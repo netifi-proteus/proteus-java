@@ -1,0 +1,100 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
+    }
+}
+
+plugins {
+    id 'com.gradle.build-scan' version '1.9' // declare before any other plugin
+
+    id 'com.github.sherter.google-java-format' version '0.6'
+    id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
+    id 'me.champeau.gradle.jmh' version '0.4.4' apply false
+    id 'io.morethan.jmhreport' version '0.6.2.1' apply false
+}
+
+buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
+
+project(':admin-client') {
+    description = 'Netifi Proteus Admin Client'
+    ext.artifactName = 'proteus-admin-client'
+}
+
+project(':auth') {
+    description = 'Netifi Proteus Authentication Utilities'
+    ext.artifactName = 'proteus-auth'
+}
+
+project(':client') {
+    description = 'Netifi Proteus Client'
+    ext.artifactName = 'proteus-client'
+}
+
+project(':core') {
+    description = 'Netifi Core Library'
+    ext.artifactName = 'proteus-core'
+}
+
+project(':frames') {
+    description = 'Netifi Proteus Frames'
+    ext.artifactName = 'proteus-frames'
+}
+
+project(':rpc') {
+    description = 'Netifi Proteus RPC'
+    ext.artifactName = 'proteus-rpc'
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply from: file('../gradle/release.gradle')
+
+    compileJava {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+        options.compilerArgs << '-Xlint:all,-overloads,-rawtypes,-unchecked'
+    }
+
+    // custom tasks for creating source/javadoc jars
+    task sourcesJar(type: Jar, dependsOn: classes) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+        baseName = "${artifactName}"
+        version = "$releaseVersion"
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+        baseName = "${artifactName}"
+        version = "$releaseVersion"
+    }
+
+    // add javadoc/source jar tasks as artifacts
+    artifacts {
+        archives sourcesJar, javadocJar
+    }
+
+    repositories {
+        jcenter()
+        maven { url 'https://dl.bintray.com/netifi/netifi-oss/' }
+        mavenLocal()
+    }
+
+    dependencies {
+        testCompile "junit:junit:4.12"
+
+        testCompile 'com.google.protobuf:protobuf-java:3.5.0'
+        testCompile 'org.hdrhistogram:HdrHistogram:2.1.10'
+        testCompile 'org.apache.logging.log4j:log4j-api:2.8.2'
+        testCompile 'org.apache.logging.log4j:log4j-core:2.8.2'
+        testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.8.2'
+        testCompile 'io.rsocket:rsocket-transport-netty:0.10.0'
+        testCompile 'io.rsocket:rsocket-transport-local:0.10.0'
+        testCompile 'org.mockito:mockito-all:1.10.19'
+    }
+}

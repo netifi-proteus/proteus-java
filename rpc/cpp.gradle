@@ -1,0 +1,112 @@
+
+def artifactStagingPath = "$buildDir/artifacts" as File
+
+// Adds space-delimited arguments from the environment variable env to the
+// argList.
+def addEnvArgs = { env, argList ->
+    def value = System.getenv(env)
+    if (value != null) {
+        value.split(' +').each() { it -> argList.add(it) }
+    }
+}
+
+// Adds corresponding "-l" option to the argList if libName is not found in
+// LDFLAGS. This is only used for Mac because when building for uploadArchives
+// artifacts, we add the ".a" files directly to LDFLAGS and without "-l" in
+// order to get statically linked, otherwise we add the libraries through "-l"
+// so that they can be searched for in default search paths.
+def addLibraryIfNotLinked = { libName, argList ->
+    def ldflags = System.env.LDFLAGS
+    if (ldflags == null || !ldflags.contains('lib' + libName + '.a')) {
+        argList.add('-l' + libName)
+    }
+}
+
+String arch = rootProject.hasProperty('targetArch') ? rootProject.targetArch : osdetector.arch
+boolean vcDisable = rootProject.hasProperty('vcDisable') ? rootProject.vcDisable : false
+
+model {
+    toolChains {
+        // If you have both VC and Gcc installed, VC will be selected, unless you
+        // set 'vcDisable=true'
+        if (!vcDisable) {
+            visualCpp(VisualCpp) {
+            }
+        }
+        gcc(Gcc) {
+            target("ppcle_64")
+        }
+        clang(Clang) {
+        }
+    }
+
+    platforms {
+        x86_32 {
+            architecture "x86"
+        }
+        x86_64 {
+            architecture "x86_64"
+        }
+        ppcle_64 {
+            architecture "ppcle_64"
+        }
+    }
+
+    components {
+        java_plugin(NativeExecutableSpec) {
+            if (arch in ['x86_32', 'x86_64', 'ppcle_64']) {
+                // If arch is not within the defined platforms, we do not specify the
+                // targetPlatform so that Gradle will choose what is appropriate.
+                targetPlatform arch
+            }
+            baseName "proteus-java"
+        }
+    }
+
+    binaries {
+        all {
+            if (toolChain in Gcc || toolChain in Clang) {
+                cppCompiler.define("PROTEUS_VERSION", version)
+                cppCompiler.args "--std=c++0x"
+                addEnvArgs("CXXFLAGS", cppCompiler.args)
+                addEnvArgs("CPPFLAGS", cppCompiler.args)
+                if (osdetector.os == "osx") {
+                    cppCompiler.args "-mmacosx-version-min=10.7", "-stdlib=libc++"
+                    addLibraryIfNotLinked('protoc', linker.args)
+                    addLibraryIfNotLinked('protobuf', linker.args)
+                } else if (osdetector.os == "windows") {
+                    linker.args "-static", "-lprotoc", "-lprotobuf", "-static-libgcc", "-static-libstdc++",
+                            "-s"
+                } else {
+                    // Link protoc, protobuf, libgcc and libstdc++ statically.
+                    // Link other (system) libraries dynamically.
+                    // Clang under OSX doesn't support these options.
+                    linker.args "-Wl,-Bstatic", "-lprotoc", "-lprotobuf", "-static-libgcc",
+                            "-static-libstdc++",
+                            "-Wl,-Bdynamic", "-lpthread", "-s"
+                }
+                addEnvArgs("LDFLAGS", linker.args)
+            } else if (toolChain in VisualCpp) {
+                cppCompiler.define("PROTEUS_VERSION", version)
+                cppCompiler.args "/EHsc", "/MT"
+                if (rootProject.hasProperty('vcProtobufInclude')) {
+                    cppCompiler.args "/I${rootProject.vcProtobufInclude}"
+                }
+                linker.args "libprotobuf.lib", "libprotoc.lib"
+                if (rootProject.hasProperty('vcProtobufLibs')) {
+                    linker.args "/LIBPATH:${rootProject.vcProtobufLibs}"
+                }
+            }
+        }
+    }
+}
+
+task buildArtifacts(type: Copy) {
+    dependsOn 'java_pluginExecutable'
+    from("$buildDir/exe") {
+        if (osdetector.os == 'windows') {
+            rename 'proteus-java', '$0.exe'
+        }
+    }
+    into artifactStagingPath
+}

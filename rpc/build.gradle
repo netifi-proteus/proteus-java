@@ -1,0 +1,62 @@
+plugins {
+    id 'com.google.osdetector' version '1.4.0'
+    id 'com.google.protobuf' version '0.8.3'
+    id 'cpp'
+}
+
+apply from: file('cpp.gradle')
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    testCompile project(':core')
+}
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.5.0'
+    }
+    plugins {
+        proteus {
+            path = "$rootDir/rpc/build/exe/java_plugin/proteus-java"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.dependsOn ':rpc:java_pluginExecutable'
+            task.inputs.file "$rootDir/compiler/build/exe/java_plugin/proteus-java"
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                proteus {
+                    option 'noversion'
+                }
+            }
+        }
+    }
+}
+
+sourceSets {
+    test {
+        proto { srcDir 'src/test/proto' }
+    }
+}
+
+idea {
+    module {
+        testSourceDirs += file("src/test/proto")
+        testSourceDirs += file("src/generated/test/java")
+        testSourceDirs += file("src/generated/test/proteus")
+
+        generatedSourceDirs += file('src/generated/test/java')
+        generatedSourceDirs += file('src/generated/test/proteus')
+    }
+}
+
+compileJava.dependsOn ':rpc:generateProto'
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}

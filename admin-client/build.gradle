@@ -1,0 +1,54 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.3'
+    id 'java'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile project (':client')
+    compile 'com.google.protobuf:protobuf-java:3.5.0'
+    compile 'com.google.protobuf:protobuf-java-util:3.5.0'
+}
+
+sourceSets {
+    main {
+        proto { srcDir 'src/main/proto' }
+    }
+
+    test {
+        proto { srcDir 'src/test/proto' }
+    }
+}
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    plugins {
+        protoc {
+            artifact = 'com.google.protobuf:protoc:3.5.0'
+        }
+        generateProtoTasks {
+            ofSourceSet('main')*.plugins {
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("src/main/proto")
+        sourceDirs += file("src/generated/main/java")
+        sourceDirs += file("src/generated/main/proteus")
+
+        generatedSourceDirs += file('src/generated/main/java')
+        generatedSourceDirs += file('src/generated/main/proteus')
+    }
+}
+
+compileJava.dependsOn ':admin-client:generateProto'
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
