@@ -10,7 +10,6 @@ public  final class Connection extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Connection)
     ConnectionOrBuilder {
-private static final long serialVersionUID = 0L;
   // Use Connection.newBuilder() to construct.
   private Connection(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -24,7 +23,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return this.unknownFields;
+    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
   }
   private Connection(
       com.google.protobuf.CodedInputStream input,
@@ -32,8 +31,6 @@ private static final long serialVersionUID = 0L;
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
     int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -43,8 +40,7 @@ private static final long serialVersionUID = 0L;
             done = true;
             break;
           default: {
-            if (!parseUnknownFieldProto3(
-                input, unknownFields, extensionRegistry, tag)) {
+            if (!input.skipField(tag)) {
               done = true;
             }
             break;
@@ -94,7 +90,6 @@ private static final long serialVersionUID = 0L;
       if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
         notices_ = java.util.Collections.unmodifiableList(notices_);
       }
-      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -114,7 +109,7 @@ private static final long serialVersionUID = 0L;
   public static final int SOURCE_FIELD_NUMBER = 1;
   private volatile java.lang.Object source_;
   /**
-   * <code>string source = 1;</code>
+   * <code>optional string source = 1;</code>
    */
   public java.lang.String getSource() {
     java.lang.Object ref = source_;
@@ -129,7 +124,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string source = 1;</code>
+   * <code>optional string source = 1;</code>
    */
   public com.google.protobuf.ByteString
       getSourceBytes() {
@@ -148,7 +143,7 @@ private static final long serialVersionUID = 0L;
   public static final int TARGET_FIELD_NUMBER = 2;
   private volatile java.lang.Object target_;
   /**
-   * <code>string target = 2;</code>
+   * <code>optional string target = 2;</code>
    */
   public java.lang.String getTarget() {
     java.lang.Object ref = target_;
@@ -163,7 +158,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string target = 2;</code>
+   * <code>optional string target = 2;</code>
    */
   public com.google.protobuf.ByteString
       getTargetBytes() {
@@ -182,19 +177,19 @@ private static final long serialVersionUID = 0L;
   public static final int METRICS_FIELD_NUMBER = 3;
   private io.netifi.proteus.admin.om.Metrics metrics_;
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public boolean hasMetrics() {
     return metrics_ != null;
   }
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public io.netifi.proteus.admin.om.Metrics getMetrics() {
     return metrics_ == null ? io.netifi.proteus.admin.om.Metrics.getDefaultInstance() : metrics_;
   }
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
     return getMetrics();
@@ -259,7 +254,6 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < notices_.size(); i++) {
       output.writeMessage(4, notices_.get(i));
     }
-    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -281,11 +275,11 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(4, notices_.get(i));
     }
-    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
+  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -308,7 +302,6 @@ private static final long serialVersionUID = 0L;
     }
     result = result && getNoticesList()
         .equals(other.getNoticesList());
-    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -318,7 +311,7 @@ private static final long serialVersionUID = 0L;
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptor().hashCode();
+    hash = (19 * hash) + getDescriptorForType().hashCode();
     hash = (37 * hash) + SOURCE_FIELD_NUMBER;
     hash = (53 * hash) + getSource().hashCode();
     hash = (37 * hash) + TARGET_FIELD_NUMBER;
@@ -336,17 +329,6 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.netifi.proteus.admin.om.Connection parseFrom(
-      java.nio.ByteBuffer data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    return PARSER.parseFrom(data);
-  }
-  public static io.netifi.proteus.admin.om.Connection parseFrom(
-      java.nio.ByteBuffer data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    return PARSER.parseFrom(data, extensionRegistry);
-  }
   public static io.netifi.proteus.admin.om.Connection parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -527,7 +509,7 @@ private static final long serialVersionUID = 0L;
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -540,12 +522,12 @@ private static final long serialVersionUID = 0L;
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, java.lang.Object value) {
+        int index, Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -596,7 +578,6 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
-      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -626,7 +607,7 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object source_ = "";
     /**
-     * <code>string source = 1;</code>
+     * <code>optional string source = 1;</code>
      */
     public java.lang.String getSource() {
       java.lang.Object ref = source_;
@@ -641,7 +622,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string source = 1;</code>
+     * <code>optional string source = 1;</code>
      */
     public com.google.protobuf.ByteString
         getSourceBytes() {
@@ -657,7 +638,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string source = 1;</code>
+     * <code>optional string source = 1;</code>
      */
     public Builder setSource(
         java.lang.String value) {
@@ -670,7 +651,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string source = 1;</code>
+     * <code>optional string source = 1;</code>
      */
     public Builder clearSource() {
       
@@ -679,7 +660,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string source = 1;</code>
+     * <code>optional string source = 1;</code>
      */
     public Builder setSourceBytes(
         com.google.protobuf.ByteString value) {
@@ -695,7 +676,7 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object target_ = "";
     /**
-     * <code>string target = 2;</code>
+     * <code>optional string target = 2;</code>
      */
     public java.lang.String getTarget() {
       java.lang.Object ref = target_;
@@ -710,7 +691,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string target = 2;</code>
+     * <code>optional string target = 2;</code>
      */
     public com.google.protobuf.ByteString
         getTargetBytes() {
@@ -726,7 +707,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string target = 2;</code>
+     * <code>optional string target = 2;</code>
      */
     public Builder setTarget(
         java.lang.String value) {
@@ -739,7 +720,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string target = 2;</code>
+     * <code>optional string target = 2;</code>
      */
     public Builder clearTarget() {
       
@@ -748,7 +729,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string target = 2;</code>
+     * <code>optional string target = 2;</code>
      */
     public Builder setTargetBytes(
         com.google.protobuf.ByteString value) {
@@ -766,13 +747,13 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> metricsBuilder_;
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public boolean hasMetrics() {
       return metricsBuilder_ != null || metrics_ != null;
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.Metrics getMetrics() {
       if (metricsBuilder_ == null) {
@@ -782,7 +763,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder setMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -798,7 +779,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder setMetrics(
         io.netifi.proteus.admin.om.Metrics.Builder builderForValue) {
@@ -812,7 +793,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder mergeMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -830,7 +811,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder clearMetrics() {
       if (metricsBuilder_ == null) {
@@ -844,7 +825,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.Metrics.Builder getMetricsBuilder() {
       
@@ -852,7 +833,7 @@ private static final long serialVersionUID = 0L;
       return getMetricsFieldBuilder().getBuilder();
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
       if (metricsBuilder_ != null) {
@@ -863,7 +844,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> 
@@ -1120,12 +1101,12 @@ private static final long serialVersionUID = 0L;
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return super.setUnknownFieldsProto3(unknownFields);
+      return this;
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return super.mergeUnknownFields(unknownFields);
+      return this;
     }
 
 

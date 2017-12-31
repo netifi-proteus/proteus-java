@@ -51,11 +51,11 @@ public interface ConnectionsOrBuilder extends
       getMetadataBytes(int index);
 
   /**
-   * <code>string class = 3;</code>
+   * <code>optional string class = 3;</code>
    */
   java.lang.String getClass_();
   /**
-   * <code>string class = 3;</code>
+   * <code>optional string class = 3;</code>
    */
   com.google.protobuf.ByteString
       getClass_Bytes();

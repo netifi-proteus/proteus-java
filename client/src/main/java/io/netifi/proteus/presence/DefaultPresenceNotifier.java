@@ -8,26 +8,27 @@ import io.netifi.proteus.frames.RoutingFlyweight;
 import io.netifi.proteus.util.TimebasedIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.collection.LongObjectHashMap;
 import io.rsocket.Payload;
 import io.rsocket.util.ByteBufPayload;
-import java.time.Duration;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Implementation of {@link PresenceNotifier} */
 public class DefaultPresenceNotifier implements PresenceNotifier {
   private static final Logger logger = LoggerFactory.getLogger(DefaultPresenceNotifier.class);
-  private static final byte[] EMPTY = new byte[0];
   private static final Object EVENT = new Object();
-  final Set<PresenceNotificationInfo> presenceInfo;
+  final LongObjectHashMap<ConcurrentHashMap<String, Set<String>>> presenceInfo;
   final ConcurrentHashMap<String, Disposable> watchingSubscriptions;
   private final TimebasedIdGenerator idGenerator;
-  private final ReplayProcessor onChange;
+  private final ReplayProcessor<Object> onChange;
   private final long fromAccessKey;
   private final String fromDestination;
   private final LoadBalancedRSocketSupplier rSocketSupplier;
@@ -41,7 +42,7 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
     this.idGenerator = idGenerator;
     this.fromAccessKey = fromAccessKey;
     this.fromDestination = fromDestination;
-    this.presenceInfo = ConcurrentHashMap.newKeySet();
+    this.presenceInfo = new LongObjectHashMap<>();
     this.watchingSubscriptions = new ConcurrentHashMap<>();
     this.rSocketSupplier = rSocketSupplier;
 
@@ -56,11 +57,16 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
         .subscribe();
   }
 
+  synchronized ConcurrentHashMap<String, Set<String>> getGroupMap(long accountId) {
+    return presenceInfo.computeIfAbsent(accountId, a -> new ConcurrentHashMap<>());
+  }
+
   public void watch(long accountId, String group) {
     if (logger.isTraceEnabled()) {
       logger.trace("watching account id {} and group {}", accountId, group);
     }
 
+    ConcurrentHashMap<String, Set<String>> groupMap = getGroupMap(accountId);
     watchingSubscriptions.computeIfAbsent(
         groupKey(accountId, group),
         k -> {
@@ -69,40 +75,57 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
           ByteBuf routingInformation = createRoutingInformation(route, fromDestination);
           Payload payload = ByteBufPayload.create(Unpooled.EMPTY_BUFFER, routingInformation);
 
-          Disposable subscribe =
-              rSocketSupplier
-                  .get()
-                  .requestStream(payload)
-                  .doOnNext(
-                      p -> {
-                        try {
-                          boolean found = DestinationAvailResult.found(p.sliceMetadata());
-
-                          PresenceNotificationInfo presenceNotificationInfo =
-                              new PresenceNotificationInfo(null, accountId, group);
-                          if (found) {
-                            logger.debug("account id {} and group {} available", accountId, group);
-                            presenceInfo.add(presenceNotificationInfo);
-                          } else {
-                            logger.debug("account id {} and group {} available", accountId, group);
-                            presenceInfo.remove(presenceNotificationInfo);
-                          }
-
-                          onChange.onNext(EMPTY);
-                        } finally {
-                          p.release();
-                        }
-                      })
-                  .doFinally(
-                      s -> {
-                        logger.debug(
-                            "removing watcher for account id {} and group {}", accountId, group);
-                        watchingSubscriptions.remove(k);
-                      })
-                  .subscribe();
-
-          return subscribe;
+          return rSocketSupplier
+              .get()
+              .requestStream(payload)
+              .transform(flux -> handleResult(flux, groupMap, accountId, group, k))
+              .subscribe();
         });
+  }
+
+  private Flux<Payload> handleResult(
+      Flux<Payload> result,
+      ConcurrentHashMap<String, Set<String>> groupMap,
+      long accountId,
+      String group,
+      String mapKey) {
+    return result
+        .doOnNext(
+            p -> {
+              try {
+                ByteBuf metadata = p.sliceMetadata();
+                boolean found = DestinationAvailResult.found(metadata);
+                String destination = DestinationAvailResult.destination(metadata);
+                logger.debug(
+                    "account id {}, destination {}, and group {} available = {}",
+                    accountId,
+                    destination,
+                    group,
+                    found);
+                if (found) {
+                  Set<String> destinations =
+                      groupMap.computeIfAbsent(group, g -> ConcurrentHashMap.newKeySet());
+                  destinations.add(destination);
+                } else {
+                  Set<String> destinations = groupMap.get(group);
+                  if (destinations != null) {
+                    destinations.remove(destination);
+                    if (destinations.isEmpty()) {
+                      groupMap.remove(group);
+                    }
+                  }
+                }
+
+                onChange.onNext(EVENT);
+              } finally {
+                p.release();
+              }
+            })
+        .doFinally(
+            s -> {
+              logger.debug("removing watcher for account id {} and group {}", accountId, group);
+              watchingSubscriptions.remove(mapKey);
+            });
   }
 
   public void stopWatching(long accountId, String group) {
@@ -115,47 +138,21 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
   public void watch(long accountId, String destination, String group) {
     logger.debug(
         "watching account id {}, group {}, and destination {}", accountId, group, destination);
+    ConcurrentHashMap<String, Set<String>> groupMap = getGroupMap(accountId);
+
     watchingSubscriptions.computeIfAbsent(
-        groupKey(accountId, group),
+        destinationkey(accountId, destination, group),
         k -> {
           ByteBuf route =
               createDestinationRoute(RouteType.PRESENCE_ID_QUERY, accountId, destination, group);
           ByteBuf routingInformation = createRoutingInformation(route, fromDestination);
           Payload payload = ByteBufPayload.create(Unpooled.EMPTY_BUFFER, routingInformation);
 
-          Disposable subscribe =
-              rSocketSupplier
-                  .get()
-                  .requestStream(payload)
-                  .doOnNext(
-                      p -> {
-                        try {
-                          boolean found = DestinationAvailResult.found(p.sliceMetadata());
-
-                          PresenceNotificationInfo presenceNotificationInfo =
-                              new PresenceNotificationInfo(destination, accountId, group);
-                          if (found) {
-                            presenceInfo.add(presenceNotificationInfo);
-                          } else {
-                            presenceInfo.remove(presenceNotificationInfo);
-                          }
-                          onChange.onNext(EVENT);
-                        } finally {
-                          p.release();
-                        }
-                      })
-                  .doFinally(
-                      s -> {
-                        logger.debug(
-                            "removing watcher for account id {}, group {} and destination {}",
-                            accountId,
-                            group,
-                            destination);
-                        watchingSubscriptions.remove(k);
-                      })
-                  .subscribe();
-
-          return subscribe;
+          return rSocketSupplier
+              .get()
+              .requestStream(payload)
+              .transform(flux -> handleResult(flux, groupMap, accountId, group, k))
+              .subscribe();
         });
   }
 
@@ -167,6 +164,24 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
     }
   }
 
+  boolean contains(long accountId, String group) {
+    ConcurrentHashMap<String, Set<String>> groupMap = getGroupMap(accountId);
+
+    return groupMap.containsKey(group);
+  }
+
+  boolean contains(long accountId, String destination, String group) {
+    ConcurrentHashMap<String, Set<String>> groupMap = getGroupMap(accountId);
+
+    Set<String> destinations = groupMap.get(group);
+
+    if (destinations == null) {
+      return false;
+    } else {
+      return destinations.contains(destination);
+    }
+  }
+
   @SuppressWarnings("unchecked")
   public Mono<Void> notify(long accountId, String group) {
     logger.trace("looking for account id {} and group {}", accountId, group);
@@ -174,12 +189,11 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
       watch(accountId, group);
     }
 
-    PresenceNotificationInfo info = new PresenceNotificationInfo(null, accountId, group);
-    if (presenceInfo.contains(info)) {
+    if (contains(accountId, group)) {
       return Mono.empty();
     } else {
       return onChange
-          .filter(o -> presenceInfo.contains(info))
+          .filter(o -> contains(accountId, group))
           .next()
           .then()
           .doOnError(
@@ -198,15 +212,13 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
       watch(accountId, destination, group);
     }
 
-    PresenceNotificationInfo info = new PresenceNotificationInfo(destination, accountId, group);
-    if (presenceInfo.contains(info)) {
+    if (contains(accountId, destination, group)) {
       return Mono.empty();
     } else {
       return onChange
-          .filter(o -> presenceInfo.contains(info))
+          .filter(o -> contains(accountId, destination, group))
           .next()
           .then()
-          .timeout(Duration.ofSeconds(5))
           .doOnError(
               throwable ->
                   logger.error(
@@ -252,51 +264,5 @@ public class DefaultPresenceNotifier implements PresenceNotifier {
         byteBuf, false, 1, fromAccessKey, fromDestination, idGenerator.nextId(), route);
 
     return byteBuf;
-  }
-
-  class PresenceNotificationInfo
-      implements DestinationPresenceNotificationInfo, GroupPresenceNotificationInfo {
-    private String destination;
-    private long accountId;
-    private String group;
-
-    PresenceNotificationInfo(String destination, long accountId, String group) {
-      this.destination = destination;
-      this.accountId = accountId;
-      this.group = group;
-    }
-
-    public String getDestination() {
-      return destination;
-    }
-
-    public long getAccountId() {
-      return accountId;
-    }
-
-    public String getGroup() {
-      return group;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      PresenceNotificationInfo that = (PresenceNotificationInfo) o;
-
-      if (accountId != that.accountId) return false;
-      if (destination != null ? !destination.equals(that.destination) : that.destination != null)
-        return false;
-      return group != null ? group.equals(that.group) : that.group == null;
-    }
-
-    @Override
-    public int hashCode() {
-      int result = destination != null ? destination.hashCode() : 0;
-      result = 31 * result + (int) (accountId ^ (accountId >>> 32));
-      result = 31 * result + (group != null ? group.hashCode() : 0);
-      return result;
-    }
   }
 }

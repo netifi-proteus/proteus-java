@@ -60,7 +60,7 @@ public class SimpleServiceTest {
     Assert.assertEquals("sending a message", responseMessage);
   }
   
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testStreaming() {
     SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
     SimpleResponse response =
@@ -74,7 +74,7 @@ public class SimpleServiceTest {
     System.out.println(responseMessage);
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 50_000)
   public void testStreamingPrintEach() {
     SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
     client
@@ -84,7 +84,7 @@ public class SimpleServiceTest {
         .forEach(simpleResponse -> System.out.println(simpleResponse.getResponseMessage()));
   }
 
-  @Test(timeout = 3_000)
+  @Test(timeout = 30_000)
   public void testClientStreamingRpc() {
     SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
 
@@ -98,7 +98,7 @@ public class SimpleServiceTest {
     System.out.println(response.getResponseMessage());
   }
 
-  @Test(timeout = 15_000)
+  @Test(timeout = 150_000)
   public void testBidiStreamingRpc() {
     SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
 

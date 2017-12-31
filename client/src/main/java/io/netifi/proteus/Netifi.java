@@ -21,6 +21,12 @@ import io.rsocket.RSocketFactory;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.ByteBufPayload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+import reactor.ipc.netty.tcp.TcpClient;
+
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
@@ -31,11 +37,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
-import reactor.ipc.netty.tcp.TcpClient;
 
 /** This is where the magic happens */
 public class Netifi implements Closeable {
@@ -148,7 +149,7 @@ public class Netifi implements Closeable {
         new LoadBalancedRSocketSupplier(
             poolSize,
             (lowerQuantile, higherQuantile) -> {
-              return new WeightedReconnectingRSocket(
+              return WeightedReconnectingRSocket.newInstance(
                   MetadataUnwrappingRSocket.wrap(requestHandlingRSocket),
                   destinationNameFactory,
                   setupPayloadSupplier,
@@ -245,22 +246,23 @@ public class Netifi implements Closeable {
   }
 
   public static class Builder {
-    private String host;
-    private Integer port = 8001;
-    private List<SocketAddress> seedAddresses;
-    private Long accessKey;
-    private Long accountId;
-    private String group;
-    private String destination;
-    private String accessToken = null;
+    private String host = DefaultBuilderConfig.getHost();
+    private Integer port = DefaultBuilderConfig.getPort();
+    private List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
+    private Long accessKey = DefaultBuilderConfig.getAccessKey();
+    private Long accountId = DefaultBuilderConfig.getAccountId();
+    private String group = DefaultBuilderConfig.getGroup();
+    private String destination = DefaultBuilderConfig.getDestination();
+    private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
-    private boolean keepalive = false;
-    private long tickPeriodSeconds = 60;
-    private long ackTimeoutSeconds = 120;
-    private int missedAcks = 3;
-    private int poolSize = Math.max(4, Runtime.getRuntime().availableProcessors());
-    private int minHostsAtStartup = 3;
-    private long minHostsAtStartupTimeout = 5;
+    private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
+    private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
+    private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
+    private int missedAcks = DefaultBuilderConfig.getMissedAcks();
+    private int poolSize = DefaultBuilderConfig.getPoolSize();
+    private int minHostsAtStartup = DefaultBuilderConfig.getMinHostsAtStartup();
+    private long minHostsAtStartupTimeout =
+        DefaultBuilderConfig.getMinHostsAtStartupTimeoutSeconds();
     private DestinationNameFactory destinationNameFactory;
 
     private Executor executor = null;
@@ -342,7 +344,6 @@ public class Netifi implements Closeable {
 
     public Builder accessToken(String accessToken) {
       this.accessToken = accessToken;
-      this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
       return this;
     }
 
@@ -378,6 +379,8 @@ public class Netifi implements Closeable {
       Objects.requireNonNull(accessToken, "account token is required");
       Objects.requireNonNull(accountId, "account Id is required");
       Objects.requireNonNull(group, "group is required");
+
+      this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
       if (poolSize < 1) {
         throw new IllegalStateException("poolSize must be greater the 0");

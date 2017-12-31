@@ -10,7 +10,6 @@ public  final class Metrics extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Metrics)
     MetricsOrBuilder {
-private static final long serialVersionUID = 0L;
   // Use Metrics.newBuilder() to construct.
   private Metrics(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -24,7 +23,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return this.unknownFields;
+    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
   }
   private Metrics(
       com.google.protobuf.CodedInputStream input,
@@ -32,8 +31,6 @@ private static final long serialVersionUID = 0L;
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
     int mutable_bitField0_ = 0;
-    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -43,8 +40,7 @@ private static final long serialVersionUID = 0L;
             done = true;
             break;
           default: {
-            if (!parseUnknownFieldProto3(
-                input, unknownFields, extensionRegistry, tag)) {
+            if (!input.skipField(tag)) {
               done = true;
             }
             break;
@@ -72,7 +68,6 @@ private static final long serialVersionUID = 0L;
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
     } finally {
-      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -91,7 +86,7 @@ private static final long serialVersionUID = 0L;
   public static final int NORMAL_FIELD_NUMBER = 1;
   private double normal_;
   /**
-   * <code>double normal = 1;</code>
+   * <code>optional double normal = 1;</code>
    */
   public double getNormal() {
     return normal_;
@@ -100,7 +95,7 @@ private static final long serialVersionUID = 0L;
   public static final int DANGER_FIELD_NUMBER = 2;
   private double danger_;
   /**
-   * <code>double danger = 2;</code>
+   * <code>optional double danger = 2;</code>
    */
   public double getDanger() {
     return danger_;
@@ -109,7 +104,7 @@ private static final long serialVersionUID = 0L;
   public static final int WARNING_FIELD_NUMBER = 3;
   private double warning_;
   /**
-   * <code>double warning = 3;</code>
+   * <code>optional double warning = 3;</code>
    */
   public double getWarning() {
     return warning_;
@@ -136,7 +131,6 @@ private static final long serialVersionUID = 0L;
     if (warning_ != 0D) {
       output.writeDouble(3, warning_);
     }
-    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -156,11 +150,11 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeDoubleSize(3, warning_);
     }
-    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
+  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -184,7 +178,6 @@ private static final long serialVersionUID = 0L;
         java.lang.Double.doubleToLongBits(getWarning())
         == java.lang.Double.doubleToLongBits(
             other.getWarning()));
-    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -194,7 +187,7 @@ private static final long serialVersionUID = 0L;
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptor().hashCode();
+    hash = (19 * hash) + getDescriptorForType().hashCode();
     hash = (37 * hash) + NORMAL_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         java.lang.Double.doubleToLongBits(getNormal()));
@@ -209,17 +202,6 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.netifi.proteus.admin.om.Metrics parseFrom(
-      java.nio.ByteBuffer data)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    return PARSER.parseFrom(data);
-  }
-  public static io.netifi.proteus.admin.om.Metrics parseFrom(
-      java.nio.ByteBuffer data,
-      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-      throws com.google.protobuf.InvalidProtocolBufferException {
-    return PARSER.parseFrom(data, extensionRegistry);
-  }
   public static io.netifi.proteus.admin.om.Metrics parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -373,7 +355,7 @@ private static final long serialVersionUID = 0L;
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -386,12 +368,12 @@ private static final long serialVersionUID = 0L;
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, java.lang.Object value) {
+        int index, Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        java.lang.Object value) {
+        Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -414,7 +396,6 @@ private static final long serialVersionUID = 0L;
       if (other.getWarning() != 0D) {
         setWarning(other.getWarning());
       }
-      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -443,13 +424,13 @@ private static final long serialVersionUID = 0L;
 
     private double normal_ ;
     /**
-     * <code>double normal = 1;</code>
+     * <code>optional double normal = 1;</code>
      */
     public double getNormal() {
       return normal_;
     }
     /**
-     * <code>double normal = 1;</code>
+     * <code>optional double normal = 1;</code>
      */
     public Builder setNormal(double value) {
       
@@ -458,7 +439,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>double normal = 1;</code>
+     * <code>optional double normal = 1;</code>
      */
     public Builder clearNormal() {
       
@@ -469,13 +450,13 @@ private static final long serialVersionUID = 0L;
 
     private double danger_ ;
     /**
-     * <code>double danger = 2;</code>
+     * <code>optional double danger = 2;</code>
      */
     public double getDanger() {
       return danger_;
     }
     /**
-     * <code>double danger = 2;</code>
+     * <code>optional double danger = 2;</code>
      */
     public Builder setDanger(double value) {
       
@@ -484,7 +465,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>double danger = 2;</code>
+     * <code>optional double danger = 2;</code>
      */
     public Builder clearDanger() {
       
@@ -495,13 +476,13 @@ private static final long serialVersionUID = 0L;
 
     private double warning_ ;
     /**
-     * <code>double warning = 3;</code>
+     * <code>optional double warning = 3;</code>
      */
     public double getWarning() {
       return warning_;
     }
     /**
-     * <code>double warning = 3;</code>
+     * <code>optional double warning = 3;</code>
      */
     public Builder setWarning(double value) {
       
@@ -510,7 +491,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>double warning = 3;</code>
+     * <code>optional double warning = 3;</code>
      */
     public Builder clearWarning() {
       
@@ -520,12 +501,12 @@ private static final long serialVersionUID = 0L;
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return super.setUnknownFieldsProto3(unknownFields);
+      return this;
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return super.mergeUnknownFields(unknownFields);
+      return this;
     }
 
 

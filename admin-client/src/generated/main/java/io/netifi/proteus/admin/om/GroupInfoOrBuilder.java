@@ -8,22 +8,22 @@ public interface GroupInfoOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string name = 1;</code>
+   * <code>optional string name = 1;</code>
    */
   java.lang.String getName();
   /**
-   * <code>string name = 1;</code>
+   * <code>optional string name = 1;</code>
    */
   com.google.protobuf.ByteString
       getNameBytes();
 
   /**
-   * <code>int64 accountId = 2;</code>
+   * <code>optional int64 accountId = 2;</code>
    */
   long getAccountId();
 
   /**
-   * <code>int32 size = 3;</code>
+   * <code>optional int32 size = 3;</code>
    */
   int getSize();
 }

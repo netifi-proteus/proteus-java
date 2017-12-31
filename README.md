@@ -1,5 +1,8 @@
 # Netifi Proteus Java
 
+<a href='https://travis-ci.org/netifi-proteus/proteus-java'><img src='https://travis-ci.org/netifi-proteus/proteus-java.svg?branch=master'></a>
+
+
 ## Build from Source
 1. Building proteus-java requires installation of the [Protobuf](https://github.com/google/protobuf) compiler. Proteus requires Protobuf 3.4.x or higher.
 

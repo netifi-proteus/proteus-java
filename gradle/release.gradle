@@ -26,7 +26,7 @@ build.dependsOn versionArchives
 
 jar {
     baseName = "${artifactName}"
-    version = "${releaseVersion}"
+    version = "${project.version}"
 }
 
 publishing {
@@ -34,6 +34,7 @@ publishing {
         maven(MavenPublication) {
             from components.java
 
+            artifactId "${artifactName}"
             artifact sourcesJar
             artifact javadocJar
         }
@@ -44,16 +45,19 @@ bintray {
     user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
     key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
     publications = ['maven']
+
+    publish = (osdetector.os == 'osx')
+
     pkg {
         repo = 'netifi-oss'
         name = "${artifactName}"
         userOrg = 'netifi'
         desc = "${project.description}"
-        websiteUrl = 'https://github.com/netifi/netifi-sdk-java'
-        issueTrackerUrl = 'https://github.com/netifi/netifi-sdk-java/issues'
-        vcsUrl = 'https://github.com/netifi/netifi-sdk-java.git'
+        websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
+        issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
+        vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
         licenses = ['Apache-2.0']
-        githubRepo = 'netifi/netifi-sdk-java'
+        githubRepo = 'netifi-proteus/proteus-java'
         githubReleaseNotesFile = 'CHANGELOG.md'
 
         version {

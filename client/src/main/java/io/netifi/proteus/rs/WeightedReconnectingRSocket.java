@@ -1,27 +1,28 @@
 package io.netifi.proteus.rs;
 
 import io.netifi.proteus.auth.SessionUtil;
+import io.netifi.proteus.balancer.transport.ClientTransportSupplierFactory;
+import io.netifi.proteus.discovery.DestinationNameFactory;
 import io.netifi.proteus.stats.Ewma;
 import io.netifi.proteus.stats.Median;
 import io.netifi.proteus.stats.Quantile;
-import io.netifi.proteus.balancer.transport.ClientTransportSupplierFactory;
-import io.netifi.proteus.discovery.DestinationNameFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.*;
 import io.rsocket.exceptions.TimeoutException;
 import io.rsocket.util.Clock;
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
+import reactor.core.publisher.*;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.Disposable;
-import reactor.core.publisher.*;
 
 /**
  * A secure RSocket implementation that contains information about its the error percentage and
@@ -69,14 +70,14 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
   private AtomicLong pendingStreams; // number of active streams
   private MonoProcessor<RSocket> currentSink;
 
-  private ReplayProcessor<AtomicLong> currentSessionCounter = ReplayProcessor.cacheLast();
-  private ReplayProcessor<byte[]> currentSessionToken = ReplayProcessor.cacheLast();
+  ReplayProcessor<AtomicLong> currentSessionCounter = ReplayProcessor.cacheLast();
+  ReplayProcessor<byte[]> currentSessionToken = ReplayProcessor.cacheLast();
 
   private double availability = 0.0;
 
   private DirectProcessor<WeightedRSocket> statsProcessor;
 
-  public WeightedReconnectingRSocket(
+  WeightedReconnectingRSocket(
       RSocket requestHandlingRSocket,
       DestinationNameFactory destinationNameFactory,
       Function<String, Payload> setupPayloadSupplier,
@@ -118,14 +119,49 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
     this.ackTimeoutSeconds = ackTimeoutSeconds;
     this.missedAcks = missedAcks;
     this.destinationNameFactory = destinationNameFactory;
-
-    resetStatsProcessor();
-    resetMono();
-
-    connect(1).subscribe();
   }
 
-  private synchronized void resetStatistics() {
+  public static WeightedReconnectingRSocket newInstance(
+      RSocket requestHandlingRSocket,
+      DestinationNameFactory destinationNameFactory,
+      Function<String, Payload> setupPayloadSupplier,
+      BooleanSupplier running,
+      ClientTransportSupplierFactory transportFactory,
+      boolean keepalive,
+      long tickPeriodSeconds,
+      long ackTimeoutSeconds,
+      int missedAcks,
+      long accessKey,
+      byte[] accessTokenBytes,
+      Quantile lowerQuantile,
+      Quantile higherQuantile,
+      int inactivityFactor) {
+    WeightedReconnectingRSocket rSocket =
+        new WeightedReconnectingRSocket(
+            requestHandlingRSocket,
+            destinationNameFactory,
+            setupPayloadSupplier,
+            running,
+            transportFactory,
+            keepalive,
+            tickPeriodSeconds,
+            ackTimeoutSeconds,
+            missedAcks,
+            accessKey,
+            accessTokenBytes,
+            lowerQuantile,
+            higherQuantile,
+            inactivityFactor);
+
+    rSocket.resetStatsProcessor();
+    rSocket.resetMono();
+
+    rSocket.connect(1).subscribe();
+    
+    return rSocket;
+  }
+
+  synchronized void resetStatistics() {
     long now = Clock.now();
     this.stamp = now;
     this.errorStamp = now;
@@ -139,7 +175,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
     errorPercentage.reset(1.0);
   }
 
-  private synchronized void resetStatsProcessor() {
+  synchronized void resetStatsProcessor() {
     this.statsProcessor = DirectProcessor.create();
   }
 
@@ -184,7 +220,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
         .keepAliveTickPeriod(Duration.ofSeconds(0));
   }
 
-  private Mono<RSocket> connect(int retry) {
+  Mono<RSocket> connect(int retry) {
     return transportFactory
         .get()
         .flatMap(
@@ -227,9 +263,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
                             logger.error(t.getMessage(), t);
                             return retryConnection(retry);
                           })
-                      .doOnNext(
-                          rSocket ->
-                              onClose.doFinally(s -> rSocket.dispose()).subscribe());
+                      .doOnNext(rSocket -> onClose.doFinally(s -> rSocket.dispose()).subscribe());
 
                 } catch (Throwable t) {
                   return retryConnection(retry);
@@ -307,7 +341,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
                         });
               } catch (Throwable t) {
                 decr(start);
-                errorPercentage.insert(0.0);
+                updateErrorPercentage(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -537,7 +571,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
     return onClose;
   }
 
-  private void resetMono() {
+  void resetMono() {
     MonoProcessor<RSocket> _m;
     synchronized (this) {
       _m = MonoProcessor.create();
@@ -547,11 +581,11 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
     source.onNext(_m);
   }
 
-  private Mono<RSocket> getRSocket() {
+  Mono<RSocket> getRSocket() {
     return source.next().flatMap(Function.identity());
   }
 
-  private void setRSocket(RSocket rSocket) {
+  void setRSocket(RSocket rSocket) {
     byte[] sessionToken;
     synchronized (this) {
       long count = sessionUtil.getThirtySecondsStepsFromEpoch();
@@ -578,10 +612,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket, SecureRSock
     _m.onNext(rSocket);
     _m.onComplete();
 
-    Disposable subscribe =
-        onClose
-            .doFinally(s -> rSocket.dispose())
-            .subscribe();
+    Disposable subscribe = onClose.doFinally(s -> rSocket.dispose()).subscribe();
 
     rSocket
         .onClose()

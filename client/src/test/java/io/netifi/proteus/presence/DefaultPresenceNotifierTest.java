@@ -1,179 +1,192 @@
 package io.netifi.proteus.presence;
 
-import io.netifi.proteus.Netifi;
-import io.netifi.proteus.auth.SessionUtil;
 import io.netifi.proteus.balancer.LoadBalancedRSocketSupplier;
-import io.netifi.proteus.frames.DestinationSetupFlyweight;
+import io.netifi.proteus.frames.DestinationAvailResult;
 import io.netifi.proteus.rs.SecureRSocket;
 import io.netifi.proteus.util.TimebasedIdGenerator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelOption;
-import io.rsocket.AbstractRSocket;
-import io.rsocket.Frame;
-import io.rsocket.RSocket;
-import io.rsocket.RSocketFactory;
-import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.ByteBufPayload;
-import io.rsocket.util.RSocketProxy;
-import java.time.Duration;
-import java.util.Base64;
-import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.tcp.TcpClient;
+import reactor.core.publisher.UnicastProcessor;
+import reactor.test.StepVerifier;
 
-@Ignore
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class DefaultPresenceNotifierTest {
-
-  private static final long accessKey = 3855261330795754807L;
-  private static final String accessToken = "n9R9042eE1KaLtE56rbWjBIGymo=";
+  private static TimebasedIdGenerator idGenerator = new TimebasedIdGenerator(1);
 
   @Test
-  public void testGroupPresence() throws Exception {
-
-    SecureRSocket rSocket = createRSocketConnection("tester", "test.groupPresence", 8001);
-
+  public void testWatchGroup() {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
     LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
-    Mockito.when(supplier.get()).thenReturn(rSocket);
-    Mockito.when(supplier.onClose()).thenReturn(Mono.empty());
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
 
-    DefaultPresenceNotifier handler =
-        new DefaultPresenceNotifier(new TimebasedIdGenerator(1), accessKey, "tester", supplier);
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
 
-    handler.notify(Long.MAX_VALUE, "test.groupPresence").block();
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
 
-    Netifi build =
-        Netifi.builder()
-            .accessKey(accessKey)
-            .accountId(Long.MAX_VALUE)
-            .accessToken(accessToken)
-            .destination("test1")
-            .group("anotherGroup")
-            .host("127.0.0.1")
-            .port(8001)
-            .build();
+    notifier.watch(Long.MAX_VALUE, "testWatchGroup-group");
 
-    handler.notify(Long.MAX_VALUE, "anotherGroup").block();
+    int length = DestinationAvailResult.computeLength("someDest");
+    ByteBuf metadata = ByteBufAllocator.DEFAULT.buffer(length);
+    DestinationAvailResult.encode(metadata, "someDest", true, idGenerator.nextId());
 
-    try {
-      handler
-          .notify(Long.MAX_VALUE, "anotherGroup2")
-          .timeout(Duration.ofSeconds(4), Schedulers.elastic())
-          .block();
-      Assert.fail();
-    } catch (Throwable t) {
-      if (!t.getMessage().contains("Timeout")) {
-        Assert.fail();
-      }
-    }
+    processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
 
-    Netifi build2 =
-        Netifi.builder()
-            .accessKey(accessKey)
-            .accountId(Long.MAX_VALUE)
-            .accessToken(accessToken)
-            .destination("test1")
-            .group("anotherGroup2")
-            .host("127.0.0.1")
-            .port(8001)
-            .build();
+    Assert.assertTrue(notifier.contains(Long.MAX_VALUE, "testWatchGroup-group"));
 
-    handler.notify(Long.MAX_VALUE, "anotherGroup2").block();
+    length = DestinationAvailResult.computeLength("someDest");
+    metadata = ByteBufAllocator.DEFAULT.buffer(length);
+    DestinationAvailResult.encode(metadata, "someDest", false, idGenerator.nextId());
 
-    build.dispose();
+    processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
 
-    //    try {
-    //      handler.notify(Long.MAX_VALUE, "anotherGroup").timeout(Duration.ofSeconds(8)).block();
-    //      Assert.fail();
-    //    } catch (Throwable t) {
-    //      if (!t.getMessage().contains("Timeout")) {
-    //        Assert.fail();
-    //      }
-    //    }
+    Assert.assertFalse(notifier.contains(Long.MAX_VALUE, "testWatchGroup-group"));
   }
 
   @Test
-  public void testDestinationPresence() {
-    SecureRSocket rSocket = createRSocketConnection("tester", "test.destinationPresence", 8001);
-
+  public void testWatchDestination() {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
     LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
-    Mockito.when(supplier.get()).thenReturn(rSocket);
-    Mockito.when(supplier.onClose()).thenReturn(Mono.empty());
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
 
-    DefaultPresenceNotifier handler =
-        new DefaultPresenceNotifier(new TimebasedIdGenerator(1), accessKey, "tester", supplier);
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
 
-    handler.notify(Long.MAX_VALUE, "tester", "test.destinationPresence").block();
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
+
+    notifier.watch(Long.MAX_VALUE, "testWatchDestination-dest", "testWatchDestination-group");
+
+    int length = DestinationAvailResult.computeLength("testWatchDestination-dest");
+    ByteBuf metadata = ByteBufAllocator.DEFAULT.buffer(length);
+    DestinationAvailResult.encode(
+        metadata, "testWatchDestination-dest", true, idGenerator.nextId());
+
+    processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
+
+    Assert.assertTrue(
+        notifier.contains(
+            Long.MAX_VALUE, "testWatchDestination-dest", "testWatchDestination-group"));
+
+    length = DestinationAvailResult.computeLength("testWatchDestination-dest");
+    metadata = ByteBufAllocator.DEFAULT.buffer(length);
+    DestinationAvailResult.encode(
+        metadata, "testWatchDestination-dest", false, idGenerator.nextId());
+
+    processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
+  
+    Assert.assertFalse(
+        notifier.contains(
+            Long.MAX_VALUE, "testWatchDestination-dest", "testWatchDestination-group"));
+  
   }
 
-  public SecureRSocket createRSocketConnection(String destination, String group, int port) {
-    return createRSocketConnection(destination, group, new AbstractRSocket() {}, port);
+  @Test
+  public void testNotifyGroup() throws Exception {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
+    LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
+
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
+
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
+
+    StepVerifier.create(notifier.notify(Long.MAX_VALUE, "testNotifyGroup-group"))
+        .then(
+            () -> {
+              int length = DestinationAvailResult.computeLength("testNotifyGroup-dest");
+              ByteBuf metadata = ByteBufAllocator.DEFAULT.buffer(length);
+              DestinationAvailResult.encode(
+                  metadata, "testNotifyGroup-dest", true, idGenerator.nextId());
+
+              processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
+            })
+        .verifyComplete();
   }
 
-  public SecureRSocket createRSocketConnection(
-      String destination, String group, RSocket handler, int port) {
-    int length = DestinationSetupFlyweight.computeLength(false, destination, group);
+  @Test
+  public void testNotifyDestination() throws Exception {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
+    LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
 
-    byte[] accessTokenBytes = Base64.getDecoder().decode(accessToken);
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
 
-    ByteBuf byteBuf = Unpooled.directBuffer(length);
-    DestinationSetupFlyweight.encode(
-        byteBuf,
-        Unpooled.EMPTY_BUFFER,
-        Unpooled.wrappedBuffer(accessTokenBytes),
-        System.currentTimeMillis(),
-        accessKey,
-        destination,
-        group);
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
 
-    TcpClient tcpClient =
-        TcpClient.create(
-            builder -> {
-              builder.option(ChannelOption.SO_RCVBUF, 1_048_576);
-              builder.option(ChannelOption.SO_SNDBUF, 1_048_576);
-              builder.option(ChannelOption.TCP_NODELAY, true);
-              builder.option(ChannelOption.SO_KEEPALIVE, true);
-              builder.host("127.0.0.1");
-              builder.port(port);
-              builder.build();
-            });
+    StepVerifier.create(
+            notifier.notify(
+                Long.MAX_VALUE, "testNotifyDestination-dest", "testNotifyDestination-group"))
+        .then(
+            () -> {
+              int length = DestinationAvailResult.computeLength("testNotifyDestination-dest");
+              ByteBuf metadata = ByteBufAllocator.DEFAULT.buffer(length);
+              DestinationAvailResult.encode(
+                  metadata, "testNotifyDestination-dest", true, idGenerator.nextId());
 
-    RSocket client =
-        RSocketFactory.connect()
-            .frameDecoder(Frame::retain)
-            .setupPayload(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, byteBuf))
-            .errorConsumer(Throwable::printStackTrace)
-            .acceptor(rSocket -> handler)
-            .transport(TcpClientTransport.create(tcpClient))
-            .start()
-            .block();
-
-    return new SecureRSocketWrapper(client);
+              processor.onNext(ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata));
+            })
+        .verifyComplete();
   }
 
-  class SecureRSocketWrapper extends RSocketProxy implements SecureRSocket {
-    public SecureRSocketWrapper(RSocket source) {
-      super(source);
-    }
+  @Test
+  public void testNotifiExistingGroup() throws Exception {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
+    LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
 
-    @Override
-    public SessionUtil getSessionUtil() {
-      return null;
-    }
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
 
-    @Override
-    public Mono<AtomicLong> getCurrentSessionCounter() {
-      return null;
-    }
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
 
-    @Override
-    public Mono<byte[]> getCurrentSessionToken() {
-      return null;
-    }
+    ConcurrentHashMap<String, Set<String>> groupMap = notifier.getGroupMap(Long.MAX_VALUE);
+    groupMap.put("testNotifyGroup-group", ConcurrentHashMap.newKeySet());
+
+    Mono<Void> notify = notifier.notify(Long.MAX_VALUE, "testNotifyGroup-group");
+    Assert.assertSame(Mono.empty(), notify);
+  }
+
+  @Test
+  public void testNotifyExistDestination() throws Exception {
+    SecureRSocket mock = Mockito.mock(SecureRSocket.class);
+    LoadBalancedRSocketSupplier supplier = Mockito.mock(LoadBalancedRSocketSupplier.class);
+    Mockito.when(supplier.get()).thenReturn(mock);
+    Mockito.when(supplier.onClose()).thenReturn(Mono.never());
+
+    UnicastProcessor processor = UnicastProcessor.create();
+    Mockito.when(mock.requestStream(Mockito.any())).thenReturn(processor);
+
+    DefaultPresenceNotifier notifier =
+        new DefaultPresenceNotifier(idGenerator, Long.MAX_VALUE, "test", supplier);
+
+    ConcurrentHashMap<String, Set<String>> groupMap = notifier.getGroupMap(Long.MAX_VALUE);
+    Set<String> destinations =
+        groupMap.computeIfAbsent("testNotifyDestination-group", k -> ConcurrentHashMap.newKeySet());
+    destinations.add("testNotifyDestination-dest");
+
+    Mono<Void> notify =
+        notifier.notify(
+            Long.MAX_VALUE, "testNotifyDestination-dest", "testNotifyDestination-group");
+    Assert.assertSame(Mono.empty(), notify);
   }
 }

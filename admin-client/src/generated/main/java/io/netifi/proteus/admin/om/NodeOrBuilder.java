@@ -8,52 +8,52 @@ public interface NodeOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string renderer = 1;</code>
+   * <code>optional string renderer = 1;</code>
    */
   java.lang.String getRenderer();
   /**
-   * <code>string renderer = 1;</code>
+   * <code>optional string renderer = 1;</code>
    */
   com.google.protobuf.ByteString
       getRendererBytes();
 
   /**
-   * <code>string name = 2;</code>
+   * <code>optional string name = 2;</code>
    */
   java.lang.String getName();
   /**
-   * <code>string name = 2;</code>
+   * <code>optional string name = 2;</code>
    */
   com.google.protobuf.ByteString
       getNameBytes();
 
   /**
-   * <code>string entryNode = 3;</code>
+   * <code>optional string entryNode = 3;</code>
    */
   java.lang.String getEntryNode();
   /**
-   * <code>string entryNode = 3;</code>
+   * <code>optional string entryNode = 3;</code>
    */
   com.google.protobuf.ByteString
       getEntryNodeBytes();
 
   /**
-   * <code>double maxVolume = 4;</code>
+   * <code>optional double maxVolume = 4;</code>
    */
   double getMaxVolume();
 
   /**
-   * <code>string class = 5;</code>
+   * <code>optional string class = 5;</code>
    */
   java.lang.String getClass_();
   /**
-   * <code>string class = 5;</code>
+   * <code>optional string class = 5;</code>
    */
   com.google.protobuf.ByteString
       getClass_Bytes();
 
   /**
-   * <code>int64 updated = 6;</code>
+   * <code>optional int64 updated = 6;</code>
    */
   long getUpdated();
 
@@ -106,11 +106,11 @@ public interface NodeOrBuilder extends
       int index);
 
   /**
-   * <code>string displayName = 9;</code>
+   * <code>optional string displayName = 9;</code>
    */
   java.lang.String getDisplayName();
   /**
-   * <code>string displayName = 9;</code>
+   * <code>optional string displayName = 9;</code>
    */
   com.google.protobuf.ByteString
       getDisplayNameBytes();
@@ -135,15 +135,15 @@ public interface NodeOrBuilder extends
       getMetadataBytes(int index);
 
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   boolean hasMetrics();
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   io.netifi.proteus.admin.om.Metrics getMetrics();
   /**
-   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder();
 }

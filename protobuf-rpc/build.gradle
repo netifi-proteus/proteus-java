@@ -1,5 +1,47 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.3'
+    id 'cpp'
+    id 'maven'
+    id 'maven-publish'
+    id 'com.jfrog.bintray'
+}
 
+String proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
+String proteusName = "${proteusPrefix}.exe"
 def artifactStagingPath = "$buildDir/artifacts" as File
+def pathToPlugin = "${artifactStagingPath.getPath()}/${proteusName}"
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    testCompile project(':core')
+}
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.5.0'
+    }
+    plugins {
+        proteus {
+            path = "$pathToPlugin"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
+            task.inputs.file "$pathToPlugin"
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                proteus {
+                    option 'noversion'
+                }
+            }
+        }
+    }
+}
 
 // Adds space-delimited arguments from the environment variable env to the
 // argList.
@@ -59,7 +101,7 @@ model {
                 // targetPlatform so that Gradle will choose what is appropriate.
                 targetPlatform arch
             }
-            baseName "proteus-java"
+            baseName "$proteusPrefix"
         }
     }
 
@@ -102,11 +144,83 @@ model {
 }
 
 task buildArtifacts(type: Copy) {
+    println 'generating artifacts'
     dependsOn 'java_pluginExecutable'
-    from("$buildDir/exe") {
-        if (osdetector.os == 'windows') {
-            rename 'proteus-java', '$0.exe'
+    from("$buildDir/exe/java_plugin") {
+        if (osdetector.os != 'windows') {
+            rename proteusPrefix, '$0.exe'
         }
     }
     into artifactStagingPath
 }
+
+sourceSets {
+    test {
+        proto { srcDir 'src/test/proto' }
+    }
+}
+
+compileJava.dependsOn ':protobuf-rpc:buildArtifacts'
+compileJava.dependsOn ':protobuf-rpc:generateProto'
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+artifacts {
+    archives("$pathToPlugin" as File) {
+        classifier osdetector.os + "-" + osdetector.arch
+        type "exe"
+        extension "exe"
+        builtBy buildArtifacts
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId "${project.ext.artifactName}"
+            artifact("$pathToPlugin") {
+                classifier osdetector.os + "-" + osdetector.arch
+                builtBy buildArtifacts
+            }
+        }
+    }
+}
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
+    publications = ['maven']
+
+    override = true
+
+    pkg {
+        repo = 'netifi-oss'
+        name = "${project.ext.artifactName}"
+        userOrg = 'netifi'
+        desc = "${project.description}"
+        websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
+        issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
+        vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
+        licenses = ['Apache-2.0']
+        githubRepo = 'netifi-proteus/proteus-java'
+        githubReleaseNotesFile = 'CHANGELOG.md'
+
+        version {
+            name = "$version"
+        }
+    }
+}
+
+idea {
+    module {
+        testSourceDirs += file("src/test/proto")
+        testSourceDirs += file("src/generated/test/java")
+        testSourceDirs += file("src/generated/test/proteus")
+
+        generatedSourceDirs += file('src/generated/test/java')
+        generatedSourceDirs += file('src/generated/test/proteus')
+    }
+}
+

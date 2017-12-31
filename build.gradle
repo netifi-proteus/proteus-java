@@ -10,6 +10,7 @@ buildscript {
 plugins {
     id 'com.gradle.build-scan' version '1.9' // declare before any other plugin
 
+    id 'com.google.osdetector' version '1.4.0'
     id 'com.github.sherter.google-java-format' version '0.6'
     id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
     id 'me.champeau.gradle.jmh' version '0.4.4' apply false
@@ -20,64 +21,54 @@ buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; license
 
 project(':admin-client') {
     description = 'Netifi Proteus Admin Client'
-    ext.artifactName = 'proteus-admin-client'
+    ext.artifactName = 'admin-client'
+
+    apply from: file('../gradle/java.gradle')
+    apply from: file('../gradle/release.gradle')
 }
 
 project(':auth') {
     description = 'Netifi Proteus Authentication Utilities'
-    ext.artifactName = 'proteus-auth'
+    ext.artifactName = 'auth'
+
+    apply from: file('../gradle/java.gradle')
+    apply from: file('../gradle/release.gradle')
 }
 
 project(':client') {
+
     description = 'Netifi Proteus Client'
-    ext.artifactName = 'proteus-client'
+    ext.artifactName = 'client'
+
+    apply from: file('../gradle/java.gradle')
+    apply from: file('../gradle/release.gradle')
 }
 
 project(':core') {
     description = 'Netifi Core Library'
-    ext.artifactName = 'proteus-core'
+    ext.artifactName = 'core'
+
+    apply from: file('../gradle/java.gradle')
+    apply from: file('../gradle/release.gradle')
 }
 
 project(':frames') {
+
     description = 'Netifi Proteus Frames'
-    ext.artifactName = 'proteus-frames'
+    ext.artifactName = 'frames'
+
+    apply from: file('../gradle/java.gradle')
+    apply from: file('../gradle/release.gradle')
 }
 
-project(':rpc') {
+project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
-    ext.artifactName = 'proteus-rpc'
+    ext.artifactName = 'protobuf-rpc'
 }
 
 subprojects {
-    apply plugin: 'java'
     apply plugin: 'idea'
-    apply from: file('../gradle/release.gradle')
-
-    compileJava {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
-        options.compilerArgs << '-Xlint:all,-overloads,-rawtypes,-unchecked'
-    }
-
-    // custom tasks for creating source/javadoc jars
-    task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-        baseName = "${artifactName}"
-        version = "$releaseVersion"
-    }
-
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
-        baseName = "${artifactName}"
-        version = "$releaseVersion"
-    }
-
-    // add javadoc/source jar tasks as artifacts
-    artifacts {
-        archives sourcesJar, javadocJar
-    }
+    apply plugin: 'java'
 
     repositories {
         jcenter()
@@ -86,8 +77,10 @@ subprojects {
     }
 
     dependencies {
+
         testCompile "junit:junit:4.12"
 
+        testCompile 'io.projectreactor:reactor-test:3.1.2.RELEASE'
         testCompile 'com.google.protobuf:protobuf-java:3.5.0'
         testCompile 'org.hdrhistogram:HdrHistogram:2.1.10'
         testCompile 'org.apache.logging.log4j:log4j-api:2.8.2'

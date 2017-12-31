@@ -2,20 +2,24 @@ package io.netifi.proteus.balancer.transport;
 
 import io.netifi.proteus.discovery.DiscoveryEvent;
 import io.netifi.proteus.discovery.SocketAddressFactory;
+import io.netifi.proteus.util.Xoroshiro128PlusRandom;
 import io.rsocket.Closeable;
 import io.rsocket.transport.ClientTransport;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Factory that produces {@link WeightedClientTransportSupplier} implementations. Uses a Flux of
@@ -35,6 +39,7 @@ public class ClientTransportSupplierFactory
   private final Function<SocketAddress, Supplier<ClientTransport>> factory;
   private final int minHostsAtStartup;
   private final long minHostsAtStartupTimeout;
+  private final Xoroshiro128PlusRandom rnd = new Xoroshiro128PlusRandom(System.nanoTime());
   private MonoProcessor<Void> onMinSuppliersPresent;
   private boolean missed = false;
   private boolean minTimeout;
@@ -182,9 +187,12 @@ public class ClientTransportSupplierFactory
         WeightedClientTransportSupplier supplier1 = null;
         WeightedClientTransportSupplier supplier2 = null;
 
-        Random rnd = ThreadLocalRandom.current();
-        int i1 = rnd.nextInt(size);
-        int i2 = rnd.nextInt(size - 1);
+        int i1;
+        int i2;
+        synchronized (this) {
+          i1 = rnd.nextInt(size);
+          i2 = rnd.nextInt(size - 1);
+        }
         if (i2 >= i1) {
           i2++;
         }

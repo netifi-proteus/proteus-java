@@ -33,6 +33,15 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
     this.group = group;
     this.presenceNotifier = presenceNotifier;
     this.groupRoute = destination == null || destination.isEmpty();
+    
+    onClose()
+        .doFinally(f -> {
+          if (groupRoute) {
+            presenceNotifier.stopWatching(accountId, group);
+          } else {
+            presenceNotifier.stopWatching(accountId, destination, group);
+          }
+        });
   }
 
   public static PresenceAwareRSocket wrap(
@@ -76,4 +85,5 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
       return presenceNotifier.notify(accountId, destination, group);
     }
   }
+  
 }

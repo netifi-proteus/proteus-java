@@ -1,17 +1,17 @@
 package io.netifi.proteus.balancer;
 
-import io.netifi.proteus.stats.FrugalQuantile;
-import io.netifi.proteus.stats.Quantile;
 import io.netifi.proteus.rs.SecureRSocket;
 import io.netifi.proteus.rs.WeightedRSocket;
 import io.netifi.proteus.rs.WeightedReconnectingRSocket;
+import io.netifi.proteus.stats.FrugalQuantile;
+import io.netifi.proteus.stats.Quantile;
+import io.netifi.proteus.util.Xoroshiro128PlusRandom;
 import io.rsocket.Closeable;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 /**
  * Load Balancer that selects the next RSocket to use. Uses Power of Two to select two {@link
@@ -23,10 +23,11 @@ public class LoadBalancedRSocketSupplier implements Supplier<SecureRSocket>, Clo
   private static final double DEFAULT_LOWER_QUANTILE = 0.2;
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int EFFORT = 5;
+  final Quantile lowerQuantile;
+  final Quantile higherQuantile;
   private final double expFactor;
-  private final Quantile lowerQuantile;
-  private final Quantile higherQuantile;
   private final WeightedReconnectingRSocket[] members;
+  private final Xoroshiro128PlusRandom rnd = new Xoroshiro128PlusRandom(System.nanoTime());
   private MonoProcessor<Void> onClose;
 
   public LoadBalancedRSocketSupplier(
@@ -71,10 +72,13 @@ public class LoadBalancedRSocketSupplier implements Supplier<SecureRSocket>, Clo
       WeightedReconnectingRSocket rsc1 = null;
       WeightedReconnectingRSocket rsc2 = null;
 
-      Random rng = ThreadLocalRandom.current();
       for (int i = 0; i < EFFORT; i++) {
-        int i1 = rng.nextInt(size);
-        int i2 = rng.nextInt(size - 1);
+        int i1;
+        int i2;
+        synchronized (this) {
+          i1 = rnd.nextInt(size);
+          i2 = rnd.nextInt(size - 1);
+        }
         if (i2 >= i1) {
           i2++;
         }
@@ -97,7 +101,7 @@ public class LoadBalancedRSocketSupplier implements Supplier<SecureRSocket>, Clo
     return rSocket;
   }
 
-  private double algorithmicWeight(WeightedRSocket socket) {
+  double algorithmicWeight(WeightedRSocket socket) {
     if (socket == null || socket.availability() == 0.0) {
       return 0.0;
     }
@@ -112,16 +116,17 @@ public class LoadBalancedRSocketSupplier implements Supplier<SecureRSocket>, Clo
     double bandWidth = Math.max(high - low, 1);
 
     if (latency < low) {
-      double alpha = (low - latency) / bandWidth;
-      double bonusFactor = Math.pow(1 + alpha, expFactor);
-      latency /= bonusFactor;
+      latency /= calculateFactor(low, latency, bandWidth);
     } else if (latency > high) {
-      double alpha = (latency - high) / bandWidth;
-      double penaltyFactor = Math.pow(1 + alpha, expFactor);
-      latency *= penaltyFactor;
+      latency *= calculateFactor(latency, high, bandWidth);
     }
 
     return socket.availability() * 1.0 / (1.0 + latency * (pendings + 1));
+  }
+
+  private double calculateFactor(double u, double l, double bandWidth) {
+    double alpha = (u - l) / bandWidth;
+    return Math.pow(1 + alpha, expFactor);
   }
 
   @Override
