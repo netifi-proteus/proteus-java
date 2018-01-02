@@ -62,7 +62,7 @@ public final class ProteusAdmin {
       "s\0223\n\007notices\030\004 \003(\0132\".io.netifi.proteus.a" +
       "dmin.om.Notice\"k\n\013Connections\022;\n\013connect" +
       "ions\030\001 \003(\0132&.io.netifi.proteus.admin.om." +
-      "Connection\022\020\n\010metadata\030\002 \003(\t\022\r\n\005class\030\003 ",
+      "Connection\022\020\n\010metadata\030\002 \003(\t\022\r\n\005class\030\003 " +
       "\001(\t\"\266\002\n\004Node\022\020\n\010renderer\030\001 \001(\t\022\014\n\004name\030\002" +
       " \001(\t\022\021\n\tentryNode\030\003 \001(\t\022\021\n\tmaxVolume\030\004 \001" +
       "(\001\022\r\n\005class\030\005 \001(\t\022\017\n\007updated\030\006 \001(\003\022/\n\005no" +
@@ -72,7 +72,7 @@ public final class ProteusAdmin {
       " \001(\t\022\020\n\010metadata\030\n \003(\t\0224\n\007metrics\030\013 \001(\0132" +
       "#.io.netifi.proteus.admin.om.Metrics\":\n\007" +
       "Metrics\022\016\n\006normal\030\001 \001(\001\022\016\n\006danger\030\002 \001(\001\022" +
-      "\017\n\007warning\030\003 \001(\001B,\n\032io.netifi.proteus.ad",
+      "\017\n\007warning\030\003 \001(\001B,\n\032io.netifi.proteus.ad" +
       "min.omB\014ProteusAdminP\001b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =

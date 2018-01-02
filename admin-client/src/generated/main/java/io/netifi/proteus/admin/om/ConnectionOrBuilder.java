@@ -8,35 +8,35 @@ public interface ConnectionOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>optional string source = 1;</code>
+   * <code>string source = 1;</code>
    */
   java.lang.String getSource();
   /**
-   * <code>optional string source = 1;</code>
+   * <code>string source = 1;</code>
    */
   com.google.protobuf.ByteString
       getSourceBytes();
 
   /**
-   * <code>optional string target = 2;</code>
+   * <code>string target = 2;</code>
    */
   java.lang.String getTarget();
   /**
-   * <code>optional string target = 2;</code>
+   * <code>string target = 2;</code>
    */
   com.google.protobuf.ByteString
       getTargetBytes();
 
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   boolean hasMetrics();
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   io.netifi.proteus.admin.om.Metrics getMetrics();
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder();
 

@@ -8,17 +8,17 @@ public interface MetricsOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>optional double normal = 1;</code>
+   * <code>double normal = 1;</code>
    */
   double getNormal();
 
   /**
-   * <code>optional double danger = 2;</code>
+   * <code>double danger = 2;</code>
    */
   double getDanger();
 
   /**
-   * <code>optional double warning = 3;</code>
+   * <code>double warning = 3;</code>
    */
   double getWarning();
 }

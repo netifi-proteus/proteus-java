@@ -10,6 +10,7 @@ public  final class Node extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Node)
     NodeOrBuilder {
+private static final long serialVersionUID = 0L;
   // Use Node.newBuilder() to construct.
   private Node(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -30,14 +31,19 @@ public  final class Node extends
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    return this.unknownFields;
   }
   private Node(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
+    if (extensionRegistry == null) {
+      throw new java.lang.NullPointerException();
+    }
     int mutable_bitField0_ = 0;
+    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -47,7 +53,8 @@ public  final class Node extends
             done = true;
             break;
           default: {
-            if (!input.skipField(tag)) {
+            if (!parseUnknownFieldProto3(
+                input, unknownFields, extensionRegistry, tag)) {
               done = true;
             }
             break;
@@ -149,6 +156,7 @@ public  final class Node extends
       if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
         metadata_ = metadata_.getUnmodifiableView();
       }
+      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -168,7 +176,7 @@ public  final class Node extends
   public static final int RENDERER_FIELD_NUMBER = 1;
   private volatile java.lang.Object renderer_;
   /**
-   * <code>optional string renderer = 1;</code>
+   * <code>string renderer = 1;</code>
    */
   public java.lang.String getRenderer() {
     java.lang.Object ref = renderer_;
@@ -183,7 +191,7 @@ public  final class Node extends
     }
   }
   /**
-   * <code>optional string renderer = 1;</code>
+   * <code>string renderer = 1;</code>
    */
   public com.google.protobuf.ByteString
       getRendererBytes() {
@@ -202,7 +210,7 @@ public  final class Node extends
   public static final int NAME_FIELD_NUMBER = 2;
   private volatile java.lang.Object name_;
   /**
-   * <code>optional string name = 2;</code>
+   * <code>string name = 2;</code>
    */
   public java.lang.String getName() {
     java.lang.Object ref = name_;
@@ -217,7 +225,7 @@ public  final class Node extends
     }
   }
   /**
-   * <code>optional string name = 2;</code>
+   * <code>string name = 2;</code>
    */
   public com.google.protobuf.ByteString
       getNameBytes() {
@@ -236,7 +244,7 @@ public  final class Node extends
   public static final int ENTRYNODE_FIELD_NUMBER = 3;
   private volatile java.lang.Object entryNode_;
   /**
-   * <code>optional string entryNode = 3;</code>
+   * <code>string entryNode = 3;</code>
    */
   public java.lang.String getEntryNode() {
     java.lang.Object ref = entryNode_;
@@ -251,7 +259,7 @@ public  final class Node extends
     }
   }
   /**
-   * <code>optional string entryNode = 3;</code>
+   * <code>string entryNode = 3;</code>
    */
   public com.google.protobuf.ByteString
       getEntryNodeBytes() {
@@ -270,7 +278,7 @@ public  final class Node extends
   public static final int MAXVOLUME_FIELD_NUMBER = 4;
   private double maxVolume_;
   /**
-   * <code>optional double maxVolume = 4;</code>
+   * <code>double maxVolume = 4;</code>
    */
   public double getMaxVolume() {
     return maxVolume_;
@@ -279,7 +287,7 @@ public  final class Node extends
   public static final int CLASS_FIELD_NUMBER = 5;
   private volatile java.lang.Object class__;
   /**
-   * <code>optional string class = 5;</code>
+   * <code>string class = 5;</code>
    */
   public java.lang.String getClass_() {
     java.lang.Object ref = class__;
@@ -294,7 +302,7 @@ public  final class Node extends
     }
   }
   /**
-   * <code>optional string class = 5;</code>
+   * <code>string class = 5;</code>
    */
   public com.google.protobuf.ByteString
       getClass_Bytes() {
@@ -313,7 +321,7 @@ public  final class Node extends
   public static final int UPDATED_FIELD_NUMBER = 6;
   private long updated_;
   /**
-   * <code>optional int64 updated = 6;</code>
+   * <code>int64 updated = 6;</code>
    */
   public long getUpdated() {
     return updated_;
@@ -392,7 +400,7 @@ public  final class Node extends
   public static final int DISPLAYNAME_FIELD_NUMBER = 9;
   private volatile java.lang.Object displayName_;
   /**
-   * <code>optional string displayName = 9;</code>
+   * <code>string displayName = 9;</code>
    */
   public java.lang.String getDisplayName() {
     java.lang.Object ref = displayName_;
@@ -407,7 +415,7 @@ public  final class Node extends
     }
   }
   /**
-   * <code>optional string displayName = 9;</code>
+   * <code>string displayName = 9;</code>
    */
   public com.google.protobuf.ByteString
       getDisplayNameBytes() {
@@ -455,19 +463,19 @@ public  final class Node extends
   public static final int METRICS_FIELD_NUMBER = 11;
   private io.netifi.proteus.admin.om.Metrics metrics_;
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   public boolean hasMetrics() {
     return metrics_ != null;
   }
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   public io.netifi.proteus.admin.om.Metrics getMetrics() {
     return metrics_ == null ? io.netifi.proteus.admin.om.Metrics.getDefaultInstance() : metrics_;
   }
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
    */
   public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
     return getMetrics();
@@ -518,6 +526,7 @@ public  final class Node extends
     if (metrics_ != null) {
       output.writeMessage(11, getMetrics());
     }
+    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -568,11 +577,11 @@ public  final class Node extends
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(11, getMetrics());
     }
+    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
-  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -611,6 +620,7 @@ public  final class Node extends
       result = result && getMetrics()
           .equals(other.getMetrics());
     }
+    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -620,7 +630,7 @@ public  final class Node extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + RENDERER_FIELD_NUMBER;
     hash = (53 * hash) + getRenderer().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
@@ -658,6 +668,17 @@ public  final class Node extends
     return hash;
   }
 
+  public static io.netifi.proteus.admin.om.Node parseFrom(
+      java.nio.ByteBuffer data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data);
+  }
+  public static io.netifi.proteus.admin.om.Node parseFrom(
+      java.nio.ByteBuffer data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data, extensionRegistry);
+  }
   public static io.netifi.proteus.admin.om.Node parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -876,7 +897,7 @@ public  final class Node extends
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -889,12 +910,12 @@ public  final class Node extends
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, Object value) {
+        int index, java.lang.Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -999,6 +1020,7 @@ public  final class Node extends
       if (other.hasMetrics()) {
         mergeMetrics(other.getMetrics());
       }
+      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -1028,7 +1050,7 @@ public  final class Node extends
 
     private java.lang.Object renderer_ = "";
     /**
-     * <code>optional string renderer = 1;</code>
+     * <code>string renderer = 1;</code>
      */
     public java.lang.String getRenderer() {
       java.lang.Object ref = renderer_;
@@ -1043,7 +1065,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string renderer = 1;</code>
+     * <code>string renderer = 1;</code>
      */
     public com.google.protobuf.ByteString
         getRendererBytes() {
@@ -1059,7 +1081,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string renderer = 1;</code>
+     * <code>string renderer = 1;</code>
      */
     public Builder setRenderer(
         java.lang.String value) {
@@ -1072,7 +1094,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string renderer = 1;</code>
+     * <code>string renderer = 1;</code>
      */
     public Builder clearRenderer() {
       
@@ -1081,7 +1103,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string renderer = 1;</code>
+     * <code>string renderer = 1;</code>
      */
     public Builder setRendererBytes(
         com.google.protobuf.ByteString value) {
@@ -1097,7 +1119,7 @@ public  final class Node extends
 
     private java.lang.Object name_ = "";
     /**
-     * <code>optional string name = 2;</code>
+     * <code>string name = 2;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -1112,7 +1134,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string name = 2;</code>
+     * <code>string name = 2;</code>
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
@@ -1128,7 +1150,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string name = 2;</code>
+     * <code>string name = 2;</code>
      */
     public Builder setName(
         java.lang.String value) {
@@ -1141,7 +1163,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string name = 2;</code>
+     * <code>string name = 2;</code>
      */
     public Builder clearName() {
       
@@ -1150,7 +1172,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string name = 2;</code>
+     * <code>string name = 2;</code>
      */
     public Builder setNameBytes(
         com.google.protobuf.ByteString value) {
@@ -1166,7 +1188,7 @@ public  final class Node extends
 
     private java.lang.Object entryNode_ = "";
     /**
-     * <code>optional string entryNode = 3;</code>
+     * <code>string entryNode = 3;</code>
      */
     public java.lang.String getEntryNode() {
       java.lang.Object ref = entryNode_;
@@ -1181,7 +1203,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string entryNode = 3;</code>
+     * <code>string entryNode = 3;</code>
      */
     public com.google.protobuf.ByteString
         getEntryNodeBytes() {
@@ -1197,7 +1219,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string entryNode = 3;</code>
+     * <code>string entryNode = 3;</code>
      */
     public Builder setEntryNode(
         java.lang.String value) {
@@ -1210,7 +1232,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string entryNode = 3;</code>
+     * <code>string entryNode = 3;</code>
      */
     public Builder clearEntryNode() {
       
@@ -1219,7 +1241,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string entryNode = 3;</code>
+     * <code>string entryNode = 3;</code>
      */
     public Builder setEntryNodeBytes(
         com.google.protobuf.ByteString value) {
@@ -1235,13 +1257,13 @@ public  final class Node extends
 
     private double maxVolume_ ;
     /**
-     * <code>optional double maxVolume = 4;</code>
+     * <code>double maxVolume = 4;</code>
      */
     public double getMaxVolume() {
       return maxVolume_;
     }
     /**
-     * <code>optional double maxVolume = 4;</code>
+     * <code>double maxVolume = 4;</code>
      */
     public Builder setMaxVolume(double value) {
       
@@ -1250,7 +1272,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional double maxVolume = 4;</code>
+     * <code>double maxVolume = 4;</code>
      */
     public Builder clearMaxVolume() {
       
@@ -1261,7 +1283,7 @@ public  final class Node extends
 
     private java.lang.Object class__ = "";
     /**
-     * <code>optional string class = 5;</code>
+     * <code>string class = 5;</code>
      */
     public java.lang.String getClass_() {
       java.lang.Object ref = class__;
@@ -1276,7 +1298,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string class = 5;</code>
+     * <code>string class = 5;</code>
      */
     public com.google.protobuf.ByteString
         getClass_Bytes() {
@@ -1292,7 +1314,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string class = 5;</code>
+     * <code>string class = 5;</code>
      */
     public Builder setClass_(
         java.lang.String value) {
@@ -1305,7 +1327,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string class = 5;</code>
+     * <code>string class = 5;</code>
      */
     public Builder clearClass_() {
       
@@ -1314,7 +1336,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string class = 5;</code>
+     * <code>string class = 5;</code>
      */
     public Builder setClass_Bytes(
         com.google.protobuf.ByteString value) {
@@ -1330,13 +1352,13 @@ public  final class Node extends
 
     private long updated_ ;
     /**
-     * <code>optional int64 updated = 6;</code>
+     * <code>int64 updated = 6;</code>
      */
     public long getUpdated() {
       return updated_;
     }
     /**
-     * <code>optional int64 updated = 6;</code>
+     * <code>int64 updated = 6;</code>
      */
     public Builder setUpdated(long value) {
       
@@ -1345,7 +1367,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional int64 updated = 6;</code>
+     * <code>int64 updated = 6;</code>
      */
     public Builder clearUpdated() {
       
@@ -1836,7 +1858,7 @@ public  final class Node extends
 
     private java.lang.Object displayName_ = "";
     /**
-     * <code>optional string displayName = 9;</code>
+     * <code>string displayName = 9;</code>
      */
     public java.lang.String getDisplayName() {
       java.lang.Object ref = displayName_;
@@ -1851,7 +1873,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string displayName = 9;</code>
+     * <code>string displayName = 9;</code>
      */
     public com.google.protobuf.ByteString
         getDisplayNameBytes() {
@@ -1867,7 +1889,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional string displayName = 9;</code>
+     * <code>string displayName = 9;</code>
      */
     public Builder setDisplayName(
         java.lang.String value) {
@@ -1880,7 +1902,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string displayName = 9;</code>
+     * <code>string displayName = 9;</code>
      */
     public Builder clearDisplayName() {
       
@@ -1889,7 +1911,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional string displayName = 9;</code>
+     * <code>string displayName = 9;</code>
      */
     public Builder setDisplayNameBytes(
         com.google.protobuf.ByteString value) {
@@ -2001,13 +2023,13 @@ public  final class Node extends
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> metricsBuilder_;
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public boolean hasMetrics() {
       return metricsBuilder_ != null || metrics_ != null;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public io.netifi.proteus.admin.om.Metrics getMetrics() {
       if (metricsBuilder_ == null) {
@@ -2017,7 +2039,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public Builder setMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -2033,7 +2055,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public Builder setMetrics(
         io.netifi.proteus.admin.om.Metrics.Builder builderForValue) {
@@ -2047,7 +2069,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public Builder mergeMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -2065,7 +2087,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public Builder clearMetrics() {
       if (metricsBuilder_ == null) {
@@ -2079,7 +2101,7 @@ public  final class Node extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public io.netifi.proteus.admin.om.Metrics.Builder getMetricsBuilder() {
       
@@ -2087,7 +2109,7 @@ public  final class Node extends
       return getMetricsFieldBuilder().getBuilder();
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
       if (metricsBuilder_ != null) {
@@ -2098,7 +2120,7 @@ public  final class Node extends
       }
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 11;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> 
@@ -2115,12 +2137,12 @@ public  final class Node extends
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.setUnknownFieldsProto3(unknownFields);
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.mergeUnknownFields(unknownFields);
     }
 
 
@@ -2143,7 +2165,7 @@ public  final class Node extends
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Node(input, extensionRegistry);
+      return new Node(input, extensionRegistry);
     }
   };
 

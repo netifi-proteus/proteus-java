@@ -1,7 +1,46 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.3'
+}
+
 
 dependencies {
     compile project (':core')
     compile project (':auth')
 
     compile 'com.typesafe:config:1.3.1'
+}
+
+String proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
+String proteusName = "${proteusPrefix}.exe"
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    plugins {
+        proteus {
+            path = "${projectDir}../protobuf-rpc/build/artifacts/${proteusName}"
+        }
+    }
+    generateProtoTasks {
+        ofSourceSet('main')*.plugins {
+            proteus {}
+        }
+    }
+}
+
+sourceSets {
+    test {
+        proto { srcDir 'src/test/proto' }
+    }
+}
+
+idea {
+    module {
+        testSourceDirs += file("src/test/proto")
+        testSourceDirs += file("src/generated/test/java")
+        testSourceDirs += file("src/generated/test/proteus")
+
+        generatedSourceDirs += file('src/generated/test/java')
+        generatedSourceDirs += file('src/generated/test/proteus')
+    }
 }

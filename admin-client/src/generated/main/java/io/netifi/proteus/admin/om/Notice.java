@@ -10,6 +10,7 @@ public  final class Notice extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Notice)
     NoticeOrBuilder {
+private static final long serialVersionUID = 0L;
   // Use Notice.newBuilder() to construct.
   private Notice(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -22,14 +23,19 @@ public  final class Notice extends
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    return this.unknownFields;
   }
   private Notice(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
+    if (extensionRegistry == null) {
+      throw new java.lang.NullPointerException();
+    }
     int mutable_bitField0_ = 0;
+    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -39,7 +45,8 @@ public  final class Notice extends
             done = true;
             break;
           default: {
-            if (!input.skipField(tag)) {
+            if (!parseUnknownFieldProto3(
+                input, unknownFields, extensionRegistry, tag)) {
               done = true;
             }
             break;
@@ -64,6 +71,7 @@ public  final class Notice extends
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
     } finally {
+      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -82,7 +90,7 @@ public  final class Notice extends
   public static final int TITLE_FIELD_NUMBER = 1;
   private volatile java.lang.Object title_;
   /**
-   * <code>optional string title = 1;</code>
+   * <code>string title = 1;</code>
    */
   public java.lang.String getTitle() {
     java.lang.Object ref = title_;
@@ -97,7 +105,7 @@ public  final class Notice extends
     }
   }
   /**
-   * <code>optional string title = 1;</code>
+   * <code>string title = 1;</code>
    */
   public com.google.protobuf.ByteString
       getTitleBytes() {
@@ -116,7 +124,7 @@ public  final class Notice extends
   public static final int LINK_FIELD_NUMBER = 2;
   private volatile java.lang.Object link_;
   /**
-   * <code>optional string link = 2;</code>
+   * <code>string link = 2;</code>
    */
   public java.lang.String getLink() {
     java.lang.Object ref = link_;
@@ -131,7 +139,7 @@ public  final class Notice extends
     }
   }
   /**
-   * <code>optional string link = 2;</code>
+   * <code>string link = 2;</code>
    */
   public com.google.protobuf.ByteString
       getLinkBytes() {
@@ -165,6 +173,7 @@ public  final class Notice extends
     if (!getLinkBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, link_);
     }
+    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -178,11 +187,11 @@ public  final class Notice extends
     if (!getLinkBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, link_);
     }
+    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
-  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -198,6 +207,7 @@ public  final class Notice extends
         .equals(other.getTitle());
     result = result && getLink()
         .equals(other.getLink());
+    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -207,7 +217,7 @@ public  final class Notice extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + TITLE_FIELD_NUMBER;
     hash = (53 * hash) + getTitle().hashCode();
     hash = (37 * hash) + LINK_FIELD_NUMBER;
@@ -217,6 +227,17 @@ public  final class Notice extends
     return hash;
   }
 
+  public static io.netifi.proteus.admin.om.Notice parseFrom(
+      java.nio.ByteBuffer data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data);
+  }
+  public static io.netifi.proteus.admin.om.Notice parseFrom(
+      java.nio.ByteBuffer data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data, extensionRegistry);
+  }
   public static io.netifi.proteus.admin.om.Notice parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -367,7 +388,7 @@ public  final class Notice extends
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -380,12 +401,12 @@ public  final class Notice extends
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, Object value) {
+        int index, java.lang.Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -407,6 +428,7 @@ public  final class Notice extends
         link_ = other.link_;
         onChanged();
       }
+      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -435,7 +457,7 @@ public  final class Notice extends
 
     private java.lang.Object title_ = "";
     /**
-     * <code>optional string title = 1;</code>
+     * <code>string title = 1;</code>
      */
     public java.lang.String getTitle() {
       java.lang.Object ref = title_;
@@ -450,7 +472,7 @@ public  final class Notice extends
       }
     }
     /**
-     * <code>optional string title = 1;</code>
+     * <code>string title = 1;</code>
      */
     public com.google.protobuf.ByteString
         getTitleBytes() {
@@ -466,7 +488,7 @@ public  final class Notice extends
       }
     }
     /**
-     * <code>optional string title = 1;</code>
+     * <code>string title = 1;</code>
      */
     public Builder setTitle(
         java.lang.String value) {
@@ -479,7 +501,7 @@ public  final class Notice extends
       return this;
     }
     /**
-     * <code>optional string title = 1;</code>
+     * <code>string title = 1;</code>
      */
     public Builder clearTitle() {
       
@@ -488,7 +510,7 @@ public  final class Notice extends
       return this;
     }
     /**
-     * <code>optional string title = 1;</code>
+     * <code>string title = 1;</code>
      */
     public Builder setTitleBytes(
         com.google.protobuf.ByteString value) {
@@ -504,7 +526,7 @@ public  final class Notice extends
 
     private java.lang.Object link_ = "";
     /**
-     * <code>optional string link = 2;</code>
+     * <code>string link = 2;</code>
      */
     public java.lang.String getLink() {
       java.lang.Object ref = link_;
@@ -519,7 +541,7 @@ public  final class Notice extends
       }
     }
     /**
-     * <code>optional string link = 2;</code>
+     * <code>string link = 2;</code>
      */
     public com.google.protobuf.ByteString
         getLinkBytes() {
@@ -535,7 +557,7 @@ public  final class Notice extends
       }
     }
     /**
-     * <code>optional string link = 2;</code>
+     * <code>string link = 2;</code>
      */
     public Builder setLink(
         java.lang.String value) {
@@ -548,7 +570,7 @@ public  final class Notice extends
       return this;
     }
     /**
-     * <code>optional string link = 2;</code>
+     * <code>string link = 2;</code>
      */
     public Builder clearLink() {
       
@@ -557,7 +579,7 @@ public  final class Notice extends
       return this;
     }
     /**
-     * <code>optional string link = 2;</code>
+     * <code>string link = 2;</code>
      */
     public Builder setLinkBytes(
         com.google.protobuf.ByteString value) {
@@ -572,12 +594,12 @@ public  final class Notice extends
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.setUnknownFieldsProto3(unknownFields);
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.mergeUnknownFields(unknownFields);
     }
 
 
@@ -600,7 +622,7 @@ public  final class Notice extends
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Notice(input, extensionRegistry);
+      return new Notice(input, extensionRegistry);
     }
   };
 

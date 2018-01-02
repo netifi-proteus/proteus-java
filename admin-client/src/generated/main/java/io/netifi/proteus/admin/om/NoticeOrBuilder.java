@@ -8,21 +8,21 @@ public interface NoticeOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>optional string title = 1;</code>
+   * <code>string title = 1;</code>
    */
   java.lang.String getTitle();
   /**
-   * <code>optional string title = 1;</code>
+   * <code>string title = 1;</code>
    */
   com.google.protobuf.ByteString
       getTitleBytes();
 
   /**
-   * <code>optional string link = 2;</code>
+   * <code>string link = 2;</code>
    */
   java.lang.String getLink();
   /**
-   * <code>optional string link = 2;</code>
+   * <code>string link = 2;</code>
    */
   com.google.protobuf.ByteString
       getLinkBytes();

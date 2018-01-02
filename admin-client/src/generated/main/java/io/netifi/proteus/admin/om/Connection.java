@@ -10,6 +10,7 @@ public  final class Connection extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Connection)
     ConnectionOrBuilder {
+private static final long serialVersionUID = 0L;
   // Use Connection.newBuilder() to construct.
   private Connection(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -23,14 +24,19 @@ public  final class Connection extends
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    return this.unknownFields;
   }
   private Connection(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
+    if (extensionRegistry == null) {
+      throw new java.lang.NullPointerException();
+    }
     int mutable_bitField0_ = 0;
+    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -40,7 +46,8 @@ public  final class Connection extends
             done = true;
             break;
           default: {
-            if (!input.skipField(tag)) {
+            if (!parseUnknownFieldProto3(
+                input, unknownFields, extensionRegistry, tag)) {
               done = true;
             }
             break;
@@ -90,6 +97,7 @@ public  final class Connection extends
       if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
         notices_ = java.util.Collections.unmodifiableList(notices_);
       }
+      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -109,7 +117,7 @@ public  final class Connection extends
   public static final int SOURCE_FIELD_NUMBER = 1;
   private volatile java.lang.Object source_;
   /**
-   * <code>optional string source = 1;</code>
+   * <code>string source = 1;</code>
    */
   public java.lang.String getSource() {
     java.lang.Object ref = source_;
@@ -124,7 +132,7 @@ public  final class Connection extends
     }
   }
   /**
-   * <code>optional string source = 1;</code>
+   * <code>string source = 1;</code>
    */
   public com.google.protobuf.ByteString
       getSourceBytes() {
@@ -143,7 +151,7 @@ public  final class Connection extends
   public static final int TARGET_FIELD_NUMBER = 2;
   private volatile java.lang.Object target_;
   /**
-   * <code>optional string target = 2;</code>
+   * <code>string target = 2;</code>
    */
   public java.lang.String getTarget() {
     java.lang.Object ref = target_;
@@ -158,7 +166,7 @@ public  final class Connection extends
     }
   }
   /**
-   * <code>optional string target = 2;</code>
+   * <code>string target = 2;</code>
    */
   public com.google.protobuf.ByteString
       getTargetBytes() {
@@ -177,19 +185,19 @@ public  final class Connection extends
   public static final int METRICS_FIELD_NUMBER = 3;
   private io.netifi.proteus.admin.om.Metrics metrics_;
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public boolean hasMetrics() {
     return metrics_ != null;
   }
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public io.netifi.proteus.admin.om.Metrics getMetrics() {
     return metrics_ == null ? io.netifi.proteus.admin.om.Metrics.getDefaultInstance() : metrics_;
   }
   /**
-   * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+   * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
    */
   public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
     return getMetrics();
@@ -254,6 +262,7 @@ public  final class Connection extends
     for (int i = 0; i < notices_.size(); i++) {
       output.writeMessage(4, notices_.get(i));
     }
+    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -275,11 +284,11 @@ public  final class Connection extends
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(4, notices_.get(i));
     }
+    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
-  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -302,6 +311,7 @@ public  final class Connection extends
     }
     result = result && getNoticesList()
         .equals(other.getNoticesList());
+    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -311,7 +321,7 @@ public  final class Connection extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + SOURCE_FIELD_NUMBER;
     hash = (53 * hash) + getSource().hashCode();
     hash = (37 * hash) + TARGET_FIELD_NUMBER;
@@ -329,6 +339,17 @@ public  final class Connection extends
     return hash;
   }
 
+  public static io.netifi.proteus.admin.om.Connection parseFrom(
+      java.nio.ByteBuffer data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data);
+  }
+  public static io.netifi.proteus.admin.om.Connection parseFrom(
+      java.nio.ByteBuffer data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data, extensionRegistry);
+  }
   public static io.netifi.proteus.admin.om.Connection parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -509,7 +530,7 @@ public  final class Connection extends
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -522,12 +543,12 @@ public  final class Connection extends
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, Object value) {
+        int index, java.lang.Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -578,6 +599,7 @@ public  final class Connection extends
           }
         }
       }
+      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -607,7 +629,7 @@ public  final class Connection extends
 
     private java.lang.Object source_ = "";
     /**
-     * <code>optional string source = 1;</code>
+     * <code>string source = 1;</code>
      */
     public java.lang.String getSource() {
       java.lang.Object ref = source_;
@@ -622,7 +644,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional string source = 1;</code>
+     * <code>string source = 1;</code>
      */
     public com.google.protobuf.ByteString
         getSourceBytes() {
@@ -638,7 +660,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional string source = 1;</code>
+     * <code>string source = 1;</code>
      */
     public Builder setSource(
         java.lang.String value) {
@@ -651,7 +673,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional string source = 1;</code>
+     * <code>string source = 1;</code>
      */
     public Builder clearSource() {
       
@@ -660,7 +682,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional string source = 1;</code>
+     * <code>string source = 1;</code>
      */
     public Builder setSourceBytes(
         com.google.protobuf.ByteString value) {
@@ -676,7 +698,7 @@ public  final class Connection extends
 
     private java.lang.Object target_ = "";
     /**
-     * <code>optional string target = 2;</code>
+     * <code>string target = 2;</code>
      */
     public java.lang.String getTarget() {
       java.lang.Object ref = target_;
@@ -691,7 +713,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional string target = 2;</code>
+     * <code>string target = 2;</code>
      */
     public com.google.protobuf.ByteString
         getTargetBytes() {
@@ -707,7 +729,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional string target = 2;</code>
+     * <code>string target = 2;</code>
      */
     public Builder setTarget(
         java.lang.String value) {
@@ -720,7 +742,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional string target = 2;</code>
+     * <code>string target = 2;</code>
      */
     public Builder clearTarget() {
       
@@ -729,7 +751,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional string target = 2;</code>
+     * <code>string target = 2;</code>
      */
     public Builder setTargetBytes(
         com.google.protobuf.ByteString value) {
@@ -747,13 +769,13 @@ public  final class Connection extends
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> metricsBuilder_;
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public boolean hasMetrics() {
       return metricsBuilder_ != null || metrics_ != null;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.Metrics getMetrics() {
       if (metricsBuilder_ == null) {
@@ -763,7 +785,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder setMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -779,7 +801,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder setMetrics(
         io.netifi.proteus.admin.om.Metrics.Builder builderForValue) {
@@ -793,7 +815,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder mergeMetrics(io.netifi.proteus.admin.om.Metrics value) {
       if (metricsBuilder_ == null) {
@@ -811,7 +833,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public Builder clearMetrics() {
       if (metricsBuilder_ == null) {
@@ -825,7 +847,7 @@ public  final class Connection extends
       return this;
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.Metrics.Builder getMetricsBuilder() {
       
@@ -833,7 +855,7 @@ public  final class Connection extends
       return getMetricsFieldBuilder().getBuilder();
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     public io.netifi.proteus.admin.om.MetricsOrBuilder getMetricsOrBuilder() {
       if (metricsBuilder_ != null) {
@@ -844,7 +866,7 @@ public  final class Connection extends
       }
     }
     /**
-     * <code>optional .io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
+     * <code>.io.netifi.proteus.admin.om.Metrics metrics = 3;</code>
      */
     private com.google.protobuf.SingleFieldBuilderV3<
         io.netifi.proteus.admin.om.Metrics, io.netifi.proteus.admin.om.Metrics.Builder, io.netifi.proteus.admin.om.MetricsOrBuilder> 
@@ -1101,12 +1123,12 @@ public  final class Connection extends
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.setUnknownFieldsProto3(unknownFields);
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.mergeUnknownFields(unknownFields);
     }
 
 
@@ -1129,7 +1151,7 @@ public  final class Connection extends
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Connection(input, extensionRegistry);
+      return new Connection(input, extensionRegistry);
     }
   };
 

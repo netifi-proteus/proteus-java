@@ -10,6 +10,7 @@ public  final class Connections extends
     com.google.protobuf.GeneratedMessageV3 implements
     // @@protoc_insertion_point(message_implements:io.netifi.proteus.admin.om.Connections)
     ConnectionsOrBuilder {
+private static final long serialVersionUID = 0L;
   // Use Connections.newBuilder() to construct.
   private Connections(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
@@ -23,14 +24,19 @@ public  final class Connections extends
   @java.lang.Override
   public final com.google.protobuf.UnknownFieldSet
   getUnknownFields() {
-    return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    return this.unknownFields;
   }
   private Connections(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     this();
+    if (extensionRegistry == null) {
+      throw new java.lang.NullPointerException();
+    }
     int mutable_bitField0_ = 0;
+    com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+        com.google.protobuf.UnknownFieldSet.newBuilder();
     try {
       boolean done = false;
       while (!done) {
@@ -40,7 +46,8 @@ public  final class Connections extends
             done = true;
             break;
           default: {
-            if (!input.skipField(tag)) {
+            if (!parseUnknownFieldProto3(
+                input, unknownFields, extensionRegistry, tag)) {
               done = true;
             }
             break;
@@ -83,6 +90,7 @@ public  final class Connections extends
       if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
         metadata_ = metadata_.getUnmodifiableView();
       }
+      this.unknownFields = unknownFields.build();
       makeExtensionsImmutable();
     }
   }
@@ -166,7 +174,7 @@ public  final class Connections extends
   public static final int CLASS_FIELD_NUMBER = 3;
   private volatile java.lang.Object class__;
   /**
-   * <code>optional string class = 3;</code>
+   * <code>string class = 3;</code>
    */
   public java.lang.String getClass_() {
     java.lang.Object ref = class__;
@@ -181,7 +189,7 @@ public  final class Connections extends
     }
   }
   /**
-   * <code>optional string class = 3;</code>
+   * <code>string class = 3;</code>
    */
   public com.google.protobuf.ByteString
       getClass_Bytes() {
@@ -218,6 +226,7 @@ public  final class Connections extends
     if (!getClass_Bytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 3, class__);
     }
+    unknownFields.writeTo(output);
   }
 
   public int getSerializedSize() {
@@ -240,11 +249,11 @@ public  final class Connections extends
     if (!getClass_Bytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, class__);
     }
+    size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
   }
 
-  private static final long serialVersionUID = 0L;
   @java.lang.Override
   public boolean equals(final java.lang.Object obj) {
     if (obj == this) {
@@ -262,6 +271,7 @@ public  final class Connections extends
         .equals(other.getMetadataList());
     result = result && getClass_()
         .equals(other.getClass_());
+    result = result && unknownFields.equals(other.unknownFields);
     return result;
   }
 
@@ -271,7 +281,7 @@ public  final class Connections extends
       return memoizedHashCode;
     }
     int hash = 41;
-    hash = (19 * hash) + getDescriptorForType().hashCode();
+    hash = (19 * hash) + getDescriptor().hashCode();
     if (getConnectionsCount() > 0) {
       hash = (37 * hash) + CONNECTIONS_FIELD_NUMBER;
       hash = (53 * hash) + getConnectionsList().hashCode();
@@ -287,6 +297,17 @@ public  final class Connections extends
     return hash;
   }
 
+  public static io.netifi.proteus.admin.om.Connections parseFrom(
+      java.nio.ByteBuffer data)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data);
+  }
+  public static io.netifi.proteus.admin.om.Connections parseFrom(
+      java.nio.ByteBuffer data,
+      com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+      throws com.google.protobuf.InvalidProtocolBufferException {
+    return PARSER.parseFrom(data, extensionRegistry);
+  }
   public static io.netifi.proteus.admin.om.Connections parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -460,7 +481,7 @@ public  final class Connections extends
     }
     public Builder setField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.setField(field, value);
     }
     public Builder clearField(
@@ -473,12 +494,12 @@ public  final class Connections extends
     }
     public Builder setRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        int index, Object value) {
+        int index, java.lang.Object value) {
       return (Builder) super.setRepeatedField(field, index, value);
     }
     public Builder addRepeatedField(
         com.google.protobuf.Descriptors.FieldDescriptor field,
-        Object value) {
+        java.lang.Object value) {
       return (Builder) super.addRepeatedField(field, value);
     }
     public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -532,6 +553,7 @@ public  final class Connections extends
         class__ = other.class__;
         onChanged();
       }
+      this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
     }
@@ -895,7 +917,7 @@ public  final class Connections extends
 
     private java.lang.Object class__ = "";
     /**
-     * <code>optional string class = 3;</code>
+     * <code>string class = 3;</code>
      */
     public java.lang.String getClass_() {
       java.lang.Object ref = class__;
@@ -910,7 +932,7 @@ public  final class Connections extends
       }
     }
     /**
-     * <code>optional string class = 3;</code>
+     * <code>string class = 3;</code>
      */
     public com.google.protobuf.ByteString
         getClass_Bytes() {
@@ -926,7 +948,7 @@ public  final class Connections extends
       }
     }
     /**
-     * <code>optional string class = 3;</code>
+     * <code>string class = 3;</code>
      */
     public Builder setClass_(
         java.lang.String value) {
@@ -939,7 +961,7 @@ public  final class Connections extends
       return this;
     }
     /**
-     * <code>optional string class = 3;</code>
+     * <code>string class = 3;</code>
      */
     public Builder clearClass_() {
       
@@ -948,7 +970,7 @@ public  final class Connections extends
       return this;
     }
     /**
-     * <code>optional string class = 3;</code>
+     * <code>string class = 3;</code>
      */
     public Builder setClass_Bytes(
         com.google.protobuf.ByteString value) {
@@ -963,12 +985,12 @@ public  final class Connections extends
     }
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.setUnknownFieldsProto3(unknownFields);
     }
 
     public final Builder mergeUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
-      return this;
+      return super.mergeUnknownFields(unknownFields);
     }
 
 
@@ -991,7 +1013,7 @@ public  final class Connections extends
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Connections(input, extensionRegistry);
+      return new Connections(input, extensionRegistry);
     }
   };
 
