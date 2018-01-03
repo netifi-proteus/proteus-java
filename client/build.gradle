@@ -2,28 +2,35 @@ plugins {
     id 'com.google.protobuf' version '0.8.3'
 }
 
-
 dependencies {
     compile project (':core')
     compile project (':auth')
 
-    compile 'com.typesafe:config:1.3.1'
+    compile 'com.typesafe:config:1.3.2'
 }
 
-String proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
-String proteusName = "${proteusPrefix}.exe"
+String protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
+String javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginBaseName"
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     plugins {
         proteus {
-            path = "${projectDir}../protobuf-rpc/build/artifacts/${proteusName}"
+            path = javaPluginPath
         }
     }
     generateProtoTasks {
-        ofSourceSet('main')*.plugins {
-            proteus {}
+        all().each { task ->
+            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
+            // Recompile protos when the codegen has been changed
+            task.inputs.file javaPluginPath
+            // Recompile protos when build.gradle has been changed, because
+            // it's possible the version of protoc has been changed.
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                proteus {}
+            }
         }
     }
 }

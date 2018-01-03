@@ -13,7 +13,8 @@
 ## Plugin-specific files:
 
 # IntelliJ
-/out/
+out/
+generated/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

@@ -88,7 +88,7 @@ Protobuf {
     }
     plugins {
         proteus {
-            artifact = 'io.netifi.proteus:proteus-java:0.2.x'
+            artifact = 'io.netifi.proteus:proteus-java:0.4.x'
         }
     }
     generateProtoTasks {

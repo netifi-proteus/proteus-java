@@ -1,4 +1,3 @@
-
 dependencies {
-    compile 'io.netty:netty-buffer:4.1.16.Final'
+    compile 'io.netty:netty-buffer:4.1.17.Final'
 }

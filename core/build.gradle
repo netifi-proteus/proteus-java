@@ -1,7 +1,6 @@
-
 dependencies {
     compile project (':frames')
-    compile 'io.rsocket:rsocket-core:0.10.0'
-    compile 'io.rsocket:rsocket-transport-netty:0.10.0'
+    compile 'io.rsocket:rsocket-core:0.10.1'
+    compile 'io.rsocket:rsocket-transport-netty:0.10.1'
     compile 'io.micrometer:micrometer-core:1.0.0-rc.5'
 }

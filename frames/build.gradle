@@ -2,5 +2,5 @@ sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 dependencies {
-    compile 'io.netty:netty-buffer:4.1.16.Final'
+    compile 'io.netty:netty-buffer:4.1.17.Final'
 }
