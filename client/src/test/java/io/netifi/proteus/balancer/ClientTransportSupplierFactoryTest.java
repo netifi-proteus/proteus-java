@@ -52,7 +52,7 @@ public class ClientTransportSupplierFactoryTest {
     factory.get().block(Duration.ofMillis(100));
   }
 
-  @Test(timeout = 3000)
+  @Test(timeout = 5000)
   public void testShouldEmitAfterFluxEmits() throws Exception {
     UnicastProcessor<DiscoveryEvent> events = UnicastProcessor.create();
     CountDownLatch latch = new CountDownLatch(1);
@@ -66,7 +66,7 @@ public class ClientTransportSupplierFactoryTest {
     latch.await();
   }
 
-  @Test(timeout = 3000, expected = IllegalStateException.class)
+  @Test(timeout = 5000, expected = IllegalStateException.class)
   public void testShouldEmitThenTimeout() throws Exception {
     UnicastProcessor<DiscoveryEvent> events = UnicastProcessor.create();
     CountDownLatch latch = new CountDownLatch(1);
@@ -113,7 +113,7 @@ public class ClientTransportSupplierFactoryTest {
     Assert.assertTrue((System.currentTimeMillis() - start) < 3_000);
   }
 
-  @Test(timeout = 3000)
+  @Test(timeout = 5000)
   public void testShouldEmitThreeUniqueFactories() throws Exception {
     Flux<DiscoveryEvent> events =
         Flux.just(
