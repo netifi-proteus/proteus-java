@@ -24,23 +24,6 @@ task versionArchives {
 }
 build.dependsOn versionArchives
 
-jar {
-    baseName = "${artifactName}"
-    version = "${project.version}"
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-
-            artifactId "${artifactName}"
-            artifact sourcesJar
-            artifact javadocJar
-        }
-    }
-}
-
 bintray {
     user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
     key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')

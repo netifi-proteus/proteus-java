@@ -1,13 +1,10 @@
 plugins {
     id 'com.google.protobuf' version '0.8.3'
     id 'cpp'
-    id 'maven'
-    id 'maven-publish'
-    id 'com.jfrog.bintray'
 }
 
-String proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
-String proteusName = "${proteusPrefix}.exe"
+def proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
+def proteusName = "${proteusPrefix}.exe"
 def artifactStagingPath = "$buildDir/artifacts" as File
 def pathToPlugin = "${artifactStagingPath.getPath()}/${proteusName}"
 
@@ -26,7 +23,7 @@ protobuf {
     }
     plugins {
         proteus {
-            path = "$pathToPlugin"
+            path = pathToPlugin
         }
     }
     generateProtoTasks {
@@ -35,9 +32,7 @@ protobuf {
             task.inputs.file "$pathToPlugin"
             task.inputs.file "${rootProject.projectDir}/build.gradle"
             task.plugins {
-                proteus {
-                    option 'noversion'
-                }
+                proteus {}
             }
         }
     }
@@ -180,35 +175,10 @@ publishing {
     publications {
         maven(MavenPublication) {
             artifactId "${project.ext.artifactName}"
-            artifact("$pathToPlugin") {
+            artifact(pathToPlugin) {
                 classifier osdetector.os + "-" + osdetector.arch
                 builtBy buildArtifacts
             }
-        }
-    }
-}
-
-bintray {
-    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-    key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
-    publications = ['maven']
-
-    override = true
-
-    pkg {
-        repo = 'netifi-oss'
-        name = "${project.ext.artifactName}"
-        userOrg = 'netifi'
-        desc = "${project.description}"
-        websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
-        issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
-        vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
-        licenses = ['Apache-2.0']
-        githubRepo = 'netifi-proteus/proteus-java'
-        githubReleaseNotesFile = 'CHANGELOG.md'
-
-        version {
-            name = "$version"
         }
     }
 }

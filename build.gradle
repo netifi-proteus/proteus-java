@@ -23,16 +23,16 @@ project(':admin-client') {
     description = 'Netifi Proteus Admin Client'
     ext.artifactName = 'admin-client'
 
-    apply from: file('../gradle/java.gradle')
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
 
 project(':auth') {
     description = 'Netifi Proteus Authentication Utilities'
     ext.artifactName = 'auth'
 
-    apply from: file('../gradle/java.gradle')
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
 
 project(':client') {
@@ -40,16 +40,16 @@ project(':client') {
     description = 'Netifi Proteus Client'
     ext.artifactName = 'client'
 
-    apply from: file('../gradle/java.gradle')
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
 
 project(':core') {
     description = 'Netifi Core Library'
     ext.artifactName = 'core'
 
-    apply from: file('../gradle/java.gradle')
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
 
 project(':frames') {
@@ -57,13 +57,15 @@ project(':frames') {
     description = 'Netifi Proteus Frames'
     ext.artifactName = 'frames'
 
-    apply from: file('../gradle/java.gradle')
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
 
 project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
     ext.artifactName = 'protobuf-rpc'
+
+    apply from: file('../gradle/release.gradle')
 }
 
 subprojects {

@@ -26,6 +26,23 @@ artifacts {
     archives sourcesJar, javadocJar
 }
 
+jar {
+    baseName = "${artifactName}"
+    version = "${project.version}"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+
+            artifactId "${artifactName}"
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
+
 dependencies {
     testCompile "junit:junit:4.12"
 
