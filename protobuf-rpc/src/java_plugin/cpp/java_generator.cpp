@@ -589,7 +589,7 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Indent();
       p->Print(
           *vars,
-          "final int length = $ProteusMetadata$.computeLength();\n"
+          "final int length = $ProteusMetadata$.computeLength(metadata);\n"
           "final $ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
           "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
           "return $ByteBufPayload$.create(data, metadataBuf);\n");
@@ -635,7 +635,7 @@ static void PrintClient(const ServiceDescriptor* service,
         p->Indent();
         p->Print(
             *vars,
-            "final int length = $ProteusMetadata$.computeLength();\n"
+            "final int length = $ProteusMetadata$.computeLength(metadata);\n"
             "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
             "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
             "$ByteBuf$ data = serialize(message);\n"
@@ -660,7 +660,7 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final int length = $ProteusMetadata$.computeLength();\n"
+              "final int length = $ProteusMetadata$.computeLength(metadata);\n"
               "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
               "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"
@@ -683,7 +683,7 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final int length = $ProteusMetadata$.computeLength();\n"
+              "final int length = $ProteusMetadata$.computeLength(metadata);\n"
               "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
               "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"

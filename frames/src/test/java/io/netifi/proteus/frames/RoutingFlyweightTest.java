@@ -1,3 +1,3 @@
-package io.netifi.sdk.frames;
+package io.netifi.proteus.frames;
 
 public class RoutingFlyweightTest {}

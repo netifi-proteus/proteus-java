@@ -9,12 +9,13 @@ public class ProteusMetadata {
   private static final int METHOD_ID_SIZE = 4;
   private static final int METADATA_LENGTH_SIZE = 4;
 
-  public static int computeLength() {
+  public static int computeLength(ByteBuf metadata) {
     return VERSION_SIZE
         + NAMESPACE_ID_SIZE
         + SERVICE_ID_SIZE
         + METHOD_ID_SIZE
-        + METADATA_LENGTH_SIZE;
+        + METADATA_LENGTH_SIZE
+        + metadata.readableBytes();
   }
 
   public static int encode(
