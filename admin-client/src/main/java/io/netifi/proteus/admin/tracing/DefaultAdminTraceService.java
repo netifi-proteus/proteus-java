@@ -1,10 +1,6 @@
 package io.netifi.proteus.admin.tracing;
 
 import io.netifi.proteus.admin.connection.ConnectionManager;
-import io.netifi.proteus.frames.admin.AdminFrameHeaderFlyweight;
-import io.netifi.proteus.frames.admin.AdminFrameType;
-import io.netifi.proteus.frames.admin.AdminTraceMetadataFlyweight;
-import io.netifi.proteus.frames.admin.AdminTraceType;
 import io.netifi.proteus.admin.om.Notice;
 import io.netifi.proteus.admin.tracing.internal.Connection;
 import io.netifi.proteus.admin.tracing.internal.Metrics;
@@ -12,6 +8,10 @@ import io.netifi.proteus.admin.tracing.internal.Node;
 import io.netifi.proteus.frames.RouteDestinationFlyweight;
 import io.netifi.proteus.frames.RouteType;
 import io.netifi.proteus.frames.RoutingFlyweight;
+import io.netifi.proteus.frames.admin.AdminFrameHeaderFlyweight;
+import io.netifi.proteus.frames.admin.AdminFrameType;
+import io.netifi.proteus.frames.admin.AdminTraceMetadataFlyweight;
+import io.netifi.proteus.frames.admin.AdminTraceType;
 import io.netifi.proteus.util.TimebasedIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -19,17 +19,18 @@ import io.netty.buffer.Unpooled;
 import io.rsocket.Closeable;
 import io.rsocket.Payload;
 import io.rsocket.util.ByteBufPayload;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class DefaultAdminTraceService implements AdminTraceService, Closeable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultAdminTraceService.class);
@@ -185,6 +186,7 @@ public class DefaultAdminTraceService implements AdminTraceService, Closeable {
     node.setConnections(new ArrayList<>());
     node.setName("edge");
     node.setRenderer("region");
+    node.setMaxVolume(5000D);
     return node;
   }
 
@@ -214,7 +216,7 @@ public class DefaultAdminTraceService implements AdminTraceService, Closeable {
         .setClass_(node.getClazz() == null ? "" : node.getClazz())
         .setUpdated(node.getUpdated() == null ? 0 : node.getUpdated())
         .addAllNodes(nodes)
-        .addAllConnection(connections)
+        .addAllConnections(connections)
         .setDisplayName(node.getDisplayName() == null ? "" : node.getDisplayName())
         .addAllMetadata(node.getMetadata() == null ? Collections.EMPTY_LIST : node.getMetadata())
         .setMetrics(metrics)

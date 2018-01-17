@@ -31,17 +31,17 @@ message Connections {
 }
 
 message Node {
-    string renderer                = 1;
-    string name                    = 2;
-    string entryNode               = 3;
-    double maxVolume               = 4;
-    string class                   = 5;
-    int64 updated                  = 6;
-    repeated Node nodes            = 7;
-    repeated Connection connection = 8;
-    string displayName             = 9;
-    repeated string metadata       = 10;
-    Metrics metrics                = 11;
+    string renderer                 = 1;
+    string name                     = 2;
+    string entryNode                = 3;
+    double maxVolume                = 4;
+    string class                    = 5;
+    int64 updated                   = 6;
+    repeated Node nodes             = 7;
+    repeated Connection connections = 8;
+    string displayName              = 9;
+    repeated string metadata        = 10;
+    Metrics metrics                 = 11;
 }
 
 message Metrics {
