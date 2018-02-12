@@ -10,7 +10,7 @@ public class ProteusMetrics {
 
   public static <T> Function<? super Publisher<T>, ? extends Publisher<T>> timed(
       MeterRegistry registry, String name, String... keyValues) {
-    return timed(registry, name, Tags.zip(keyValues));
+    return timed(registry, name, Tags.of(keyValues));
   }
 
   public static <T> Function<? super Publisher<T>, ? extends Publisher<T>> timed(
