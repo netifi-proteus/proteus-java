@@ -53,13 +53,6 @@ public class DefaultAdminTraceService implements AdminTraceService, Closeable {
                   Payload request = createPayload();
                   return rsocket
                       .requestStream(request)
-                      .doOnRequest(
-                          value ->
-                              System.out.println(rsocket.getRouterId() + " - requesting " + value))
-                      .doOnNext(
-                          payload -> {
-                            System.out.println("on next from " + rsocket.getRouterId());
-                          })
                       .subscribeOn(Schedulers.elastic());
                 })
             .doOnError(t -> logger.error(t.getMessage(), t))
