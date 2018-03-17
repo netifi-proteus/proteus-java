@@ -56,6 +56,13 @@ public class DefaultAdminTraceService implements AdminTraceService, Closeable {
                       .subscribeOn(Schedulers.elastic());
                 })
             .doOnError(t -> logger.error(t.getMessage(), t))
+            .filter(p -> {
+              ByteBuf metadata = p.sliceMetadata();
+              
+              String fromGroup = AdminTraceMetadataFlyweight.group(metadata);
+              
+              return !"routerToRouter".equals(fromGroup);
+            })
             .scan(createRootNode(), this::handleResponse)
             .filter(node -> !node.getNodes().isEmpty())
             .map(
