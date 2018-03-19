@@ -8,9 +8,9 @@ public class Metrics {
   private SmoothlyDecayingRollingCounter warningCounter;
   
   public Metrics() {
-    normalCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
-    dangerCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
-    warningCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
+    normalCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(15), 5);
+    dangerCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(15), 5);
+    warningCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(15), 5);
   }
 
   public Double getNormal() {
