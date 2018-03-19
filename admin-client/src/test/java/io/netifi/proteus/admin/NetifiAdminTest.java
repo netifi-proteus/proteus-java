@@ -11,11 +11,12 @@ public class NetifiAdminTest {
   public void testAdminTraceService() {
     NetifiAdmin admin =
         NetifiAdmin.builder()
-            .socketAddress(InetSocketAddress.createUnresolved("127.0.0.1", 6001))
+            .socketAddress(InetSocketAddress.createUnresolved("172.16.1.9", 6001))
             .build();
 
     AdminTraceService traceService = admin.adminTraceService();
 
-    traceService.streamDataJson().take(10).doOnNext(System.out::println).blockLast();
+    traceService.streamDataJson().doOnNext(System.out::println).blockLast();
+   // traceService.streamDataJson().take(10).doOnNext(System.out::println).blockLast();
   }
 }

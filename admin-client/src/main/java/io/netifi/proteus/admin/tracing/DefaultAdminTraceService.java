@@ -73,6 +73,11 @@ public class DefaultAdminTraceService implements AdminTraceService, Closeable {
                   return node;
                 })
             .sample(Duration.ofSeconds(1))
+            .cache(1)
+            .flatMap(node -> {
+              return Flux.interval(Duration.ofSeconds(1)).map(l -> node);
+            })
+            .onBackpressureLatest()
             .map(this::translateNode)
             .publish()
             .refCount();

@@ -1,53 +1,39 @@
 package io.netifi.proteus.admin.tracing.internal;
 
+import java.time.Duration;
+
 public class Metrics {
-  private DecayingCounter normalCounter;
-  private DecayingCounter dangerCounter;
-  private DecayingCounter warningCounter;
-  private Ewma normalAvg;
-  private Ewma dangerAvg;
-  private Ewma warningAvg;
-
+  private SmoothlyDecayingRollingCounter normalCounter;
+  private SmoothlyDecayingRollingCounter dangerCounter;
+  private SmoothlyDecayingRollingCounter warningCounter;
+  
   public Metrics() {
-    normalAvg = new Ewma();
-    dangerAvg = new Ewma();
-    warningAvg = new Ewma();
-
-    normalCounter = new DecayingCounter(1.0, 0);
-    dangerCounter = new DecayingCounter(1.0, 0);
-    warningCounter = new DecayingCounter(1.0, 0);
+    normalCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
+    dangerCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
+    warningCounter = new SmoothlyDecayingRollingCounter(Duration.ofSeconds(30), 5);
   }
 
   public Double getNormal() {
-    return normalAvg.value();
+    return (double) normalCounter.getSum();
   }
 
   public void setNormal(Double normal) {
-    if (normal != null) {
-      normalCounter.increment(normal);
-      normalAvg.insert(normalCounter.get());
-    }
+    normalCounter.add(normal.longValue());
   }
 
   public Double getDanger() {
-    return dangerAvg.value();
+    return (double) dangerCounter.getSum();
   }
 
   public void setDanger(Double danger) {
-    if (danger != null) {
-      dangerCounter.increment(danger);
-      dangerAvg.insert(dangerCounter.get());
-    }
+    dangerCounter.add(danger.longValue());
   }
 
   public Double getWarning() {
-    return warningAvg.value();
+    return (double) warningCounter.getSum();
   }
 
   public void setWarning(Double warning) {
-    if (warning != null) {
-      warningCounter.increment(warning);
-      warningAvg.insert(warningCounter.get());
-    }
+    warningCounter.add(warning.longValue());
   }
 }
