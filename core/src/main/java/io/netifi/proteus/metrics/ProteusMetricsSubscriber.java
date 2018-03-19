@@ -12,7 +12,7 @@ import reactor.util.context.Context;
 public class ProteusMetricsSubscriber<T> extends AtomicBoolean
     implements Subscription, CoreSubscriber<T> {
   private final CoreSubscriber<? super T> actual;
-  private final Counter success, error, cancelled;
+  private final Counter next, complete, error, cancelled;
   private final Timer timer;
 
   private Subscription s;
@@ -20,12 +20,14 @@ public class ProteusMetricsSubscriber<T> extends AtomicBoolean
 
   ProteusMetricsSubscriber(
       CoreSubscriber<? super T> actual,
-      Counter success,
+      Counter next,
+      Counter complete,
       Counter error,
       Counter cancelled,
       Timer timer) {
     this.actual = actual;
-    this.success = success;
+    this.next = next;
+    this.complete = complete;
     this.error = error;
     this.cancelled = cancelled;
     this.timer = timer;
@@ -43,6 +45,9 @@ public class ProteusMetricsSubscriber<T> extends AtomicBoolean
 
   @Override
   public void onNext(T t) {
+    if (compareAndSet(false, true)) {
+      next.increment();
+    }
     actual.onNext(t);
   }
 
@@ -58,7 +63,7 @@ public class ProteusMetricsSubscriber<T> extends AtomicBoolean
   @Override
   public void onComplete() {
     if (compareAndSet(false, true)) {
-      success.increment();
+      complete.increment();
       timer.record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
     }
     actual.onComplete();

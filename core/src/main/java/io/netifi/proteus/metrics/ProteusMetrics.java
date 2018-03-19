@@ -15,8 +15,10 @@ public class ProteusMetrics {
 
   public static <T> Function<? super Publisher<T>, ? extends Publisher<T>> timed(
       MeterRegistry registry, String name, Iterable<Tag> tags) {
-    Counter success =
-        Counter.builder(name + ".request").tags("status", "success").tags(tags).register(registry);
+    Counter next =
+        Counter.builder(name + ".request").tags("status", "next").tags(tags).register(registry);
+    Counter complete =
+        Counter.builder(name + ".request").tags("status", "complete").tags(tags).register(registry);
     Counter error =
         Counter.builder(name + ".request").tags("status", "error").tags(tags).register(registry);
     Counter cancelled =
@@ -29,6 +31,6 @@ public class ProteusMetrics {
 
     return Operators.lift(
         (scannable, subscriber) ->
-            new ProteusMetricsSubscriber<>(subscriber, success, error, cancelled, timer));
+            new ProteusMetricsSubscriber<>(subscriber, next, complete, error, cancelled, timer));
   }
 }
