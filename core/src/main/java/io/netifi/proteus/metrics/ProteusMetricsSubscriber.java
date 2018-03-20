@@ -45,9 +45,7 @@ public class ProteusMetricsSubscriber<T> extends AtomicBoolean
 
   @Override
   public void onNext(T t) {
-    if (compareAndSet(false, true)) {
-      next.increment();
-    }
+    next.increment();
     actual.onNext(t);
   }
 
