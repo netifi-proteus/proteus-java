@@ -61,6 +61,15 @@ project(':frames') {
     apply from: file('../gradle/java.gradle')
 }
 
+project(':metrics') {
+
+    description = 'Netifi Proteus Metrics'
+    ext.artifactName = 'metrics'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
 project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
     ext.artifactName = 'protobuf-rpc'
