@@ -1,11 +1,15 @@
 package io.netifi.proteus;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.balancer.LoadBalancedRSocketSupplier;
 import io.netifi.proteus.balancer.transport.ClientTransportSupplierFactory;
 import io.netifi.proteus.discovery.DestinationNameFactory;
 import io.netifi.proteus.discovery.RouterInfoSocketAddressFactory;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.InfoSetupFlyweight;
+import io.netifi.proteus.metrics.ProteusMetricsExporter;
+import io.netifi.proteus.metrics.om.MetricsSnapshotHandler;
+import io.netifi.proteus.metrics.om.MetricsSnapshotHandlerClient;
 import io.netifi.proteus.presence.DefaultPresenceNotifier;
 import io.netifi.proteus.presence.PresenceNotifier;
 import io.netifi.proteus.rs.*;
@@ -29,6 +33,7 @@ import reactor.ipc.netty.tcp.TcpClient;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -265,12 +270,37 @@ public class Netifi implements Closeable {
         DefaultBuilderConfig.getMinHostsAtStartupTimeoutSeconds();
     private DestinationNameFactory destinationNameFactory;
 
+    private MeterRegistry registry = null;
+    private String metricHandlerGroup = DefaultBuilderConfig.getMetricHandlerGroup();
+    private int batchSize = DefaultBuilderConfig.getBatchSize();
+    private long exportFrequencySeconds = DefaultBuilderConfig.getExportFrequencySeconds();
+
     private Executor executor = null;
 
     private Builder() {}
 
+    public Builder meterRegistry(MeterRegistry registry) {
+      this.registry = registry;
+      return this;
+    }
+
+    public Builder metricHandlerGroup(String metricHandlerGroup) {
+      this.metricHandlerGroup = metricHandlerGroup;
+      return this;
+    }
+
+    public Builder metricBatchSize(int batchSize) {
+      this.batchSize = batchSize;
+      return this;
+    }
+
     public Builder minHostsAtStartup(int minHostsAtStartup) {
       this.minHostsAtStartup = minHostsAtStartup;
+      return this;
+    }
+
+    public Builder metricExportFrequencySeconds(long exportFrequencySeconds) {
+      this.exportFrequencySeconds = exportFrequencySeconds;
       return this;
     }
 
@@ -435,6 +465,17 @@ public class Netifi implements Closeable {
                     minHostsAtStartup,
                     minHostsAtStartupTimeout);
             netifi.onClose.doFinally(s -> NETIFI.remove(netifiKey)).subscribe();
+
+            if (registry != null) {
+              NetifiSocket socket = netifi.connect(metricHandlerGroup).block();
+              MetricsSnapshotHandler handler = new MetricsSnapshotHandlerClient(socket);
+              ProteusMetricsExporter exporter =
+                  new ProteusMetricsExporter(
+                      handler, registry, Duration.ofSeconds(exportFrequencySeconds), batchSize);
+              exporter.run();
+              netifi.onClose.doFinally(s -> exporter.dispose()).subscribe();
+            }
+
             return netifi;
           });
     }

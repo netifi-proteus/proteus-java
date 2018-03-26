@@ -7,6 +7,8 @@ dependencies {
     compile project (':auth')
 
     compile 'com.typesafe:config:1.3.2'
+
+    testCompile 'io.micrometer:micrometer-registry-atlas:1.0.2'
 }
 
 def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
@@ -50,4 +52,8 @@ idea {
         generatedSourceDirs += file('src/generated/test/java')
         generatedSourceDirs += file('src/generated/test/proteus')
     }
+}
+
+clean {
+    delete 'src/generated'
 }
