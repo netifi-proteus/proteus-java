@@ -1,0 +1,10 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.3'
+}
+
+dependencies {
+    compile project (':client')
+    compile project (':metrics-core')
+    compile project (':metrics-idl')
+    compile 'io.micrometer:micrometer-registry-atlas:1.0.2'
+}

@@ -170,6 +170,38 @@ final class DefaultBuilderConfig {
     }
     return minHostsAtStartupTimeout;
   }
+  
+  static String getMetricHandlerGroup() {
+    String metricHandlerGroup = "netifi.metrics";
+    try {
+      metricHandlerGroup =
+          ConfigHolder.conf.getString("proteus.client.metrics.group");
+    } catch (ConfigException.Missing m) {
+    }
+    return metricHandlerGroup;
+  }
+  
+  static int getBatchSize() {
+    int batchSize = 1_000;
+  
+    try {
+      batchSize =
+          ConfigHolder.conf.getInt("proteus.client.metrics.metricBatchSize");
+    } catch (ConfigException.Missing m) {
+    }
+    return batchSize;
+  }
+  
+  static long getExportFrequencySeconds() {
+    long exportFrequencySeconds = 10;
+  
+    try {
+      exportFrequencySeconds =
+          ConfigHolder.conf.getLong("proteus.client.metrics.frequency");
+    } catch (ConfigException.Missing m) {
+    }
+    return exportFrequencySeconds;
+  }
 
   static List<SocketAddress> getSeedAddress() {
     List<SocketAddress> seedAddresses = null;
