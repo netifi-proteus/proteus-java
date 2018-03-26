@@ -53,3 +53,7 @@ idea {
         generatedSourceDirs += file('src/generated/test/proteus')
     }
 }
+
+clean {
+    delete 'src/generated'
+}
