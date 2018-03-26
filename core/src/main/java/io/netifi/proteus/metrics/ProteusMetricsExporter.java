@@ -178,7 +178,7 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
             .doOnNext(skew -> recordClockSkew(skew.getTimestamp()))
             .onErrorResume(
                 throwable -> {
-                  logger.error("error streaming data, retrying in 30 seconds", throwable);
+                  logger.debug("error streaming data, retrying in 30 seconds", throwable);
                   return Mono.delay(Duration.ofSeconds(30)).then(Mono.error(throwable));
                 })
             .retry()
