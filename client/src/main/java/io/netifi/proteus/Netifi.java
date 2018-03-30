@@ -275,6 +275,7 @@ public class Netifi implements Closeable {
     private String metricHandlerGroup = DefaultBuilderConfig.getMetricHandlerGroup();
     private int batchSize = DefaultBuilderConfig.getBatchSize();
     private long exportFrequencySeconds = DefaultBuilderConfig.getExportFrequencySeconds();
+    private boolean exportSystemMetrics = DefaultBuilderConfig.getExportSystemMetrics();
 
     private Executor executor = null;
 
@@ -302,6 +303,11 @@ public class Netifi implements Closeable {
 
     public Builder metricExportFrequencySeconds(long exportFrequencySeconds) {
       this.exportFrequencySeconds = exportFrequencySeconds;
+      return this;
+    }
+    
+    public Builder exportSystemMetrics(boolean exportSystemMetrics) {
+      this.exportSystemMetrics = exportSystemMetrics;
       return this;
     }
 

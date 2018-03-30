@@ -202,7 +202,20 @@ final class DefaultBuilderConfig {
     }
     return exportFrequencySeconds;
   }
-
+  
+  
+  static boolean getExportSystemMetrics() {
+    boolean exportSystemMetrics = true;
+    
+    try {
+      exportSystemMetrics =
+          ConfigHolder.conf.getBoolean("proteus.client.metrics.exportSystemMetrics");
+    } catch (ConfigException.Missing m) {
+    }
+    return exportSystemMetrics;
+  }
+  
+  
   static List<SocketAddress> getSeedAddress() {
     List<SocketAddress> seedAddresses = null;
     try {
