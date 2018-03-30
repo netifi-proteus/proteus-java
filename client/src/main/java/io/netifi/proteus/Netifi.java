@@ -8,6 +8,7 @@ import io.netifi.proteus.discovery.RouterInfoSocketAddressFactory;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.InfoSetupFlyweight;
 import io.netifi.proteus.metrics.ProteusMetricsExporter;
+import io.netifi.proteus.metrics.ProteusOperatingSystemMetrics;
 import io.netifi.proteus.metrics.om.MetricsSnapshotHandler;
 import io.netifi.proteus.metrics.om.MetricsSnapshotHandlerClient;
 import io.netifi.proteus.presence.DefaultPresenceNotifier;
@@ -467,13 +468,35 @@ public class Netifi implements Closeable {
             netifi.onClose.doFinally(s -> NETIFI.remove(netifiKey)).subscribe();
 
             if (registry != null) {
+              registry
+                  .config()
+                  .commonTags(
+                      "accessKey",
+                      String.valueOf(accessKey),
+                      "environmentId",
+                      String.valueOf(accountId),
+                      "group",
+                      group,
+                      "destination",
+                      destination);
+
+              ProteusOperatingSystemMetrics systemMetrics =
+                  new ProteusOperatingSystemMetrics(registry);
+
               NetifiSocket socket = netifi.connect(metricHandlerGroup).block();
               MetricsSnapshotHandler handler = new MetricsSnapshotHandlerClient(socket);
               ProteusMetricsExporter exporter =
                   new ProteusMetricsExporter(
                       handler, registry, Duration.ofSeconds(exportFrequencySeconds), batchSize);
               exporter.run();
-              netifi.onClose.doFinally(s -> exporter.dispose()).subscribe();
+              netifi
+                  .onClose
+                  .doFinally(
+                      s -> {
+                        systemMetrics.dispose();
+                        exporter.dispose();
+                      })
+                  .subscribe();
             }
 
             return netifi;
