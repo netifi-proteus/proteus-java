@@ -499,7 +499,6 @@ public class Netifi implements Closeable {
                   .onClose
                   .doFinally(
                       s -> {
-                        systemMetrics.dispose();
                         exporter.dispose();
                       })
                   .subscribe();

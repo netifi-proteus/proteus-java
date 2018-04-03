@@ -27,8 +27,7 @@ public class ProteusMetrics {
             .tags(tags)
             .register(registry);
     Timer timer =
-        Timer.builder(name + ".latency").publishPercentileHistogram().tags(tags).register(registry);
-
+        Timer.builder(name + ".latency").publishPercentiles(0.5, 0.9, 0.95, 0.99).tags(tags).register(registry);
     return Operators.lift(
         (scannable, subscriber) ->
             new ProteusMetricsSubscriber<>(subscriber, next, complete, error, cancelled, timer));

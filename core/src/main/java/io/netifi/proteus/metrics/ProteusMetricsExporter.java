@@ -3,6 +3,9 @@ package io.netifi.proteus.metrics;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Statistic;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.HistogramSnapshot;
+import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import io.netifi.proteus.metrics.om.*;
 import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
@@ -12,7 +15,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -40,6 +45,11 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
     this.batchSize = batchSize;
   }
 
+  private static final String round(double percentile) {
+    double roundOff = (double) Math.round(percentile * 10_000.0) / 10_000.0;
+    return String.valueOf(roundOff);
+  }
+
   private Flux<MetricsSnapshot> getMetricsSnapshotStream() {
     return Flux.interval(exportFrequency)
         .onBackpressureLatest()
@@ -50,14 +60,80 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
                     .flatMap(
                         meters ->
                             meters
-                                .reduce(
-                                    MetricsSnapshot.newBuilder(),
-                                    (builder, meter) -> {
-                                      ProteusMeter convert = convert(meter);
-                                      builder.addMeters(convert);
-                                      return builder;
+                                .groupBy(
+                                    meter -> {
+                                      if (meter instanceof Timer) {
+                                        return true;
+                                      } else {
+                                        return false;
+                                      }
+                                    })
+                                .flatMap(
+                                    grouped -> {
+                                      if (grouped.key()) {
+                                        return grouped.reduce(
+                                            MetricsSnapshot.newBuilder(),
+                                            (builder, meter) -> {
+                                              Timer timer = (Timer) meter;
+                                              List<ProteusMeter> convert = convert(timer);
+                                              builder.addAllMeters(convert);
+                                              return builder;
+                                            });
+                                      } else {
+                                        return grouped.reduce(
+                                            MetricsSnapshot.newBuilder(),
+                                            (builder, meter) -> {
+                                              ProteusMeter convert = convert(meter);
+                                              builder.addMeters(convert);
+                                              return builder;
+                                            });
+                                      }
                                     })
                                 .map(MetricsSnapshot.Builder::build)));
+  }
+
+  private List<ProteusMeter> convert(Timer timer) {
+    List<ProteusMeter> meters = new ArrayList<>();
+    HistogramSnapshot snapshot = timer.takeSnapshot(true);
+
+    Meter.Id id = timer.getId();
+    Meter.Type type = id.getType();
+
+    List<MeterTag> meterTags =
+        StreamSupport.stream(id.getTags().spliterator(), false)
+            .map(tag -> MeterTag.newBuilder().setKey(tag.getKey()).setValue(tag.getValue()).build())
+            .collect(Collectors.toList());
+
+    ValueAtPercentile[] valueAtPercentiles = snapshot.percentileValues();
+    for (ValueAtPercentile percentile : valueAtPercentiles) {
+      ProteusMeter.Builder meterBuilder = ProteusMeter.newBuilder();
+      double value = percentile.value(TimeUnit.NANOSECONDS);
+      MeterTag tag =
+          MeterTag.newBuilder()
+              .setKey("percentile")
+              .setValue(round(percentile.percentile()))
+              .build();
+      MeterId.Builder idBuilder = MeterId.newBuilder();
+      idBuilder.setName(id.getName());
+      idBuilder.addAllTag(meterTags);
+      idBuilder.setType(convert(type));
+      if (id.getDescription() != null) {
+        idBuilder.setDescription(id.getDescription());
+      }
+      idBuilder.setBaseUnit("nanoseconds");
+      idBuilder.addTag(tag);
+
+      meterBuilder.setId(idBuilder);
+      meterBuilder.addMeasure(
+          MeterMeasurement.newBuilder().setValue(value).setStatistic(MeterStatistic.DURATION));
+      ProteusMeter meter = meterBuilder.build();
+      meters.add(meter);
+    }
+
+    ProteusMeter convert = convert((Meter) timer);
+    meters.add(convert);
+
+    return meters;
   }
 
   private ProteusMeter convert(Meter meter) {
