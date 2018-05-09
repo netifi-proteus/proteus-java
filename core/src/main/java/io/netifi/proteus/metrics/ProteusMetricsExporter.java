@@ -94,7 +94,7 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
 
   private List<ProteusMeter> convert(Timer timer) {
     List<ProteusMeter> meters = new ArrayList<>();
-    HistogramSnapshot snapshot = timer.takeSnapshot(true);
+    HistogramSnapshot snapshot = timer.takeSnapshot();
 
     Meter.Id id = timer.getId();
     Meter.Type type = id.getType();

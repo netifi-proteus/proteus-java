@@ -1,5 +1,5 @@
 plugins {
-    id 'com.google.protobuf' version '0.8.3'
+    id 'com.google.protobuf' version '0.8.5'
 }
 
 dependencies {
@@ -9,9 +9,9 @@ dependencies {
     compile 'com.google.protobuf:protobuf-java:3.5.0'
     compile 'com.google.protobuf:protobuf-java-util:3.5.0'
 
-    compile 'io.rsocket:rsocket-core:0.10.3'
-    compile 'io.rsocket:rsocket-transport-netty:0.10.3'
-    compile 'io.micrometer:micrometer-core:1.0.2'
+    compile 'io.rsocket:rsocket-core:0.11.0'
+    compile 'io.rsocket:rsocket-transport-netty:0.11.0'
+    compile 'io.micrometer:micrometer-core:1.0.3'
 }
 
 sourceSets {
