@@ -37,23 +37,6 @@ protobuf {
     }
 }
 
-sourceSets {
-    test {
-        proto { srcDir 'src/test/proto' }
-    }
-}
-
-idea {
-    module {
-        testSourceDirs += file("src/test/proto")
-        testSourceDirs += file("src/generated/test/java")
-        testSourceDirs += file("src/generated/test/proteus")
-
-        generatedSourceDirs += file('src/generated/test/java')
-        generatedSourceDirs += file('src/generated/test/proteus')
-    }
-}
-
 clean {
-    delete 'src/generated'
+    delete protobuf.generatedFilesBaseDir
 }

@@ -1,6 +1,8 @@
 plugins {
     id 'com.google.protobuf' version '0.8.5'
     id 'cpp'
+    id 'java'
+    id 'idea'
 }
 
 def proteusPrefix = "proteus-java-${osdetector.os}-${osdetector.arch}"
@@ -8,11 +10,16 @@ def proteusName = "${proteusPrefix}.exe"
 def artifactStagingPath = "$buildDir/artifacts" as File
 def pathToPlugin = "${artifactStagingPath.getPath()}/${proteusName}"
 
+repositories {
+    mavenCentral()
+}
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
     testCompile project(':core')
+    testCompile 'junit:junit:4.12'
 }
 
 protobuf {
@@ -149,12 +156,6 @@ task buildArtifacts(type: Copy) {
     into artifactStagingPath
 }
 
-sourceSets {
-    test {
-        proto { srcDir 'src/test/proto' }
-    }
-}
-
 compileJava.dependsOn ':protobuf-rpc:buildArtifacts'
 compileJava.dependsOn ':protobuf-rpc:generateProto'
 
@@ -182,15 +183,3 @@ publishing {
         }
     }
 }
-
-idea {
-    module {
-        testSourceDirs += file("src/test/proto")
-        testSourceDirs += file("src/generated/test/java")
-        testSourceDirs += file("src/generated/test/proteus")
-
-        generatedSourceDirs += file('src/generated/test/java')
-        generatedSourceDirs += file('src/generated/test/proteus')
-    }
-}
-

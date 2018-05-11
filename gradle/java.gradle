@@ -1,4 +1,9 @@
 apply plugin: 'java'
+apply plugin: 'idea'
+
+repositories {
+    mavenCentral()
+}
 
 compileJava {
     sourceCompatibility = 1.8
@@ -44,16 +49,16 @@ publishing {
 }
 
 dependencies {
-    testCompile "junit:junit:4.12"
+    testCompile 'junit:junit:4.12'
 
-    testCompile 'io.projectreactor:reactor-test:3.1.3.RELEASE'
+    testCompile 'io.projectreactor:reactor-test:3.1.7.RELEASE'
     testCompile 'com.google.protobuf:protobuf-java:3.5.0'
     testCompile 'org.hdrhistogram:HdrHistogram:2.1.10'
     testCompile 'org.apache.logging.log4j:log4j-api:2.8.2'
     testCompile 'org.apache.logging.log4j:log4j-core:2.8.2'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.8.2'
-    testCompile 'io.rsocket:rsocket-transport-netty:0.11.0'
-    testCompile 'io.rsocket:rsocket-transport-local:0.11.0'
+    testCompile 'io.rsocket:rsocket-transport-netty:0.11.1'
+    testCompile 'io.rsocket:rsocket-transport-local:0.11.1'
     testCompile 'org.mockito:mockito-all:1.10.19'
 }
 

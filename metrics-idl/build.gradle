@@ -7,14 +7,3 @@ dependencies {
     compile 'com.google.protobuf:protobuf-java-util:3.5.0'
 
 }
-
-
-sourceSets {
-    main {
-        proto { srcDir 'src/main/proto' }
-    }
-
-    test {
-        proto { srcDir 'src/test/proto' }
-    }
-}

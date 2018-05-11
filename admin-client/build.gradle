@@ -8,16 +8,6 @@ dependencies {
     compile 'com.google.protobuf:protobuf-java-util:3.5.0'
 }
 
-sourceSets {
-    main {
-        proto { srcDir 'src/main/proto' }
-    }
-
-    test {
-        proto { srcDir 'src/test/proto' }
-    }
-}
-
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
@@ -29,17 +19,6 @@ protobuf {
             ofSourceSet('main')*.plugins {
             }
         }
-    }
-}
-
-idea {
-    module {
-        sourceDirs += file("src/main/proto")
-        sourceDirs += file("src/generated/main/java")
-        sourceDirs += file("src/generated/main/proteus")
-
-        generatedSourceDirs += file('src/generated/main/java')
-        generatedSourceDirs += file('src/generated/main/proteus')
     }
 }
 
