@@ -11,7 +11,7 @@ def artifactStagingPath = "$buildDir/artifacts" as File
 def pathToPlugin = "${artifactStagingPath.getPath()}/${proteusName}"
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
 
 sourceCompatibility = 1.8
