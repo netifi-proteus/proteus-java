@@ -7,12 +7,15 @@ matrix:
     - docker pull netifi/proteus-java-build
     script: gradle/buildLinux.sh
   - os: osx
-    osx_image: xcode9.2
+    osx_image: xcode9.3
+    language: generic
     before_install:
     - brew update
+    - brew upgrade python
     - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
     - brew install protobuf
     script: gradle/buildViaTravis.sh
+
 before_cache:
 - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
 notifications:
