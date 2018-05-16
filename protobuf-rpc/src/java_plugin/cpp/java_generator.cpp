@@ -578,14 +578,14 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Indent();
       p->Print(
           *vars,
-          "boolean once;\n\n"
+          "private final $AtomicBoolean$ once = new $AtomicBoolean$(false);\n\n"
           "@$Override$\n"
           "public $Payload$ apply($MessageLite$ message) {\n");
       p->Indent();
       p->Print(
           *vars,
           "$ByteBuf$ data = serialize(message);\n"
-          "if (!once) {\n");
+          "if (once.compareAndSet(false, true)) {\n");
       p->Indent();
       p->Print(
           *vars,
@@ -1335,6 +1335,7 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["from"] = "from";
   vars["Function"] = "java.util.function.Function";
   vars["Supplier"] = "java.util.function.Supplier";
+  vars["AtomicBoolean"] = "java.util.concurrent.atomic.AtomicBoolean";
   vars["Override"] = "java.lang.Override";
   vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";

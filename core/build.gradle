@@ -9,8 +9,8 @@ dependencies {
     compile 'com.google.protobuf:protobuf-java:3.5.0'
     compile 'com.google.protobuf:protobuf-java-util:3.5.0'
 
-    compile 'io.rsocket:rsocket-core:0.11.2'
-    compile 'io.rsocket:rsocket-transport-netty:0.11.2'
+    compile 'io.rsocket:rsocket-core:0.11.3'
+    compile 'io.rsocket:rsocket-transport-netty:0.11.3'
     compile 'io.micrometer:micrometer-core:1.0.3'
 }
 
