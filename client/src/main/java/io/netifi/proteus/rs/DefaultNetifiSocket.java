@@ -69,44 +69,37 @@ public class DefaultNetifiSocket implements NetifiSocket {
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
     try {
-      ByteBuf metadataToWrap = payload.sliceMetadata();
-      ByteBuf data = payload.sliceData();
       ByteBuf route = getRoute();
-
-      int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+      ByteBuf data = payload.sliceData();
+      ByteBuf metadataToWrap = payload.sliceMetadata();
 
       SecureRSocket secureRSocket = rSocketSupplier.get();
-      return secureRSocket
-          .getCurrentSessionCounter()
-          .flatMap(
-              counter -> {
-                long count = counter.incrementAndGet();
+      return secureRSocket.getCurrentSessionCounter()
+          .zipWith(secureRSocket.getCurrentSessionToken(), (counter, key) -> {
+            long count = counter.incrementAndGet();
+            byte[] currentRequestToken = sessionUtil.generateSessionToken(key, data, count);
+            return sessionUtil.generateRequestToken(currentRequestToken, data, count);
+          })
+          .flatMap(requestToken -> {
+            int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+            ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
+            RoutingFlyweight.encode(
+                metadata,
+                true,
+                requestToken,
+                accessKey,
+                fromDestination,
+                generator.nextId(),
+                route,
+                metadataToWrap);
 
-                return secureRSocket
-                    .getCurrentSessionToken()
-                    .flatMap(
-                        key -> {
-                          byte[] currentRequestToken =
-                              sessionUtil.generateSessionToken(key, data, count);
-                          int requestToken =
-                              sessionUtil.generateRequestToken(currentRequestToken, data, count);
-                          ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
-                          RoutingFlyweight.encode(
-                              metadata,
-                              true,
-                              requestToken,
-                              accessKey,
-                              fromDestination,
-                              generator.nextId(),
-                              route,
-                              metadataToWrap);
+            Payload wrappedPayload = ByteBufPayload.create(data.retain(), metadata);
+            payload.release();
 
-                          return secureRSocket.fireAndForget(
-                              ByteBufPayload.create(payload.sliceData(), metadata));
-                        });
-              });
-
+            return secureRSocket.fireAndForget(wrappedPayload);
+          });
     } catch (Throwable t) {
+      payload.release();
       return Mono.error(t);
     }
   }
@@ -114,42 +107,37 @@ public class DefaultNetifiSocket implements NetifiSocket {
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
     try {
-      ByteBuf metadataToWrap = payload.sliceMetadata();
       ByteBuf route = getRoute();
       ByteBuf data = payload.sliceData();
-      int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+      ByteBuf metadataToWrap = payload.sliceMetadata();
 
       SecureRSocket secureRSocket = rSocketSupplier.get();
-      return secureRSocket
-          .getCurrentSessionCounter()
-          .flatMap(
-              counter -> {
-                long count = counter.incrementAndGet();
+      return secureRSocket.getCurrentSessionCounter()
+          .zipWith(secureRSocket.getCurrentSessionToken(), (counter, key) -> {
+            long count = counter.incrementAndGet();
+            byte[] currentRequestToken = sessionUtil.generateSessionToken(key, data, count);
+            return sessionUtil.generateRequestToken(currentRequestToken, data, count);
+          })
+          .flatMap(requestToken -> {
+            int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+            ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
+            RoutingFlyweight.encode(
+                metadata,
+                true,
+                requestToken,
+                accessKey,
+                fromDestination,
+                generator.nextId(),
+                route,
+                metadataToWrap);
 
-                return secureRSocket
-                    .getCurrentSessionToken()
-                    .flatMap(
-                        key -> {
-                          byte[] currentRequestToken =
-                              sessionUtil.generateSessionToken(key, data, count);
-                          int requestToken =
-                              sessionUtil.generateRequestToken(currentRequestToken, data, count);
-                          ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
-                          RoutingFlyweight.encode(
-                              metadata,
-                              true,
-                              requestToken,
-                              accessKey,
-                              fromDestination,
-                              generator.nextId(),
-                              route,
-                              metadataToWrap);
+            Payload wrappedPayload = ByteBufPayload.create(data.retain(), metadata);
+            payload.release();
 
-                          return secureRSocket.requestResponse(
-                              ByteBufPayload.create(payload.sliceData(), metadata));
-                        });
-              });
+            return secureRSocket.requestResponse(wrappedPayload);
+          });
     } catch (Throwable t) {
+      payload.release();
       return Mono.error(t);
     }
   }
@@ -157,137 +145,121 @@ public class DefaultNetifiSocket implements NetifiSocket {
   @Override
   public Flux<Payload> requestStream(Payload payload) {
     try {
-      ByteBuf metadataToWrap = payload.sliceMetadata();
       ByteBuf route = getRoute();
       ByteBuf data = payload.sliceData();
-
-      int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+      ByteBuf metadataToWrap = payload.sliceMetadata();
 
       SecureRSocket secureRSocket = rSocketSupplier.get();
-      return secureRSocket
-          .getCurrentSessionCounter()
-          .flatMapMany(
-              counter -> {
-                long count = counter.incrementAndGet();
+      return secureRSocket.getCurrentSessionCounter()
+          .zipWith(secureRSocket.getCurrentSessionToken(), (counter, key) -> {
+            long count = counter.incrementAndGet();
+            byte[] currentRequestToken = sessionUtil.generateSessionToken(key, data, count);
+            return sessionUtil.generateRequestToken(currentRequestToken, data, count);
+          })
+          .flatMapMany(requestToken -> {
+            int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+            ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
+            RoutingFlyweight.encode(
+                metadata,
+                true,
+                requestToken,
+                accessKey,
+                fromDestination,
+                generator.nextId(),
+                route,
+                metadataToWrap);
 
-                return secureRSocket
-                    .getCurrentSessionToken()
-                    .flatMapMany(
-                        key -> {
-                          byte[] currentRequestToken =
-                              sessionUtil.generateSessionToken(key, data, count);
-                          int requestToken =
-                              sessionUtil.generateRequestToken(currentRequestToken, data, count);
-                          ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
-                          RoutingFlyweight.encode(
-                              metadata,
-                              true,
-                              requestToken,
-                              accessKey,
-                              fromDestination,
-                              generator.nextId(),
-                              route,
-                              metadataToWrap);
+            Payload wrappedPayload = ByteBufPayload.create(data.retain(), metadata);
+            payload.release();
 
-                          return secureRSocket.requestStream(
-                              ByteBufPayload.create(payload.sliceData(), metadata));
-                        });
-              });
-
+            return secureRSocket.requestStream(wrappedPayload);
+          });
     } catch (Throwable t) {
+      payload.release();
       return Flux.error(t);
     }
   }
 
   @Override
   public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-    SecureRSocket secureRSocket = rSocketSupplier.get();
     ByteBuf route = getRoute();
-    Flux<Payload> payloadFlux =
+
+    SecureRSocket secureRSocket = rSocketSupplier.get();
+    Flux<Payload> wrappedPayloads =
         Flux.from(payloads)
-            .flatMap(
-                payload -> {
-                  ByteBuf data = payload.sliceData();
-                  ByteBuf metadataToWrap = payload.sliceMetadata();
-                  int length =
-                      RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+            .concatMap(payload -> {
+              try {
+                ByteBuf data = payload.sliceData();
+                ByteBuf metadataToWrap = payload.sliceMetadata();
 
-                  return secureRSocket
-                      .getCurrentSessionCounter()
-                      .flatMapMany(
-                          counter -> {
-                            long count = counter.incrementAndGet();
+                return secureRSocket.getCurrentSessionCounter()
+                    .zipWith(secureRSocket.getCurrentSessionToken(), (counter, key) -> {
+                      long count = counter.incrementAndGet();
+                      byte[] currentRequestToken = sessionUtil.generateSessionToken(key, data, count);
+                      return sessionUtil.generateRequestToken(currentRequestToken, data, count);
+                    })
+                    .map(requestToken -> {
+                      int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+                      ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
+                      RoutingFlyweight.encode(
+                          metadata,
+                          true,
+                          requestToken,
+                          accessKey,
+                          fromDestination,
+                          generator.nextId(),
+                          route,
+                          metadataToWrap);
 
-                            return secureRSocket
-                                .getCurrentSessionToken()
-                                .map(
-                                    key -> {
-                                      byte[] currentRequestToken =
-                                          sessionUtil.generateSessionToken(key, data, count);
-                                      int requestToken =
-                                          sessionUtil.generateRequestToken(
-                                              currentRequestToken, data, count);
-                                      ByteBuf metadata =
-                                          ByteBufAllocator.DEFAULT.directBuffer(length);
-                                      RoutingFlyweight.encode(
-                                          metadata,
-                                          true,
-                                          requestToken,
-                                          accessKey,
-                                          fromDestination,
-                                          generator.nextId(),
-                                          route,
-                                          metadataToWrap);
+                      Payload wrappedPayload = ByteBufPayload.create(data.retain(), metadata);
+                      payload.release();
 
-                                      return ByteBufPayload.create(payload.sliceData(), metadata);
-                                    });
-                          });
-                });
+                      return wrappedPayload;
+                    });
+              } catch (Throwable t) {
+                payload.release();
+                return Flux.error(t);
+              }
+            });
 
-    return secureRSocket.requestChannel(payloadFlux);
+    return secureRSocket.requestChannel(wrappedPayloads);
   }
 
   @Override
   public Mono<Void> metadataPush(Payload payload) {
     try {
       ByteBuf route = getRoute();
-      ByteBuf unwrappedMetadata = payload.sliceMetadata();
       ByteBuf data = payload.sliceData();
+      ByteBuf metadataToWrap = payload.sliceMetadata();
 
-      int length = RoutingFlyweight.computeLength(true, fromDestination, route);
       SecureRSocket secureRSocket = rSocketSupplier.get();
+      return secureRSocket.getCurrentSessionCounter()
+          .zipWith(secureRSocket.getCurrentSessionToken(), (counter, key) -> {
+            long count = counter.incrementAndGet();
+            byte[] currentRequestToken = sessionUtil.generateSessionToken(key, data, count);
+            return sessionUtil.generateRequestToken(currentRequestToken, data, count);
+          })
+          .flatMap(requestToken -> {
+            int length = RoutingFlyweight.computeLength(true, fromDestination, route, metadataToWrap);
+            ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
+            RoutingFlyweight.encode(
+                metadata,
+                true,
+                requestToken,
+                accessKey,
+                fromDestination,
+                generator.nextId(),
+                route,
+                metadataToWrap);
 
-      return secureRSocket
-          .getCurrentSessionCounter()
-          .flatMap(
-              counter -> {
-                long count = counter.incrementAndGet();
+            Payload wrappedPayload = ByteBufPayload.create(data.retain(), metadata);
+            payload.release();
 
-                return secureRSocket
-                    .getCurrentSessionToken()
-                    .flatMap(
-                        key -> {
-                          byte[] currentRequestToken =
-                              sessionUtil.generateSessionToken(key, data, count);
-                          int requestToken =
-                              sessionUtil.generateRequestToken(currentRequestToken, data, count);
-                          ByteBuf metadata = ByteBufAllocator.DEFAULT.directBuffer(length);
-                          RoutingFlyweight.encode(
-                              metadata,
-                              true,
-                              requestToken,
-                              accessKey,
-                              fromDestination,
-                              generator.nextId(),
-                              route,
-                              unwrappedMetadata);
-
-                          return secureRSocket.metadataPush(
-                              ByteBufPayload.create(payload.sliceData(), metadata));
-                        });
-              });
+            return secureRSocket.metadataPush(wrappedPayload);
+          });
 
     } catch (Throwable t) {
+      payload.release();
       return Mono.error(t);
     }
   }
