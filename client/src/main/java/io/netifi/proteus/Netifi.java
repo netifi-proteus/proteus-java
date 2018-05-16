@@ -18,7 +18,6 @@ import io.netifi.proteus.util.TimebasedIdGenerator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.rsocket.Closeable;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
@@ -30,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.ipc.netty.tcp.TcpClient;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -38,7 +36,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -83,7 +80,8 @@ public class Netifi implements Closeable {
       List<SocketAddress> socketAddresses,
       Executor executor,
       int minHostsAtStartup,
-      long minHostsAtStartupTimeout) {
+      long minHostsAtStartupTimeout,
+      Function<SocketAddress, Supplier<ClientTransport>> clientTransportFactory) {
     this.onClose = MonoProcessor.create();
     this.keepalive = keepalive;
     this.accessKey = accessKey;
@@ -119,7 +117,7 @@ public class Netifi implements Closeable {
 
           return RSocketFactory.connect()
               .setupPayload(payload)
-              .transport(TcpClientTransport.create((InetSocketAddress) address))
+              .transport(clientTransportFactory.apply(address))
               .start();
         };
 
@@ -129,7 +127,7 @@ public class Netifi implements Closeable {
     this.transportSupplierFactory =
         new ClientTransportSupplierFactory(
             routerInfoSocketAddressFactory,
-            this::createClientTransport,
+            clientTransportFactory,
             minHostsAtStartup,
             minHostsAtStartupTimeout);
 
@@ -178,30 +176,6 @@ public class Netifi implements Closeable {
 
   public static Builder builder() {
     return new Builder();
-  }
-
-  private Supplier<ClientTransport> createClientTransport(SocketAddress address) {
-    return () -> {
-      InetSocketAddress inetSocketAddress = (InetSocketAddress) address;
-      if (executor == null) {
-        return TcpClientTransport.create(inetSocketAddress);
-      } else {
-        NioEventLoopGroup group =
-            new NioEventLoopGroup(
-                Runtime.getRuntime().availableProcessors(), ForkJoinPool.commonPool());
-        TcpClient client =
-            TcpClient.builder()
-                .options(
-                    options -> {
-                      options.disablePool();
-                      options.eventLoopGroup(group);
-                      options.connectAddress(() -> address);
-                    })
-                .build();
-
-        return TcpClientTransport.create(client);
-      }
-    };
   }
 
   @Override
@@ -276,10 +250,16 @@ public class Netifi implements Closeable {
     private int batchSize = DefaultBuilderConfig.getBatchSize();
     private long exportFrequencySeconds = DefaultBuilderConfig.getExportFrequencySeconds();
     private boolean exportSystemMetrics = DefaultBuilderConfig.getExportSystemMetrics();
+    private Function<SocketAddress, Supplier<ClientTransport>> clientTransportFactory =
+        address -> () -> TcpClientTransport.create((InetSocketAddress) address);
 
     private Executor executor = null;
 
-    private Builder() {}
+    private Builder clientTransportFactorty(
+        Function<SocketAddress, Supplier<ClientTransport>> clientTransportFactory) {
+      this.clientTransportFactory = clientTransportFactory;
+      return this;
+    }
 
     public Builder meterRegistry(MeterRegistry registry) {
       this.registry = registry;
@@ -305,7 +285,7 @@ public class Netifi implements Closeable {
       this.exportFrequencySeconds = exportFrequencySeconds;
       return this;
     }
-    
+
     public Builder exportSystemMetrics(boolean exportSystemMetrics) {
       this.exportSystemMetrics = exportSystemMetrics;
       return this;
@@ -470,7 +450,8 @@ public class Netifi implements Closeable {
                     socketAddresses,
                     executor,
                     minHostsAtStartup,
-                    minHostsAtStartupTimeout);
+                    minHostsAtStartupTimeout,
+                    clientTransportFactory);
             netifi.onClose.doFinally(s -> NETIFI.remove(netifiKey)).subscribe();
 
             if (registry != null) {
