@@ -35,13 +35,14 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
     this.groupRoute = destination == null || destination.isEmpty();
     
     onClose()
-        .doFinally(f -> {
+        .doFinally(signalType -> {
           if (groupRoute) {
             presenceNotifier.stopWatching(accountId, group);
           } else {
             presenceNotifier.stopWatching(accountId, destination, group);
           }
-        });
+        })
+        .subscribe();
   }
 
   public static PresenceAwareRSocket wrap(
@@ -55,27 +56,36 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
 
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
-    return _notify().then(source.fireAndForget(payload));
+    return _notify()
+        .doOnError(t -> payload.release())
+        .then(source.fireAndForget(payload));
   }
 
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
-    return _notify().then(source.requestResponse(payload));
+    return _notify()
+        .doOnError(t -> payload.release())
+        .then(source.requestResponse(payload));
   }
 
   @Override
   public Flux<Payload> requestStream(Payload payload) {
-    return _notify().thenMany(source.requestStream(payload));
+    return _notify()
+        .doOnError(t -> payload.release())
+        .thenMany(source.requestStream(payload));
   }
 
   @Override
   public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-    return _notify().thenMany(source.requestChannel(payloads));
+    return _notify()
+        .thenMany(source.requestChannel(payloads));
   }
 
   @Override
   public Mono<Void> metadataPush(Payload payload) {
-    return _notify().then(source.metadataPush(payload));
+    return _notify()
+        .doOnError(t -> payload.release())
+        .then(source.metadataPush(payload));
   }
 
   private Mono<Void> _notify() {
