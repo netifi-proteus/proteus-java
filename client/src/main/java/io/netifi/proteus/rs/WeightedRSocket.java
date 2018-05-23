@@ -4,7 +4,7 @@ import io.rsocket.RSocket;
 
 /**
  * RSocket implementation that provides statistical weight around the connection including it's
- * latency and error rate. Used by {@link io.netifi.proteus.balancer.LoadBalancedRSocketSupplier} to
+ * latency and error rate. Used by ProteusBrokerService to
  * determine the next best RSocket to return.
  */
 public interface WeightedRSocket extends RSocket {

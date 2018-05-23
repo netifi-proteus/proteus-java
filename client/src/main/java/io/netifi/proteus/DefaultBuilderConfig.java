@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Gets current default configuration for {@link io.netifi.proteus.Netifi.Builder}. Can be overriden
+ * Gets current default configuration for {@link Proteus.Builder}. Can be overriden
  * with System properties, or if the application provides a config file. The builder will over-ride
  * these values if they are based directly in to the builder. Otherwise it will these values a
  * default.

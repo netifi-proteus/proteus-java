@@ -1,6 +1,7 @@
 package io.netifi.proteus.frames;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 public class ProteusMetadata {
   private static final int VERSION_SIZE = 2;
@@ -18,11 +19,12 @@ public class ProteusMetadata {
         + metadata.readableBytes();
   }
 
-  public static int encode(
-      ByteBuf byteBuf, int namespaceId, int serviceId, int methodId, ByteBuf metadata) {
+  public static ByteBuf encode(
+      ByteBufAllocator allocator, int namespaceId, int serviceId, int methodId, ByteBuf metadata) {
     int offset = 0;
-
+    ByteBuf byteBuf = allocator.buffer();
     byteBuf.setShort(offset, 1);
+
     offset += VERSION_SIZE;
 
     byteBuf.setInt(offset, namespaceId);
@@ -43,7 +45,7 @@ public class ProteusMetadata {
 
     byteBuf.writerIndex(offset);
 
-    return offset;
+    return byteBuf;
   }
 
   public static int version(ByteBuf byteBuf) {

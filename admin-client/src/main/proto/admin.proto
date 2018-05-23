@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package io.netifi.proteus.admin.om;
+package io.proteus.proteus.admin.om;
 
-option java_package = "io.netifi.proteus.admin.om";
+option java_package = "io.proteus.proteus.admin.om";
 option java_outer_classname = "ProteusAdmin";
 option java_multiple_files = true;
 

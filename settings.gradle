@@ -1,6 +1,6 @@
 rootProject.name = 'proteus-java'
-include 'admin-client'
 include 'auth'
+include 'broker-info-idl'
 include 'client'
 include 'core'
 include 'frames'

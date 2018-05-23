@@ -589,9 +589,7 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Indent();
       p->Print(
           *vars,
-          "final int length = $ProteusMetadata$.computeLength(metadata);\n"
-          "final $ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
-          "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
+          "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
           "return $ByteBufPayload$.create(data, metadataBuf);\n");
       p->Outdent();
       p->Print("} else {\n");
@@ -635,9 +633,7 @@ static void PrintClient(const ServiceDescriptor* service,
         p->Indent();
         p->Print(
             *vars,
-            "final int length = $ProteusMetadata$.computeLength(metadata);\n"
-            "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
-            "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
+            "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
             "$ByteBuf$ data = serialize(message);\n"
             "return rSocket.requestStream($ByteBufPayload$.create(data, metadataBuf));\n");
         p->Outdent();
@@ -660,9 +656,7 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final int length = $ProteusMetadata$.computeLength(metadata);\n"
-              "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
-              "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
+              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"
               "return rSocket.requestResponse($ByteBufPayload$.create(data, metadataBuf));\n");
           p->Outdent();
@@ -683,9 +677,7 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final int length = $ProteusMetadata$.computeLength(metadata);\n"
-              "$ByteBuf$ metadataBuf = $ByteBufAllocator$.DEFAULT.directBuffer(length);\n"
-              "$ProteusMetadata$.encode(metadataBuf, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
+              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"
               "return rSocket.fireAndForget($ByteBufPayload$.create(data, metadataBuf));\n");
           p->Outdent();

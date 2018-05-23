@@ -10,15 +10,15 @@ import reactor.core.publisher.Mono;
  * user is connected.
  */
 public interface PresenceNotifier {
-  void watch(long accountId, String group);
+  void watch(String group);
 
-  void stopWatching(long accountId, String group);
+  void stopWatching(String group);
 
-  void watch(long accountId, String destination, String group);
+  void watch(String destination, String group);
 
-  void stopWatching(long accountId, String destination, String group);
+  void stopWatching(String destination, String group);
 
-  Mono<Void> notify(long accountId, String group);
+  Mono<Void> notify(String group);
 
-  Mono<Void> notify(long accountId, String destination, String group);
+  Mono<Void> notify(String destination, String group);
 }

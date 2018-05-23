@@ -10,17 +10,18 @@ plugins {
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
-project(':admin-client') {
-    description = 'Netifi Proteus Admin Client'
-    ext.artifactName = 'admin-client'
+project(':auth') {
+    description = 'Netifi Proteus Authentication Utilities'
+    ext.artifactName = 'auth'
 
     apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
-project(':auth') {
-    description = 'Netifi Proteus Authentication Utilities'
-    ext.artifactName = 'auth'
+project(':broker-info-idl') {
+
+    description = 'Netifi Broker IDL'
+    ext.artifactName = 'metrics-idl'
 
     apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package io.netifi.testing;
+package io.proteus.testing;
 
-option java_package = "io.netifi.testing.protobuf";
+option java_package = "io.proteus.testing.protobuf";
 option java_outer_classname = "SimpleServiceProto";
 option java_multiple_files = true;
 

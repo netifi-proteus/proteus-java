@@ -1,72 +1,51 @@
 package io.netifi.proteus.integration;
 
-import io.netifi.proteus.Netifi;
-import io.netifi.proteus.rs.NetifiSocket;
-import io.netifi.testing.protobuf.*;
-import io.netty.buffer.ByteBuf;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.junit.Test;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.EmitterProcessor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 @Ignore
 public class ProteusIntegrationTest {
 
-  private static final long accessKey = 3855261330795754807L;
+ /* private static final long accessKey = 3855261330795754807L;
   private static final String accessToken = "kTBDVtfRBO4tHOnZzSyY5ym2kfY=";
   private static final String host = "localhost";
   private static final int port = 8001;
   private static final int server_port = 8001;
-  private static Netifi server;
-  private static Netifi client;
-  private static NetifiSocket netifiSocket;
+  private static Proteus server;
+  private static Proteus client;
+  private static ProteusSocket proteusSocket;
 
   @BeforeClass
   public static void setup() {
     server =
-        Netifi.builder()
+        Proteus.builder()
             .keepalive(false)
             .group("test.server")
             .destination("server")
-            .accountId(Long.MAX_VALUE)
             .accessKey(accessKey)
             .accessToken(accessToken)
             .host(host)
             .port(server_port)
-            .minHostsAtStartup(1)
             .build();
 
     client =
-        Netifi.builder()
+        Proteus.builder()
             .keepalive(false)
             .group("test.client")
             .destination("client")
-            .accountId(Long.MAX_VALUE)
             .accessKey(accessKey)
             .accessToken(accessToken)
             .host(host)
             .port(port)
-            .minHostsAtStartup(1)
             .build();
 
     server.addService(new SimpleServiceServer(new DefaultSimpleService()));
 
-    netifiSocket = client.connect("test.server").block();
+    proteusSocket = client.connect("test.server").block();
   }
 
   @Test
   public void testUnaryRpc() {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse simpleResponse =
         simpleServiceClient
             .unaryRpc(SimpleRequest.newBuilder().setRequestMessage("a message").build())
@@ -95,7 +74,7 @@ public class ProteusIntegrationTest {
   }
 
   public void doTest(int count) {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     long start = System.nanoTime();
     Flux.range(1, count)
         .flatMap(
@@ -116,7 +95,7 @@ public class ProteusIntegrationTest {
 
   @Test
   public void testServerStreamingRpc() {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
         simpleServiceClient
             .serverStreamingRpc(SimpleRequest.newBuilder().setRequestMessage("a message").build())
@@ -128,7 +107,7 @@ public class ProteusIntegrationTest {
 
   @Test
   public void testServerStreamingFireHose() {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
         simpleServiceClient
             .serverStreamingRpc(SimpleRequest.newBuilder().setRequestMessage("a message").build())
@@ -140,7 +119,7 @@ public class ProteusIntegrationTest {
 
   @Test
   public void testClientStreamingRpc() {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     Flux<SimpleRequest> map =
         Flux.range(1, 11)
             .map(i -> SimpleRequest.newBuilder().setRequestMessage("a message " + i).build());
@@ -152,7 +131,7 @@ public class ProteusIntegrationTest {
 
   @Test
   public void testBidiRequest() {
-    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
 
     Flux<SimpleRequest> map =
         Flux.range(1, 300_000)
@@ -178,7 +157,7 @@ public class ProteusIntegrationTest {
   public void testFireAndForget() throws Exception {
     int count = 1;
     CountDownLatch latch = new CountDownLatch(count);
-    SimpleServiceClient client = new SimpleServiceClient(netifiSocket);
+    SimpleServiceClient client = new SimpleServiceClient(proteusSocket);
     client
         .streamOnFireAndForget(Empty.getDefaultInstance())
         .doOnError(Throwable::printStackTrace)
@@ -287,5 +266,5 @@ public class ProteusIntegrationTest {
         Publisher<SimpleRequest> messages, ByteBuf metadata) {
       return Flux.from(messages).flatMap(message -> unaryRpc(message, metadata));
     }
-  }
+  }*/
 }

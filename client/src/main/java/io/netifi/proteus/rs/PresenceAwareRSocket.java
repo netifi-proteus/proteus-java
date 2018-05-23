@@ -13,9 +13,8 @@ import reactor.core.publisher.Mono;
  * destination is available before sending a request. It will wait in a non-blocking manner to
  * determine if the group, or destination is present.
  */
-public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
+public class PresenceAwareRSocket extends RSocketProxy implements ProteusSocket {
 
-  private final long accountId;
   private final String destination;
   private final String group;
   private final PresenceNotifier presenceNotifier;
@@ -23,12 +22,10 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
 
   private PresenceAwareRSocket(
       RSocket source,
-      long accountId,
       String destination,
       String group,
       PresenceNotifier presenceNotifier) {
     super(source);
-    this.accountId = accountId;
     this.destination = destination;
     this.group = group;
     this.presenceNotifier = presenceNotifier;
@@ -37,9 +34,9 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
     onClose()
         .doFinally(signalType -> {
           if (groupRoute) {
-            presenceNotifier.stopWatching(accountId, group);
+            presenceNotifier.stopWatching(group);
           } else {
-            presenceNotifier.stopWatching(accountId, destination, group);
+            presenceNotifier.stopWatching(destination, group);
           }
         })
         .subscribe();
@@ -47,11 +44,10 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
 
   public static PresenceAwareRSocket wrap(
       RSocket source,
-      long accountId,
       String destination,
       String group,
       PresenceNotifier presenceNotifier) {
-    return new PresenceAwareRSocket(source, accountId, destination, group, presenceNotifier);
+    return new PresenceAwareRSocket(source, destination, group, presenceNotifier);
   }
 
   @Override
@@ -90,9 +86,9 @@ public class PresenceAwareRSocket extends RSocketProxy implements NetifiSocket {
 
   private Mono<Void> _notify() {
     if (groupRoute) {
-      return presenceNotifier.notify(accountId, group);
+      return presenceNotifier.notify(group);
     } else {
-      return presenceNotifier.notify(accountId, destination, group);
+      return presenceNotifier.notify(destination, group);
     }
   }
   

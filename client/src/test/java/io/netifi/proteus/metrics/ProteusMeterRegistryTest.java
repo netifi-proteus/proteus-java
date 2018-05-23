@@ -1,26 +1,10 @@
 package io.netifi.proteus.metrics;
 
-import com.netflix.spectator.atlas.AtlasConfig;
-import io.micrometer.atlas.AtlasMeterRegistry;
-import io.micrometer.core.instrument.Counter;
-import io.netifi.proteus.Netifi;
-import io.netifi.proteus.metrics.om.*;
-import io.netty.buffer.ByteBuf;
-import io.rsocket.RSocket;
-import io.rsocket.RSocketFactory;
-import io.rsocket.transport.netty.client.TcpClientTransport;
-import io.rsocket.transport.netty.server.TcpServerTransport;
 import org.junit.Ignore;
-import org.junit.Test;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @Ignore
 public class ProteusMeterRegistryTest {
-  @Test
+  /*@Test
   public void testMetrics() throws InterruptedException {
     MetricsSnapshotHandlerServer snapshotHandlerServer =
         new MetricsSnapshotHandlerServer(
@@ -81,7 +65,7 @@ public class ProteusMeterRegistryTest {
       test.increment();
     }
 
-    /* ProteusMeterRegistry registry =
+    *//* ProteusMeterRegistry registry =
         new ProteusMeterRegistry(ProteusSpectatorConfig.defaultInstance(), client);
 
     registry.start();
@@ -90,7 +74,7 @@ public class ProteusMeterRegistryTest {
 
     while (true) {
       test.increment();
-    }*/
+    }*//*
   }
 
   @Test
@@ -109,9 +93,9 @@ public class ProteusMeterRegistryTest {
                   }
               });
       
-    Netifi netifi =
-        Netifi.builder()
-            .group("netifi.metrics.test")
+    Proteus proteus =
+        Proteus.builder()
+            .group("proteus.metrics.test")
             .accessKey(7685465987873703191L)
             .accessToken("PYYgV9XHSJ/3KqgK5wYjz+73MeA=")
             .accountId(100)
@@ -132,8 +116,8 @@ public class ProteusMeterRegistryTest {
 
   @Test
   public void testMetricsThroughBrokerWithNetifi() throws InterruptedException {
-    /*
-    Netifi netifi = Netifi
+    *//*
+    Proteus netifi = Proteus
                         .builder()
                         .group("netifi.metrics.test")
                         .accessKey(7685465987873703191L)
@@ -144,7 +128,7 @@ public class ProteusMeterRegistryTest {
                         .host("localhost")
                         .build();
 
-    NetifiSocket socket = netifi.connect("netifi.metrics").block();
+    ProteusSocket socket = netifi.connect("netifi.metrics").block();
 
     MetricsSnapshotHandler client = new MetricsSnapshotHandlerClient(socket);
 
@@ -155,6 +139,6 @@ public class ProteusMeterRegistryTest {
 
     while (true) {
       test.increment();
-    }*/
-  }
+    }*//*
+  }*/
 }

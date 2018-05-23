@@ -18,14 +18,12 @@ public class PresenceAwareRSocketTest {
     Mockito.when(mock.onClose()).thenReturn(Mono.never());
     PresenceNotifier presenceNotifier = Mockito.mock(PresenceNotifier.class);
 
-    Mockito.when(
-            presenceNotifier.notify(Mockito.anyLong(), Mockito.anyString(), Mockito.anyString()))
+    Mockito.when(presenceNotifier.notify(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Mono.never());
 
     PresenceAwareRSocket rSocket =
         PresenceAwareRSocket.wrap(
             mock,
-            Long.MAX_VALUE,
             "testShouldWaitForPresence-dest",
             "testShouldWaitForPresence-group",
             presenceNotifier);
@@ -43,12 +41,10 @@ public class PresenceAwareRSocketTest {
     Mockito.when(mock.onClose()).thenReturn(Mono.never());
     PresenceNotifier presenceNotifier = Mockito.mock(PresenceNotifier.class);
 
-    Mockito.when(presenceNotifier.notify(Mockito.anyLong(), Mockito.anyString()))
-        .thenReturn(Mono.never());
+    Mockito.when(presenceNotifier.notify(Mockito.anyString())).thenReturn(Mono.never());
 
     PresenceAwareRSocket rSocket =
-        PresenceAwareRSocket.wrap(
-            mock, Long.MAX_VALUE, null, "testShouldWaitForPresence-group", presenceNotifier);
+        PresenceAwareRSocket.wrap(mock, null, "testShouldWaitForPresence-group", presenceNotifier);
 
     StepVerifier.create(rSocket.requestResponse(Mockito.mock(Payload.class)))
         .expectNextCount(0)

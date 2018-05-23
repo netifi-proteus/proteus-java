@@ -3,6 +3,7 @@ package io.netifi.proteus.rpc;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netifi.proteus.rs.RequestHandlingRSocket;
 import io.netty.buffer.ByteBuf;
+import io.proteus.proteus.rpc.*;
 import io.rsocket.Frame;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
