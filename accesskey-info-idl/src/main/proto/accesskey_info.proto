@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package io.netifi.proteus.controlcenter.accesskey.service;
+
+option java_package = "io.netifi.proteus.controlcenter.accesskey.service";
+option java_outer_classname = "AccessKeyServiceProto";
+option java_multiple_files = true;
+
+// Service that returns AuthInfo used by the router to login
+service AccessKeyInfoService {
+  rpc AccessKeyInfoEvents (Empty) returns (stream AccessKeyInfo) {}
+}
+
+message Empty {}
+
+message AccessKeyInfo {
+  int64 key = 1;
+
+  bytes accessTokenHash = 2;
+
+  bytes accessTokenSalt = 3;
+
+  string accessKeyAlgo = 4;
+
+  int64 account = 5;
+
+  enum Type {
+      SEED_NEXT = 0;
+      SEED_COMPLETE = 1;
+      ADD = 2;
+      REMOVE = 3;
+  }
+  Type type = 6;
+}

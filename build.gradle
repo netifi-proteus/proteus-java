@@ -18,10 +18,19 @@ project(':auth') {
     apply from: file('../gradle/java.gradle')
 }
 
+project(':accesskey-info-idl') {
+
+    description = 'Netifi Access Key IDL'
+    ext.artifactName = 'access-key-idl'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
 project(':broker-info-idl') {
 
     description = 'Netifi Broker IDL'
-    ext.artifactName = 'metrics-idl'
+    ext.artifactName = 'broker-info-idl'
 
     apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')

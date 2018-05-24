@@ -41,7 +41,7 @@ service BrokerInfoService {
     rpc Groups (Broker) returns (stream Group) {}
     rpc Destinations (Broker) returns (stream Destination) {}
     rpc DestinationsByBrokerAndGroup (Group) returns (stream Destination) {}
-    rpc DestinationsByGroup (Group) returns (Destination) {}
+    rpc DestinationsByGroup (Group) returns (stream Destination) {}
     rpc BrokersWithGroup (Group) returns (stream Broker) {}
     rpc BrokerWithDestination (Destination) returns (Broker) {}
     rpc streamGroupEvents (Group) returns (stream Event) {}
