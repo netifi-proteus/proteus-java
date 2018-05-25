@@ -18,7 +18,7 @@ project(':auth') {
     apply from: file('../gradle/java.gradle')
 }
 
-project(':accesskey-info-idl') {
+project(':access-key-info-idl') {
 
     description = 'Netifi Access Key IDL'
     ext.artifactName = 'access-key-idl'
