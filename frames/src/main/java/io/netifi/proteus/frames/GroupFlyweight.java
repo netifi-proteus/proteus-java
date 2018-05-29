@@ -3,6 +3,7 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -13,7 +14,6 @@ public class GroupFlyweight {
       CharSequence fromGroup,
       CharSequence toGroup,
       ByteBuf metadata) {
-
     ByteBuf fromDestinationBuffer = allocator.buffer();
     int fromDestinationLength =
         fromDestinationBuffer.writeCharSequence(fromDestination, StandardCharsets.UTF_8);
@@ -32,6 +32,10 @@ public class GroupFlyweight {
             .writeBytes(fromGroupBuffer)
             .writeInt(toGroupLength)
             .writeBytes(toGroupBuffer);
+
+    ReferenceCountUtil.safeRelease(fromDestinationBuffer);
+    ReferenceCountUtil.safeRelease(fromGroupBuffer);
+    ReferenceCountUtil.safeRelease(toGroupBuffer);
 
     return Unpooled.wrappedBuffer(byteBuf, metadata);
   }
@@ -73,22 +77,22 @@ public class GroupFlyweight {
 
     return byteBuf.readCharSequence(length, StandardCharsets.UTF_8);
   }
-  
+
   public static ByteBuf metadata(ByteBuf byteBuf) {
     byteBuf.resetReaderIndex();
     int offset = FrameHeaderFlyweight.size(byteBuf);
-    
+
     byteBuf.readerIndex(offset);
     offset = byteBuf.readInt();
-    
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-    
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-    
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
-    
+
     return byteBuf.slice();
   }
 }

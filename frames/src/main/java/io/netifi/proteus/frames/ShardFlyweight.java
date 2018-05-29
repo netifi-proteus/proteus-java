@@ -3,6 +3,7 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -37,6 +38,10 @@ public class ShardFlyweight {
             .writeBytes(toGroupBuffer)
             .writeInt(shardKeyLength)
             .writeBytes(shardKey);
+
+    ReferenceCountUtil.safeRelease(fromDestinationBuffer);
+    ReferenceCountUtil.safeRelease(fromGroupBuffer);
+    ReferenceCountUtil.safeRelease(toGroupBuffer);
 
     return Unpooled.wrappedBuffer(byteBuf, metadata);
   }
@@ -82,38 +87,38 @@ public class ShardFlyweight {
   public static ByteBuf shardKey(ByteBuf byteBuf) {
     byteBuf.resetReaderIndex();
     int offset = FrameHeaderFlyweight.size(byteBuf);
-  
+
     byteBuf.readerIndex(offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     int length = byteBuf.readInt();
-    
+
     return byteBuf.slice(byteBuf.readerIndex(), length);
   }
-  
+
   public static ByteBuf metadata(ByteBuf byteBuf) {
     byteBuf.resetReaderIndex();
     int offset = FrameHeaderFlyweight.size(byteBuf);
-  
+
     byteBuf.readerIndex(offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-  
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     offset = byteBuf.readInt();
-    
+
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
     return byteBuf.slice();
   }

@@ -2,7 +2,7 @@ package io.netifi.proteus.frames;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -22,22 +22,28 @@ public class BrokerSetupFlyweight {
 
     ByteBuf buffer = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.BROKER_SETUP);
 
-    ByteBuf routerIdBuffer = allocator.buffer();
-    int routerIdLength = routerIdBuffer.writeCharSequence(brokerId, StandardCharsets.UTF_8);
+    ByteBuf brokerIdBuffer = allocator.buffer();
+    int routerIdLength = brokerIdBuffer.writeCharSequence(brokerId, StandardCharsets.UTF_8);
 
     ByteBuf clusterIdBuffer = allocator.buffer();
     int clusterIdLength = clusterIdBuffer.writeCharSequence(clusterId, StandardCharsets.UTF_8);
 
     int authTokenSize = accessToken.readableBytes();
 
-    return buffer
-        .writeInt(routerIdLength)
-        .writeBytes(routerIdBuffer)
-        .writeInt(clusterIdLength)
-        .writeBytes(clusterIdBuffer)
-        .writeLong(accessKey)
-        .writeInt(authTokenSize)
-        .writeBytes(accessToken);
+    ByteBuf byteBuf =
+        buffer
+            .writeInt(routerIdLength)
+            .writeBytes(brokerIdBuffer)
+            .writeInt(clusterIdLength)
+            .writeBytes(clusterIdBuffer)
+            .writeLong(accessKey)
+            .writeInt(authTokenSize)
+            .writeBytes(accessToken);
+
+    ReferenceCountUtil.safeRelease(brokerIdBuffer);
+    ReferenceCountUtil.safeRelease(clusterId);
+
+    return byteBuf;
   }
 
   public static CharSequence brokerId(ByteBuf byteBuf) {
@@ -63,38 +69,37 @@ public class BrokerSetupFlyweight {
     int length = byteBuf.readInt();
 
     return byteBuf.readCharSequence(length, StandardCharsets.UTF_8);
-
   }
 
   public static long accessKey(ByteBuf byteBuf) {
     byteBuf.resetReaderIndex();
-    
+
     int offset = FrameHeaderFlyweight.size(byteBuf);
     byteBuf.readerIndex(offset);
-  
+
     offset = byteBuf.readInt();
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
-  
+
     offset = byteBuf.readInt();
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
-    
+
     return byteBuf.readLong();
   }
 
   public static ByteBuf accessToken(ByteBuf byteBuf) {
     byteBuf.resetReaderIndex();
-  
+
     int offset = FrameHeaderFlyweight.size(byteBuf);
     byteBuf.readerIndex(offset);
-  
+
     offset = byteBuf.readInt();
     byteBuf.readerIndex(byteBuf.readerIndex() + offset);
-  
+
     offset = byteBuf.readInt();
     byteBuf.readerIndex(byteBuf.readerIndex() + offset + ACCESS_KEY_LENGTH_SIZE);
-    
+
     byteBuf.readInt();
-    
+
     return byteBuf.slice();
   }
 }

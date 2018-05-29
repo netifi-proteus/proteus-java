@@ -3,6 +3,7 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -40,14 +41,20 @@ public class DestinationSetupFlyweight {
 
     int accessTokenSize = accessToken.readableBytes();
 
-    return buffer
-        .writeInt(destinationLength)
-        .writeBytes(destinationBuffer)
-        .writeInt(groupLength)
-        .writeBytes(groupBuffer)
-        .writeLong(accessKey)
-        .writeInt(accessTokenSize)
-        .writeBytes(accessToken);
+    ByteBuf byteBuf =
+        buffer
+            .writeInt(destinationLength)
+            .writeBytes(destinationBuffer)
+            .writeInt(groupLength)
+            .writeBytes(groupBuffer)
+            .writeLong(accessKey)
+            .writeInt(accessTokenSize)
+            .writeBytes(accessToken);
+
+    ReferenceCountUtil.safeRelease(destinationBuffer);
+    ReferenceCountUtil.safeRelease(groupBuffer);
+
+    return byteBuf;
   }
 
   public static CharSequence destination(ByteBuf byteBuf) {
