@@ -1,11 +1,28 @@
 package io.netifi.proteus.integration;
 
+import io.netifi.proteus.Proteus;
+import io.netifi.proteus.rs.ProteusSocket;
+import io.netty.buffer.ByteBuf;
+import io.proteus.testing.protobuf.*;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Test;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 @Ignore
 public class ProteusIntegrationTest {
 
- /* private static final long accessKey = 3855261330795754807L;
+  private static final long accessKey = 3855261330795754807L;
   private static final String accessToken = "kTBDVtfRBO4tHOnZzSyY5ym2kfY=";
   private static final String host = "localhost";
   private static final int port = 8001;
@@ -40,7 +57,7 @@ public class ProteusIntegrationTest {
 
     server.addService(new SimpleServiceServer(new DefaultSimpleService()));
 
-    proteusSocket = client.connect("test.server").block();
+    proteusSocket = client.group("test.server");
   }
 
   @Test
@@ -55,7 +72,7 @@ public class ProteusIntegrationTest {
     System.out.println(simpleResponse.getResponseMessage());
   }
 
-  @Test
+  //@Test
   public void testUnaryRpc_100() {
     doTest(100);
     doTest(100);
@@ -67,7 +84,7 @@ public class ProteusIntegrationTest {
     doTest(100);
   }
 
-  @Test
+  //@Test
   public void testUnaryRpc_multiple() {
     doTest(1_000_000);
     doTest(1_000_000);
@@ -266,5 +283,5 @@ public class ProteusIntegrationTest {
         Publisher<SimpleRequest> messages, ByteBuf metadata) {
       return Flux.from(messages).flatMap(message -> unaryRpc(message, metadata));
     }
-  }*/
+  }
 }

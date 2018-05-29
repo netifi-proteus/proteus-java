@@ -701,13 +701,14 @@ static void PrintClient(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
     *vars,
-    "$ByteBuf$ byteBuf = $ByteBufAllocator$.DEFAULT.directBuffer(message.getSerializedSize());\n");
+    "int length = message.getSerializedSize();\n"
+    "$ByteBuf$ byteBuf = $ByteBufAllocator$.DEFAULT.buffer(length);\n");
   p->Print("try {\n");
   p->Indent();
   p->Print(
     *vars,
-    "message.writeTo($CodedOutputStream$.newInstance(byteBuf.nioBuffer(0, byteBuf.writableBytes())));\n"
-    "byteBuf.writerIndex(byteBuf.capacity());\n"
+    "message.writeTo($CodedOutputStream$.newInstance(byteBuf.internalNioBuffer(0, length)));\n"
+    "byteBuf.writerIndex(length);\n"
     "return byteBuf;\n");
   p->Outdent();
   p->Print("} catch (Throwable t) {\n");
@@ -1222,13 +1223,14 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
     *vars,
-    "$ByteBuf$ byteBuf = $ByteBufAllocator$.DEFAULT.directBuffer(message.getSerializedSize());\n");
+    "int length = message.getSerializedSize();\n"
+    "$ByteBuf$ byteBuf = $ByteBufAllocator$.DEFAULT.buffer(length);\n");
   p->Print("try {\n");
   p->Indent();
   p->Print(
     *vars,
-    "message.writeTo($CodedOutputStream$.newInstance(byteBuf.nioBuffer(0, byteBuf.writableBytes())));\n"
-    "byteBuf.writerIndex(byteBuf.capacity());\n"
+    "message.writeTo($CodedOutputStream$.newInstance(byteBuf.internalNioBuffer(0, length)));\n"
+    "byteBuf.writerIndex(length);\n"
     "return $ByteBufPayload$.create(byteBuf);\n");
   p->Outdent();
   p->Print("} catch (Throwable t) {\n");

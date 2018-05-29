@@ -85,11 +85,13 @@ public class PresenceAwareRSocket extends RSocketProxy implements ProteusSocket 
   }
 
   private Mono<Void> _notify() {
-    if (groupRoute) {
-      return presenceNotifier.notify(group);
-    } else {
-      return presenceNotifier.notify(destination, group);
-    }
+    return Mono.defer(() -> {
+      if (groupRoute) {
+        return presenceNotifier.notify(group);
+      } else {
+        return presenceNotifier.notify(destination, group);
+      }
+    });
   }
   
 }

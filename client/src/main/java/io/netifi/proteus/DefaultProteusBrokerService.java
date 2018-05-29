@@ -1,5 +1,8 @@
 package io.netifi.proteus;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 import io.netifi.proteus.frames.DestinationFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;
@@ -13,10 +16,7 @@ import io.netifi.proteus.util.Xoroshiro128PlusRandom;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.proteus.broker.info.Broker;
-import io.proteus.broker.info.BrokerInfoServiceClient;
-import io.proteus.broker.info.Empty;
-import io.proteus.broker.info.Event;
+import io.proteus.broker.info.*;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.transport.ClientTransport;
@@ -24,16 +24,12 @@ import io.rsocket.util.ByteBufPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.BiFunction;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
@@ -62,6 +58,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int poolSize = Runtime.getRuntime().availableProcessors();
   private final double expFactor = DEFAULT_EXP_FACTOR;
   private final int inactivityFactor = DEFAULT_INACTIVITY_FACTOR;
+  private final BrokerInfoServiceClient client;
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
   private boolean clientTransportMissed = false;
@@ -110,16 +107,31 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     createFirstConnection();
 
-    ProteusSocket proteusSocket = group("com.netifi.proteus.brokerInfo");
-    BrokerInfoServiceClient client = new BrokerInfoServiceClient(proteusSocket);
-
+    ProteusSocket proteusSocket =
+        new DefaultProteusSocket(
+            payload -> {
+              ByteBuf data = payload.sliceData();
+              ByteBuf metadataToWrap = payload.sliceMetadata();
+              ByteBuf metadata =
+                  GroupFlyweight.encode(
+                      ByteBufAllocator.DEFAULT,
+                      destinationNameFactory.peek(),
+                      group,
+                      "com.netifi.proteus.brokerInfo",
+                      metadataToWrap);
+              Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+              payload.release();
+              return wrappedPayload;
+            },
+            this::selectRSocket);
+    this.client = new BrokerInfoServiceClient(proteusSocket);
     this.presenceNotifier = new BrokerInfoPresenceNotifier(client);
 
     Disposable disposable =
         client
             .streamBrokerEvents(Empty.getDefaultInstance())
             .doOnSubscribe(s -> createRemainingConnections())
-            .concatMap(event -> Mono.fromRunnable(() -> handleBrokerEvent(event)))
+            .doOnNext(event -> handleBrokerEvent(event))
             .doOnError(t -> logger.error("error streaming broker events", t))
             .retry()
             .subscribe();
@@ -145,11 +157,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   synchronized void createRemainingConnections() {
-    while (members.size() < poolSize) {
+    /*while (members.size() < poolSize) {
       rsocketMissed = true;
       WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
       members.add(rSocket);
-    }
+    }*/
   }
 
   void handleBrokerEvent(Event event) {
