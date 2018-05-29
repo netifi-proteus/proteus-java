@@ -1,8 +1,5 @@
 package io.netifi.proteus;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
-import com.google.common.collect.Tables;
 import io.netifi.proteus.frames.DestinationFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;
@@ -16,7 +13,10 @@ import io.netifi.proteus.util.Xoroshiro128PlusRandom;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.proteus.broker.info.*;
+import io.proteus.broker.info.Broker;
+import io.proteus.broker.info.BrokerInfoServiceClient;
+import io.proteus.broker.info.Empty;
+import io.proteus.broker.info.Event;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.transport.ClientTransport;
@@ -24,12 +24,14 @@ import io.rsocket.util.ByteBufPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.*;
+import reactor.core.publisher.MonoProcessor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
@@ -117,7 +119,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
                       ByteBufAllocator.DEFAULT,
                       destinationNameFactory.peek(),
                       group,
-                      "com.netifi.proteus.brokerInfo",
+                      "com.netifi.proteus.brokerServices",
                       metadataToWrap);
               Payload wrappedPayload = ByteBufPayload.create(data, metadata);
               payload.release();
