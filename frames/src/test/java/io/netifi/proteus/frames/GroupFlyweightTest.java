@@ -13,9 +13,9 @@ public class GroupFlyweightTest {
     ByteBuf metadata = Unpooled.wrappedBuffer("metadata".getBytes());
     ByteBuf byteBuf =
         GroupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, "fromDestination", "fromGroup", "toGroup", metadata);
+            ByteBufAllocator.DEFAULT, "汉字", "fromGroup", "toGroup", metadata);
 
-    Assert.assertEquals("fromDestination", GroupFlyweight.fromDestination(byteBuf));
+    Assert.assertEquals("汉字", GroupFlyweight.fromDestination(byteBuf));
     Assert.assertEquals("fromGroup", GroupFlyweight.fromGroup(byteBuf));
     Assert.assertEquals("toGroup", GroupFlyweight.toGroup(byteBuf));
     metadata.resetReaderIndex();

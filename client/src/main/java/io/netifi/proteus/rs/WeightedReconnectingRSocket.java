@@ -285,29 +285,29 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return getRSocket()
         .flatMap(
             source -> {
-              long start = incr();
+              long start = start();
               try {
                 return source
                     .fireAndForget(payload)
-                    .doOnCancel(() -> decr(start))
+                    .doOnCancel(() -> stop(start))
                     .doOnSuccessOrError(
                         (p, t) -> {
-                          long now = decr(start);
+                          long now = stop(start);
                           if (t == null || t instanceof TimeoutException) {
-                            observe(now - start);
+                            record(now - start);
                           }
 
                           if (t != null) {
-                            updateErrorPercentage(0.0);
+                            recordError(0.0);
                           } else {
-                            updateErrorPercentage(1.0);
+                            recordError(1.0);
                           }
 
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                decr(start);
-                updateErrorPercentage(0.0);
+                stop(start);
+                recordError(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -319,29 +319,29 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return getRSocket()
         .flatMap(
             source -> {
-              long start = incr();
+              long start = start();
               try {
                 return source
                     .requestResponse(payload)
-                    .doOnCancel(() -> decr(start))
+                    .doOnCancel(() -> stop(start))
                     .doOnSuccessOrError(
                         (p, t) -> {
-                          long now = decr(start);
+                          long now = stop(start);
                           if (t == null || t instanceof TimeoutException) {
-                            observe(now - start);
+                            record(now - start);
                           }
 
                           if (t != null) {
-                            updateErrorPercentage(0.0);
+                            recordError(0.0);
                           } else {
-                            updateErrorPercentage(1.0);
+                            recordError(1.0);
                           }
 
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                decr(start);
-                updateErrorPercentage(0.0);
+                stop(start);
+                recordError(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -364,16 +364,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                         })
                     .doOnNext(
                         o -> {
-                          updateErrorPercentage(1.0);
+                          recordError(1.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnError(
                         t -> {
-                          updateErrorPercentage(0.0);
+                          recordError(0.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                updateErrorPercentage(0.0);
+                recordError(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Flux.error(t);
               }
@@ -396,16 +396,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                         })
                     .doOnNext(
                         o -> {
-                          updateErrorPercentage(1.0);
+                          recordError(1.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnError(
                         t -> {
-                          updateErrorPercentage(0.0);
+                          recordError(0.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                updateErrorPercentage(0.0);
+                recordError(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Flux.error(t);
               }
@@ -417,27 +417,27 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return getRSocket()
         .flatMap(
             source -> {
-              long start = incr();
+              long start = start();
               try {
                 return source
                     .metadataPush(payload)
-                    .doOnCancel(() -> decr(start))
+                    .doOnCancel(() -> stop(start))
                     .doOnSuccessOrError(
                         (p, t) -> {
-                          long now = decr(start);
+                          long now = stop(start);
                           if (t == null || t instanceof TimeoutException) {
-                            observe(now - start);
+                            record(now - start);
                           }
 
                           if (t != null) {
-                            updateErrorPercentage(0.0);
+                            recordError(0.0);
                           } else {
-                            updateErrorPercentage(1.0);
+                            recordError(1.0);
                           }
                         });
               } catch (Throwable t) {
-                decr(start);
-                updateErrorPercentage(0.0);
+                stop(start);
+                recordError(0.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -483,7 +483,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return duration + (now - stamp0) * pending;
   }
 
-  private synchronized long incr() {
+  private synchronized long start() {
     long now = Clock.now();
     interArrivalTime.insert(now - stamp);
     duration += Math.max(0, now - stamp0) * pending;
@@ -493,7 +493,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return now;
   }
 
-  private synchronized long decr(long timestamp) {
+  private synchronized long stop(long timestamp) {
     long now = Clock.now();
     duration += Math.max(0, now - stamp0) * pending - (now - timestamp);
     pending -= 1;
@@ -501,13 +501,13 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return now;
   }
 
-  private synchronized void observe(double rtt) {
-    median.insert(rtt);
-    lowerQuantile.insert(rtt);
-    higherQuantile.insert(rtt);
+  private synchronized void record(double roundTripTime) {
+    median.insert(roundTripTime);
+    lowerQuantile.insert(roundTripTime);
+    higherQuantile.insert(roundTripTime);
   }
 
-  private synchronized void updateErrorPercentage(double value) {
+  private synchronized void recordError(double value) {
     errorPercentage.insert(value);
     errorStamp = Clock.now();
   }
@@ -550,7 +550,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   @Override
   public double availability() {
     if (Clock.now() - stamp > tau) {
-      updateErrorPercentage(1.0);
+      recordError(1.0);
     }
     return availability * errorPercentage.value();
   }

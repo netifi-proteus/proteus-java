@@ -109,31 +109,14 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     createFirstConnection();
 
-    ProteusSocket proteusSocket =
-        new DefaultProteusSocket(
-            payload -> {
-              ByteBuf data = payload.sliceData();
-              ByteBuf metadataToWrap = payload.sliceMetadata();
-              ByteBuf metadata =
-                  GroupFlyweight.encode(
-                      ByteBufAllocator.DEFAULT,
-                      destinationNameFactory.peek(),
-                      group,
-                      "com.netifi.proteus.brokerServices",
-                      metadataToWrap);
-              Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-              payload.release();
-              return wrappedPayload;
-            },
-            this::selectRSocket);
-    this.client = new BrokerInfoServiceClient(proteusSocket);
+    this.client = new BrokerInfoServiceClient(unwrappedGroup("com.netifi.proteus.brokerServices"));
     this.presenceNotifier = new BrokerInfoPresenceNotifier(client);
 
     Disposable disposable =
         client
             .streamBrokerEvents(Empty.getDefaultInstance())
             .doOnSubscribe(s -> createRemainingConnections())
-            .doOnNext(event -> handleBrokerEvent(event))
+            .doOnNext(this::handleBrokerEvent)
             .doOnError(t -> logger.error("error streaming broker events", t))
             .retry()
             .subscribe();
@@ -144,6 +127,14 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
               disposable.dispose();
             })
         .subscribe();
+  }
+
+  BrokerInfoServiceClient getBrokerInfoServiceClient() {
+    return client;
+  }
+
+  PresenceNotifier getBrokerInfoPresenceNotifier() {
+    return presenceNotifier;
   }
 
   void seedClientTransportSupplier() {
@@ -266,27 +257,28 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     return PresenceAwareRSocket.wrap(defaultProteusSocket, destination, group, presenceNotifier);
   }
 
+  private ProteusSocket unwrappedGroup(String group) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              GroupFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  group,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+
   @Override
   public ProteusSocket group(String group) {
-    DefaultProteusSocket defaultProteusSocket =
-        new DefaultProteusSocket(
-            payload -> {
-              ByteBuf data = payload.sliceData();
-              ByteBuf metadataToWrap = payload.sliceMetadata();
-              ByteBuf metadata =
-                  GroupFlyweight.encode(
-                      ByteBufAllocator.DEFAULT,
-                      DefaultProteusBrokerService.this.destinationNameFactory.peek(),
-                      DefaultProteusBrokerService.this.group,
-                      group,
-                      metadataToWrap);
-              Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-              payload.release();
-              return wrappedPayload;
-            },
-            this::selectRSocket);
-
-    return PresenceAwareRSocket.wrap(defaultProteusSocket, null, group, presenceNotifier);
+    return PresenceAwareRSocket.wrap(unwrappedGroup(group), null, group, presenceNotifier);
   }
 
   @Override
@@ -377,7 +369,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     double alpha = (u - l) / bandWidth;
     return Math.pow(1 + alpha, expFactor);
   }
-  
+
   private WeightedClientTransportSupplier selectClientTransportSupplier() {
     WeightedClientTransportSupplier supplier;
 

@@ -2,7 +2,6 @@ package io.netifi.proteus.frames;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -14,6 +13,7 @@ public class GroupFlyweight {
       CharSequence fromGroup,
       CharSequence toGroup,
       ByteBuf metadata) {
+
     ByteBuf fromDestinationBuffer = allocator.buffer();
     int fromDestinationLength =
         fromDestinationBuffer.writeCharSequence(fromDestination, StandardCharsets.UTF_8);
@@ -31,13 +31,14 @@ public class GroupFlyweight {
             .writeInt(fromGroupLength)
             .writeBytes(fromGroupBuffer)
             .writeInt(toGroupLength)
-            .writeBytes(toGroupBuffer);
+            .writeBytes(toGroupBuffer)
+            .writeBytes(metadata);
 
     ReferenceCountUtil.safeRelease(fromDestinationBuffer);
     ReferenceCountUtil.safeRelease(fromGroupBuffer);
     ReferenceCountUtil.safeRelease(toGroupBuffer);
 
-    return Unpooled.wrappedBuffer(byteBuf, metadata);
+    return byteBuf;
   }
 
   public static CharSequence fromDestination(ByteBuf byteBuf) {
