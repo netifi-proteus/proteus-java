@@ -2,6 +2,7 @@ package io.netifi.proteus.frames;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 
@@ -9,9 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public class DestinationSetupFlyweight {
-
-  private static final int ACCESS_KEY_LENGTH_SIZE = Long.BYTES;
-
   public static ByteBuf encode(
       ByteBufAllocator allocator,
       CharSequence destination,
@@ -30,26 +28,20 @@ public class DestinationSetupFlyweight {
     Objects.requireNonNull(destination);
     Objects.requireNonNull(group);
 
-    ByteBuf buffer = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP);
-
-    ByteBuf destinationBuffer = allocator.buffer();
-    int destinationLength =
-        destinationBuffer.writeCharSequence(destination, StandardCharsets.UTF_8);
-
-    ByteBuf groupBuffer = allocator.buffer();
-    int groupLength = groupBuffer.writeCharSequence(group, StandardCharsets.UTF_8);
+    ByteBuf destinationBuffer = ByteBufUtil.writeUtf8(allocator, destination);
+    ByteBuf groupBuffer = ByteBufUtil.writeUtf8(allocator, group);
 
     int accessTokenSize = accessToken.readableBytes();
 
     ByteBuf byteBuf =
-        buffer
-            .writeInt(destinationLength)
+        FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP)
+            .writeInt(destinationBuffer.readableBytes())
             .writeBytes(destinationBuffer)
-            .writeInt(groupLength)
+            .writeInt(groupBuffer.readableBytes())
             .writeBytes(groupBuffer)
             .writeLong(accessKey)
             .writeInt(accessTokenSize)
-            .writeBytes(accessToken);
+            .writeBytes(accessToken, accessToken.readerIndex(), accessTokenSize);
 
     ReferenceCountUtil.safeRelease(destinationBuffer);
     ReferenceCountUtil.safeRelease(groupBuffer);
@@ -58,60 +50,50 @@ public class DestinationSetupFlyweight {
   }
 
   public static CharSequence destination(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-
     int offset = FrameHeaderFlyweight.size(byteBuf);
-    byteBuf.readerIndex(offset);
 
-    int length = byteBuf.readInt();
+    int destinationLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES;
 
-    return byteBuf.readCharSequence(length, StandardCharsets.UTF_8);
+    return byteBuf.getCharSequence(offset, destinationLength, StandardCharsets.UTF_8);
   }
 
   public static CharSequence group(ByteBuf byteBuf) {
-
-    byteBuf.resetReaderIndex();
-
     int offset = FrameHeaderFlyweight.size(byteBuf);
-    byteBuf.readerIndex(offset);
 
-    offset = byteBuf.readInt();
-    byteBuf.readerIndex(byteBuf.readerIndex() + offset);
+    int destinationLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + destinationLength;
 
-    int length = byteBuf.readInt();
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES;
 
-    return byteBuf.readCharSequence(length, StandardCharsets.UTF_8);
+    return byteBuf.getCharSequence(offset, groupLength, StandardCharsets.UTF_8);
   }
 
   public static long accessKey(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-
     int offset = FrameHeaderFlyweight.size(byteBuf);
-    byteBuf.readerIndex(offset);
 
-    offset = byteBuf.readInt();
-    byteBuf.readerIndex(byteBuf.readerIndex() + offset);
+    int destinationLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + destinationLength;
 
-    offset = byteBuf.readInt();
-    byteBuf.readerIndex(byteBuf.readerIndex() + offset);
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength;
 
-    return byteBuf.readLong();
+    return byteBuf.getLong(offset);
   }
 
   public static ByteBuf accessToken(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-
     int offset = FrameHeaderFlyweight.size(byteBuf);
-    byteBuf.readerIndex(offset);
 
-    offset = byteBuf.readInt();
-    byteBuf.readerIndex(byteBuf.readerIndex() + offset);
+    int destinationLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + destinationLength;
 
-    offset = byteBuf.readInt();
-    byteBuf.readerIndex(byteBuf.readerIndex() + offset + ACCESS_KEY_LENGTH_SIZE);
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength + Long.BYTES;
 
-    byteBuf.readInt();
+    int accessTokenLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES;
 
-    return byteBuf.slice();
+    return byteBuf.slice(offset, accessTokenLength);
   }
 }

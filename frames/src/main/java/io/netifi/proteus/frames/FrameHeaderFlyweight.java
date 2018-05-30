@@ -31,20 +31,15 @@ public class FrameHeaderFlyweight {
   }
 
   public static short majorVersion(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-    return byteBuf.readShort();
+    return byteBuf.getShort(0);
   }
 
   public static short minorVersion(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-    byteBuf.readerIndex(MAJOR_VERSION_SIZE);
-    return byteBuf.readShort();
+    return byteBuf.getShort(MAJOR_VERSION_SIZE);
   }
 
   public static FrameType frameType(ByteBuf byteBuf) {
-    byteBuf.resetReaderIndex();
-    byteBuf.readerIndex(MAJOR_VERSION_SIZE + MINOR_VERSION_SIZE);
-    short frameTypeId = byteBuf.readShort();
+    short frameTypeId = byteBuf.getShort(MAJOR_VERSION_SIZE + MINOR_VERSION_SIZE);
     return FrameType.from(frameTypeId);
   }
 
