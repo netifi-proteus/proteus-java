@@ -238,7 +238,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     DefaultProteusSocket defaultProteusSocket =
         new DefaultProteusSocket(
             payload -> {
-              ByteBuf data = payload.sliceData();
+              ByteBuf data = payload.sliceData().retain();
               ByteBuf metadataToWrap = payload.sliceMetadata();
               ByteBuf metadata =
                   DestinationFlyweight.encode(
@@ -260,7 +260,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private ProteusSocket unwrappedGroup(String group) {
     return new DefaultProteusSocket(
         payload -> {
-          ByteBuf data = payload.sliceData();
+          ByteBuf data = payload.sliceData().retain();
           ByteBuf metadataToWrap = payload.sliceMetadata();
           ByteBuf metadata =
               GroupFlyweight.encode(
