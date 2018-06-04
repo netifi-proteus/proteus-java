@@ -11,6 +11,9 @@ public class FrameHeaderFlyweight {
 
   private static final int MAJOR_VERSION_SIZE = Short.BYTES;
   private static final int MINOR_VERSION_SIZE = Short.BYTES;
+  private static final int FRAME_TYPE_SIZE = Short.BYTES;
+
+  public static final int BYTES = MAJOR_VERSION_SIZE + MINOR_VERSION_SIZE + FRAME_TYPE_SIZE;
 
   private FrameHeaderFlyweight() {}
 
@@ -19,8 +22,7 @@ public class FrameHeaderFlyweight {
       final short majorVersion,
       final short minorVersion,
       final FrameType type) {
-    return allocator
-        .buffer()
+    return allocator.buffer()
         .writeShort(majorVersion)
         .writeShort(minorVersion)
         .writeShort(type.getEncodedType());
@@ -41,9 +43,5 @@ public class FrameHeaderFlyweight {
   public static FrameType frameType(ByteBuf byteBuf) {
     short frameTypeId = byteBuf.getShort(MAJOR_VERSION_SIZE + MINOR_VERSION_SIZE);
     return FrameType.from(frameTypeId);
-  }
-
-  public static int size(ByteBuf byteBuf) {
-    return Short.BYTES * 3;
   }
 }

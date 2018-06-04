@@ -1,7 +1,7 @@
 package io.netifi.proteus.presence;
 
 import io.netty.buffer.ByteBuf;
-import io.proteus.broker.info.*;
+import io.netifi.proteus.broker.info.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;

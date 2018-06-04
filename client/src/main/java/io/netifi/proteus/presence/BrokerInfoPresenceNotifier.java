@@ -3,8 +3,8 @@ package io.netifi.proteus.presence;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
+import io.netifi.proteus.broker.info.*;
 import io.netty.buffer.Unpooled;
-import io.proteus.broker.info.*;
 import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -14,6 +14,9 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.netifi.proteus.broker.info.Event.Type.JOIN;
+import static io.netifi.proteus.broker.info.Event.Type.LEAVE;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   FluxProcessor<Destination, Destination> joinEvents;
@@ -83,7 +86,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
   private void joinEvent(Event event) {
     Destination destination = event.getDestination();
-    switch (event.getEventType()) {
+    switch (event.getType()) {
       case JOIN:
         groups.put(destination.getGroup(), destination.getDestination(), destination.getBroker());
         if (joinEvents.hasDownstreams()) {
@@ -94,7 +97,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         groups.remove(destination.getGroup(), destination.getDestination());
         break;
       default:
-        throw new IllegalStateException("unknown event type " + event.getEventType());
+        throw new IllegalStateException("unknown event type " + event.getType());
     }
   }
 

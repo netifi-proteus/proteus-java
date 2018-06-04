@@ -3,7 +3,6 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -19,38 +18,35 @@ public class BrokerSetupFlyweight {
     Objects.requireNonNull(brokerId);
     Objects.requireNonNull(clusterId);
 
-    ByteBuf brokerIdBuffer = ByteBufUtil.writeUtf8(allocator, brokerId);
-    ByteBuf clusterIdBuffer = ByteBufUtil.writeUtf8(allocator, clusterId);
+    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.BROKER_SETUP);
+
+    int brokerIdLength = ByteBufUtil.utf8Bytes(brokerId);
+    byteBuf.writeInt(brokerIdLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, brokerId, brokerIdLength);
+
+    int clusterIdLength = ByteBufUtil.utf8Bytes(clusterId);
+    byteBuf.writeInt(clusterIdLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, clusterId, clusterIdLength);
 
     int authTokenSize = accessToken.readableBytes();
-
-    ByteBuf byteBuf =
-        FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.BROKER_SETUP)
-            .writeInt(brokerIdBuffer.readableBytes())
-            .writeBytes(brokerIdBuffer)
-            .writeInt(clusterIdBuffer.readableBytes())
-            .writeBytes(clusterIdBuffer)
-            .writeLong(accessKey)
-            .writeInt(authTokenSize)
-            .writeBytes(accessToken, accessToken.readerIndex(), authTokenSize);
-
-    ReferenceCountUtil.safeRelease(brokerIdBuffer);
-    ReferenceCountUtil.safeRelease(clusterId);
+    byteBuf.writeLong(accessKey)
+        .writeInt(authTokenSize)
+        .writeBytes(accessToken, accessToken.readerIndex(), authTokenSize);
 
     return byteBuf;
   }
 
-  public static CharSequence brokerId(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String brokerId(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int brokerIdLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, brokerIdLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, brokerIdLength, StandardCharsets.UTF_8);
   }
 
-  public static CharSequence clusterId(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String clusterId(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int brokerIdLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + brokerIdLength;
@@ -58,11 +54,11 @@ public class BrokerSetupFlyweight {
     int clusterIdLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, clusterIdLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, clusterIdLength, StandardCharsets.UTF_8);
   }
 
   public static long accessKey(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int brokerIdLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + brokerIdLength;
@@ -74,7 +70,7 @@ public class BrokerSetupFlyweight {
   }
 
   public static ByteBuf accessToken(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int brokerIdLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + brokerIdLength;

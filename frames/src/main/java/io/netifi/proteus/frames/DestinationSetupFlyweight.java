@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -28,38 +27,35 @@ public class DestinationSetupFlyweight {
     Objects.requireNonNull(destination);
     Objects.requireNonNull(group);
 
-    ByteBuf destinationBuffer = ByteBufUtil.writeUtf8(allocator, destination);
-    ByteBuf groupBuffer = ByteBufUtil.writeUtf8(allocator, group);
+    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP);
+
+    int destinationLength = ByteBufUtil.utf8Bytes(destination);
+    byteBuf.writeInt(destinationLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, destination, destinationLength);
+
+    int groupLength = ByteBufUtil.utf8Bytes(group);
+    byteBuf.writeInt(groupLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, group, groupLength);
 
     int accessTokenSize = accessToken.readableBytes();
-
-    ByteBuf byteBuf =
-        FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP)
-            .writeInt(destinationBuffer.readableBytes())
-            .writeBytes(destinationBuffer)
-            .writeInt(groupBuffer.readableBytes())
-            .writeBytes(groupBuffer)
-            .writeLong(accessKey)
-            .writeInt(accessTokenSize)
-            .writeBytes(accessToken, accessToken.readerIndex(), accessTokenSize);
-
-    ReferenceCountUtil.safeRelease(destinationBuffer);
-    ReferenceCountUtil.safeRelease(groupBuffer);
+    byteBuf.writeLong(accessKey)
+        .writeInt(accessTokenSize)
+        .writeBytes(accessToken, accessToken.readerIndex(), accessTokenSize);
 
     return byteBuf;
   }
 
-  public static CharSequence destination(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String destination(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int destinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, destinationLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, destinationLength, StandardCharsets.UTF_8);
   }
 
-  public static CharSequence group(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String group(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int destinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + destinationLength;
@@ -67,11 +63,11 @@ public class DestinationSetupFlyweight {
     int groupLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, groupLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, groupLength, StandardCharsets.UTF_8);
   }
 
   public static long accessKey(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int destinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + destinationLength;
@@ -83,7 +79,7 @@ public class DestinationSetupFlyweight {
   }
 
   public static ByteBuf accessToken(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int destinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + destinationLength;

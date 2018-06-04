@@ -1,4 +1,4 @@
-package io.netifi.proteus.rs;
+package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.ProteusService;
 import io.netifi.proteus.collections.BiInt2ObjectMap;

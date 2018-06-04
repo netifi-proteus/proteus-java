@@ -4,52 +4,25 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
 public class ProteusMetadata {
-  private static final int VERSION_SIZE = 2;
-  private static final int NAMESPACE_ID_SIZE = 4;
-  private static final int SERVICE_ID_SIZE = 4;
-  private static final int METHOD_ID_SIZE = 4;
-  private static final int METADATA_LENGTH_SIZE = 4;
-
-  public static int computeLength(ByteBuf metadata) {
-    return VERSION_SIZE
-        + NAMESPACE_ID_SIZE
-        + SERVICE_ID_SIZE
-        + METHOD_ID_SIZE
-        + METADATA_LENGTH_SIZE
-        + metadata.readableBytes();
-  }
+  private static final int VERSION_SIZE = Short.BYTES;
+  private static final int NAMESPACE_ID_SIZE = Integer.BYTES;
+  private static final int SERVICE_ID_SIZE = Integer.BYTES;
+  private static final int METHOD_ID_SIZE = Integer.BYTES;
 
   public static ByteBuf encode(
       ByteBufAllocator allocator, int namespaceId, int serviceId, int methodId, ByteBuf metadata) {
-    int offset = 0;
-    ByteBuf byteBuf = allocator.buffer();
-    byteBuf.setShort(offset, 1);
-
-    offset += VERSION_SIZE;
-
-    byteBuf.setInt(offset, namespaceId);
-    offset += NAMESPACE_ID_SIZE;
-
-    byteBuf.setInt(offset, serviceId);
-    offset += SERVICE_ID_SIZE;
-
-    byteBuf.setInt(offset, methodId);
-    offset += METHOD_ID_SIZE;
-
-    int metadataLength = metadata.readableBytes();
-    byteBuf.setInt(offset, metadataLength);
-    offset += METADATA_LENGTH_SIZE;
-
-    byteBuf.setBytes(offset, metadata);
-    offset += metadataLength;
-
-    byteBuf.writerIndex(offset);
+    ByteBuf byteBuf = allocator.buffer()
+        .writeShort(1)
+        .writeInt(namespaceId)
+        .writeInt(serviceId)
+        .writeInt(methodId)
+        .writeBytes(metadata, metadata.readerIndex(), metadata.readableBytes());
 
     return byteBuf;
   }
 
   public static int version(ByteBuf byteBuf) {
-    return toUnsignedInt(byteBuf.getShort(0));
+    return byteBuf.getShort(0) & 0x7FFF;
   }
 
   public static int namespaceId(ByteBuf byteBuf) {
@@ -69,13 +42,7 @@ public class ProteusMetadata {
 
   public static ByteBuf metadata(ByteBuf byteBuf) {
     int offset = VERSION_SIZE + NAMESPACE_ID_SIZE + SERVICE_ID_SIZE + METHOD_ID_SIZE;
-    int length = byteBuf.getInt(offset);
-    offset += METADATA_LENGTH_SIZE;
-
-    return byteBuf.slice(offset, length);
-  }
-
-  private static int toUnsignedInt(short x) {
-    return x & 0x7FFF;
+    int metadataLength = byteBuf.readableBytes() - offset;
+    return byteBuf.slice(offset, metadataLength);
   }
 }

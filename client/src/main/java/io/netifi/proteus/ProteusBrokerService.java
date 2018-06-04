@@ -1,6 +1,6 @@
 package io.netifi.proteus;
 
-import io.netifi.proteus.rs.ProteusSocket;
+import io.netifi.proteus.rsocket.ProteusSocket;
 
 interface ProteusBrokerService {
     ProteusSocket destination(String destination, String group);

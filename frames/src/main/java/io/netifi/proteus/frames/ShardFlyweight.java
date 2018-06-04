@@ -3,7 +3,6 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.ReferenceCountUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -16,42 +15,39 @@ public class ShardFlyweight {
       ByteBuf shardKey,
       ByteBuf metadata) {
 
-    ByteBuf fromDestinationBuffer = ByteBufUtil.writeUtf8(allocator, fromDestination);
-    ByteBuf fromGroupBuffer = ByteBufUtil.writeUtf8(allocator, fromGroup);
-    ByteBuf toGroupBuffer = ByteBufUtil.writeUtf8(allocator, toGroup);
+    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.SHARD);
+
+    int fromDestinationLength = ByteBufUtil.utf8Bytes(fromDestination);
+    byteBuf.writeInt(fromDestinationLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, fromDestination, fromDestinationLength);
+
+    int fromGroupLength = ByteBufUtil.utf8Bytes(fromGroup);
+    byteBuf.writeInt(fromGroupLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, fromGroup, fromGroupLength);
+
+    int toGroupLength = ByteBufUtil.utf8Bytes(toGroup);
+    byteBuf.writeInt(toGroupLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, toGroup, toGroupLength);
 
     int shardKeyLength = shardKey.readableBytes();
-
-    ByteBuf byteBuf =
-        FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION)
-            .writeInt(fromDestinationBuffer.readableBytes())
-            .writeBytes(fromDestinationBuffer)
-            .writeInt(fromGroupBuffer.readableBytes())
-            .writeBytes(fromGroupBuffer)
-            .writeInt(toGroupBuffer.readableBytes())
-            .writeBytes(toGroupBuffer)
-            .writeInt(shardKeyLength)
-            .writeBytes(shardKey, shardKey.readerIndex(), shardKeyLength)
-            .writeBytes(metadata, metadata.readerIndex(), metadata.readableBytes());
-
-    ReferenceCountUtil.safeRelease(fromDestinationBuffer);
-    ReferenceCountUtil.safeRelease(fromGroupBuffer);
-    ReferenceCountUtil.safeRelease(toGroupBuffer);
+    byteBuf.writeInt(shardKeyLength)
+        .writeBytes(shardKey, shardKey.readerIndex(), shardKeyLength)
+        .writeBytes(metadata, metadata.readerIndex(), metadata.readableBytes());
 
     return byteBuf;
   }
 
-  public static CharSequence fromDestination(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String fromDestination(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int fromDestinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, fromDestinationLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, fromDestinationLength, StandardCharsets.UTF_8);
   }
 
-  public static CharSequence fromGroup(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String fromGroup(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int fromDestinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + fromDestinationLength;
@@ -59,11 +55,11 @@ public class ShardFlyweight {
     int fromGroupLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, fromGroupLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, fromGroupLength, StandardCharsets.UTF_8);
   }
 
-  public static CharSequence toGroup(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+  public static String toGroup(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int fromDestinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + fromDestinationLength;
@@ -74,11 +70,11 @@ public class ShardFlyweight {
     int toGroupLength = byteBuf.getInt(offset);
     offset += Integer.BYTES;
 
-    return byteBuf.getCharSequence(offset, toGroupLength, StandardCharsets.UTF_8);
+    return byteBuf.toString(offset, toGroupLength, StandardCharsets.UTF_8);
   }
 
   public static ByteBuf shardKey(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int fromDestinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + fromDestinationLength;
@@ -96,7 +92,7 @@ public class ShardFlyweight {
   }
 
   public static ByteBuf metadata(ByteBuf byteBuf) {
-    int offset = FrameHeaderFlyweight.size(byteBuf);
+    int offset = FrameHeaderFlyweight.BYTES;
 
     int fromDestinationLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + fromDestinationLength;

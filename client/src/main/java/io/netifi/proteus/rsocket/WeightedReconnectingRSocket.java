@@ -1,8 +1,8 @@
-package io.netifi.proteus.rs;
+package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.DestinationNameFactory;
 import io.netifi.proteus.exception.TimeoutException;
-import io.netifi.proteus.rs.transport.WeightedClientTransportSupplier;
+import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netifi.proteus.stats.Ewma;
 import io.netifi.proteus.stats.Median;
 import io.netifi.proteus.stats.Quantile;

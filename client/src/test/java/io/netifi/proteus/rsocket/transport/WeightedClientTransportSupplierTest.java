@@ -1,6 +1,6 @@
-package io.netifi.proteus.rs.transport;
+package io.netifi.proteus.rsocket.transport;
 
-import io.netifi.proteus.rs.WeightedRSocket;
+import io.netifi.proteus.rsocket.WeightedRSocket;
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
 import org.junit.Assert;

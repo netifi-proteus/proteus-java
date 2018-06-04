@@ -1,9 +1,9 @@
 package io.netifi.proteus.integration;
 
 import io.netifi.proteus.Proteus;
-import io.netifi.proteus.rs.ProteusSocket;
+import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netty.buffer.ByteBuf;
-import io.proteus.testing.protobuf.*;
+import io.netifi.proteus.testing.protobuf.*;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;

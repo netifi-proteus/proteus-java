@@ -1,4 +1,4 @@
-package io.netifi.proteus.rs;
+package io.netifi.proteus.rsocket;
 
 import io.rsocket.RSocket;
 
