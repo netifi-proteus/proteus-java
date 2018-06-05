@@ -1,11 +1,14 @@
 sudo: required
 matrix:
   include:
-  - services: docker
+  - os: linux
+    jdk: oraclejdk8
     language: generic
     before_install:
-    - docker pull netifi/proteus-java-build
-    script: gradle/buildLinux.sh
+    - sudo add-apt-repository ppa:maarten-fonville/protobuf -y
+    - sudo apt-get update -y
+    - sudo apt-get install libprotobuf-dev libprotoc-dev protobuf-compiler -y
+    script: gradle/buildViaTravis-linux.sh
   - os: osx
     osx_image: xcode9.3
     language: generic
