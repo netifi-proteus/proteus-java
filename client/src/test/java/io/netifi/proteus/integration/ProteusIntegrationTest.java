@@ -72,7 +72,7 @@ public class ProteusIntegrationTest {
     System.out.println(simpleResponse.getResponseMessage());
   }
 
-  //@Test
+  @Test
   public void testUnaryRpc_100() {
     doTest(100);
     doTest(100);
@@ -84,7 +84,7 @@ public class ProteusIntegrationTest {
     doTest(100);
   }
 
-  //@Test
+  @Test
   public void testUnaryRpc_multiple() {
     doTest(1_000_000);
     doTest(1_000_000);
@@ -270,7 +270,7 @@ public class ProteusIntegrationTest {
     @Override
     public Flux<SimpleResponse> serverStreamingFireHose(SimpleRequest message, ByteBuf metadata) {
       String requestMessage = message.getRequestMessage();
-      return Flux.range(1, 100_000_00)
+      return Flux.range(1, 100_000_000)
           .publish()
           .refCount()
           .onBackpressureDrop()
