@@ -14,16 +14,14 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static io.netifi.proteus.broker.info.Event.Type.JOIN;
-import static io.netifi.proteus.broker.info.Event.Type.LEAVE;
+import java.util.concurrent.ConcurrentMap;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   FluxProcessor<Destination, Destination> joinEvents;
   private BrokerInfoService client;
   Table<String, String, Broker> groups;
-  private Map<String, Disposable> groupWatches;
-  private Map<String, Map<String, Disposable>> destinationWatches;
+  private ConcurrentMap<String, Disposable> groupWatches;
+  private ConcurrentMap<String, ConcurrentMap<String, Disposable>> destinationWatches;
 
   public BrokerInfoPresenceNotifier(BrokerInfoService client) {
     this.client = client;
@@ -104,27 +102,33 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   @Override
   public Mono<Void> notify(String group) {
     Objects.requireNonNull(group);
-    watch(group);
 
-    Mono<Boolean> containsGroup = Mono.fromCallable(() -> groups.containsRow(group));
-    Flux<Boolean> joinEvents =
-        this.joinEvents.map(destination -> destination.getGroup().equals(group));
+    if (groups.containsRow(group)) {
+      return Mono.empty();
+    } else {
+      watch(group);
 
-    return Flux.merge(containsGroup, joinEvents).filter(Boolean::booleanValue).take(1).then();
+      return joinEvents
+          .filter(info -> info.getGroup().equals(group))
+          .next()
+          .then();
+    }
   }
 
   @Override
   public Mono<Void> notify(String destination, String group) {
     Objects.requireNonNull(destination);
     Objects.requireNonNull(group);
-    watch(destination, group);
 
-    Mono<Boolean> containsGroup = Mono.fromCallable(() ->
-                                                        groups.contains(group, destination));
-    Flux<Boolean> joinEvents =
-        this.joinEvents.map(
-            d -> d.getGroup().equals(group) && d.getDestination().equals(destination));
+    if (groups.contains(group, destination)) {
+      return Mono.empty();
+    } else {
+      watch(destination, group);
 
-    return Flux.merge(containsGroup, joinEvents).filter(Boolean::booleanValue).take(1).then();
+      return joinEvents
+          .filter(info -> info.getGroup().equals(group) && info.getDestination().equals(destination))
+          .next()
+          .then();
+    }
   }
 }
