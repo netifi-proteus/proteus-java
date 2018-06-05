@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package io.netifi.proteus;
+
+option java_package = "io.netifi.proteus";
+option java_outer_classname = "CoreProto";
+option java_multiple_files = true;
+
+// Empty message to Ack responses - won't generate to void
+message Ack {}
+
+// Empty message that represents void when returned
+message Empty {}

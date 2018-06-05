@@ -1,0 +1,10 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.5'
+}
+
+dependencies {
+    protobuf project (':broker-info-idl')
+
+    compile 'com.google.protobuf:protobuf-java:3.5.0'
+    compile 'com.google.protobuf:protobuf-java-util:3.5.0'
+}

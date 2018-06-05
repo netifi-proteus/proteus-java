@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package io.netifi.proteus.broker.info;
+
+option java_package = "io.netifi.proteus.broker.info";
+option java_outer_classname = "BrokerInfo";
+option java_multiple_files = true;
+
+message Group {
+    string group  = 1;
+    Broker broker = 2;
+}
+
+message Destination {
+    string group       = 1;
+    string destination = 2;
+    Broker broker      = 3;
+}
+
+message Broker {
+    string brokerId  = 1;
+    string ipAddress = 2;
+    int32 port       = 3;
+}
+
+message Event {
+    enum Type {
+        JOIN  = 0;
+        LEAVE = 1;
+    }
+    Type type               = 1;
+    Broker broker           = 2;
+    Destination destination = 3;
+}
+
+message Empty {}
+
+service BrokerInfoService {
+    rpc Brokers (Empty) returns (stream Broker) {}
+    rpc Groups (Broker) returns (stream Group) {}
+    rpc Destinations (Broker) returns (stream Destination) {}
+    rpc DestinationsByBrokerAndGroup (Group) returns (stream Destination) {}
+    rpc DestinationsByGroup (Group) returns (stream Destination) {}
+    rpc BrokersWithGroup (Group) returns (stream Broker) {}
+    rpc BrokerWithDestination (Destination) returns (Broker) {}
+    rpc streamGroupEvents (Group) returns (stream Event) {}
+    rpc streamDestinationEvents (Destination) returns (stream Event) {}
+    rpc streamBrokerEvents (Empty) returns (stream Event) {}
+}
