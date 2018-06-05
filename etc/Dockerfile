@@ -22,4 +22,4 @@ RUN update-alternatives --config gcc
 RUN mkdir /build
 WORKDIR /build
 
-# to build docker image run: docker build -t proteus/proteus-java-build:latest -f etc/Dockerfile .
+# to build docker image run: docker build -t netifi/proteus-java-build:latest -f etc/Dockerfile .
