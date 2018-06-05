@@ -2,7 +2,6 @@ package io.netifi.proteus;
 
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
-import io.netifi.proteus.broker.info.Empty;
 import io.netifi.proteus.broker.info.Event;
 import io.netifi.proteus.frames.DestinationFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;

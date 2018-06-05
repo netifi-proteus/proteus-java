@@ -25,15 +25,14 @@ message Broker {
     int32 port       = 3;
 }
 
-enum EventType {
-    JOIN  = 0;
-    LEAVE = 1;
-}
-
 message Event {
-    Broker broker           = 1;
-    Destination destination = 2;
-    EventType eventType     = 3;
+    enum Type {
+        JOIN  = 0;
+        LEAVE = 1;
+    }
+    Type type               = 1;
+    Broker broker           = 2;
+    Destination destination = 3;
 }
 
 service BrokerInfoService {

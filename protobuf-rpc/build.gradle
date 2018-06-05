@@ -18,6 +18,10 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
+
+    compileOnly 'com.google.protobuf:protobuf-java:3.5.0'
+    compileOnly 'com.google.protobuf:protobuf-java-util:3.5.0'
+
     testCompile project(':core')
     testCompile 'junit:junit:4.12'
 }
