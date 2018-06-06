@@ -88,6 +88,10 @@ public class ProteusIntegrationTest {
   public void testUnaryRpc_multiple() {
     doTest(1_000_000);
     doTest(1_000_000);
+    doTest(1_000_000);
+    doTest(1_000_000);
+    doTest(1_000_000);
+    doTest(1_000_000);
   }
 
   public void doTest(int count) {
@@ -128,7 +132,7 @@ public class ProteusIntegrationTest {
     SimpleResponse response =
         simpleServiceClient
             .serverStreamingRpc(SimpleRequest.newBuilder().setRequestMessage("a message").build())
-            .take(100_000)
+            .limitRequest(100_000)
             .blockLast();
 
     System.out.println(response.getResponseMessage());

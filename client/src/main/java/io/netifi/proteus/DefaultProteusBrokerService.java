@@ -149,11 +149,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   synchronized void createRemainingConnections() {
-    /*while (members.size() < poolSize) {
+    while (members.size() < poolSize) {
       rsocketMissed = true;
       WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
       members.add(rSocket);
-    }*/
+    }
   }
 
   void handleBrokerEvent(Event event) {

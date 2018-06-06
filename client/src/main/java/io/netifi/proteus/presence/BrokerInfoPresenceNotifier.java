@@ -5,9 +5,10 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
 import io.netifi.proteus.broker.info.*;
 import io.netty.buffer.Unpooled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 
@@ -17,9 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
+  private static final Logger logger = LoggerFactory.getLogger(BrokerInfoPresenceNotifier.class);
   FluxProcessor<Destination, Destination> joinEvents;
-  private BrokerInfoService client;
   Table<String, String, Broker> groups;
+  private BrokerInfoService client;
   private ConcurrentMap<String, Disposable> groupWatches;
   private ConcurrentMap<String, ConcurrentMap<String, Disposable>> destinationWatches;
 
@@ -84,6 +86,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
   private void joinEvent(Event event) {
     Destination destination = event.getDestination();
+    logger.info("presence notifier received event {}", event.toString());
     switch (event.getType()) {
       case JOIN:
         groups.put(destination.getGroup(), destination.getDestination(), destination.getBroker());
@@ -92,7 +95,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         }
         break;
       case LEAVE:
-        groups.remove(destination.getGroup(), destination.getDestination());
+        groups.remove(destination.getGroup  (), destination.getDestination());
         break;
       default:
         throw new IllegalStateException("unknown event type " + event.getType());
@@ -108,10 +111,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     } else {
       watch(group);
 
-      return joinEvents
-          .filter(info -> info.getGroup().equals(group))
-          .next()
-          .then();
+      return joinEvents.filter(info -> info.getGroup().equals(group)).next().then();
     }
   }
 
@@ -126,7 +126,8 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
       watch(destination, group);
 
       return joinEvents
-          .filter(info -> info.getGroup().equals(group) && info.getDestination().equals(destination))
+          .filter(
+              info -> info.getGroup().equals(group) && info.getDestination().equals(destination))
           .next()
           .then();
     }
