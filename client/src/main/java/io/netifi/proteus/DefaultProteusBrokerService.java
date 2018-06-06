@@ -114,8 +114,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     Disposable disposable =
         client
             .streamBrokerEvents(Empty.getDefaultInstance())
-            .doOnSubscribe(s -> createRemainingConnections())
             .doOnNext(this::handleBrokerEvent)
+            .filter(event -> event.getType() == Event.Type.JOIN)
+            .doOnNext(event -> createConnection())
             .doOnError(t -> logger.error("error streaming broker events", t))
             .retry()
             .subscribe();
@@ -148,10 +149,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     members.add(weightedReconnectingRSocket);
   }
 
-  synchronized void createRemainingConnections() {
-    while (members.size() < poolSize) {
+  synchronized void createConnection() {
+    if (members.size() < poolSize) {
       rsocketMissed = true;
       WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
+      System.out.println("adding...");
       members.add(rSocket);
     }
   }
@@ -273,7 +275,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   @Override
   public ProteusSocket destination(String destination, String group) {
-    return PresenceAwareRSocket.wrap(unwrappedDestination(destination, group), destination, group, presenceNotifier);
+    return PresenceAwareRSocket.wrap(
+        unwrappedDestination(destination, group), destination, group, presenceNotifier);
   }
 
   @Override
@@ -412,7 +415,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         }
       }
     }
-
+    
+    logger.info("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
     if (logger.isDebugEnabled()) {
       logger.debug("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
     }
