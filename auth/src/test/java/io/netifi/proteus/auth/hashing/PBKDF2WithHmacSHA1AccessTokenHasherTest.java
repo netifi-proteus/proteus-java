@@ -1,9 +1,8 @@
 package io.netifi.proteus.auth.hashing;
 
+import java.util.concurrent.ThreadLocalRandom;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.concurrent.ThreadLocalRandom;
 
 public class PBKDF2WithHmacSHA1AccessTokenHasherTest {
   @Test

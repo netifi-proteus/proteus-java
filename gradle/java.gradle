@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'idea'
+apply plugin: 'com.github.sherter.google-java-format'
 
 repositories {
     jcenter()
@@ -9,6 +10,11 @@ compileJava {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
     options.compilerArgs << '-Xlint:all,-overloads,-rawtypes,-unchecked'
+}
+
+googleJavaFormat {
+    toolVersion = '1.6'
+    exclude '**/generated'
 }
 
 // custom tasks for creating source/javadoc jars
