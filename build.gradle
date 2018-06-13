@@ -29,8 +29,17 @@ project(':access-key-info-idl') {
 
 project(':broker-info-idl') {
 
-    description = 'Netifi Broker IDL'
+    description = 'Netifi Broker Info IDL'
     ext.artifactName = 'broker-info-idl'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
+project(':broker-mgmt-idl') {
+
+    description = 'Netifi Broker Management IDL'
+    ext.artifactName = 'broker-mgmt-idl'
 
     apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
