@@ -2,6 +2,9 @@ plugins {
     id 'com.google.protobuf' version '0.8.5'
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 dependencies {
     protobuf project (':protobuf-rpc')
     protobuf project (':broker-info-idl')

@@ -12,7 +12,6 @@ import io.netifi.proteus.rsocket.*;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netifi.proteus.stats.FrugalQuantile;
 import io.netifi.proteus.stats.Quantile;
-import io.netifi.proteus.util.Xoroshiro128PlusRandom;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -27,10 +26,7 @@ import reactor.core.publisher.MonoProcessor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
@@ -46,7 +42,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
   private final RSocket requestHandlingRSocket;
-  private final Xoroshiro128PlusRandom rnd = new Xoroshiro128PlusRandom(System.nanoTime());
+  private final SplittableRandom rnd = new SplittableRandom(System.nanoTime());
   private final String group;
   private final DestinationNameFactory destinationNameFactory;
   private final boolean keepalive;

@@ -19,7 +19,6 @@ project(':auth') {
 }
 
 project(':access-key-info-idl') {
-
     description = 'Netifi Access Key IDL'
     ext.artifactName = 'access-key-idl'
 
@@ -28,7 +27,6 @@ project(':access-key-info-idl') {
 }
 
 project(':broker-info-idl') {
-
     description = 'Netifi Broker IDL'
     ext.artifactName = 'broker-info-idl'
 
@@ -37,7 +35,6 @@ project(':broker-info-idl') {
 }
 
 project(':client') {
-
     description = 'Netifi Proteus Client'
     ext.artifactName = 'client'
 
@@ -54,7 +51,6 @@ project(':core') {
 }
 
 project(':frames') {
-
     description = 'Netifi Proteus Frames'
     ext.artifactName = 'frames'
 
@@ -63,7 +59,6 @@ project(':frames') {
 }
 
 project(':metrics-idl') {
-
     description = 'Netifi Proteus Metrics IDL'
     ext.artifactName = 'metrics-idl'
 

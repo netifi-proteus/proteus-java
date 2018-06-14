@@ -1,7 +1,6 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.ProteusService;
-import io.netifi.proteus.collections.BiInt2ObjectMap;
 import io.netifi.proteus.exception.ServiceNotFound;
 import io.netifi.proteus.frames.ProteusMetadata;
 import io.netty.buffer.ByteBuf;
@@ -13,40 +12,38 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 public class RequestHandlingRSocket extends AbstractRSocket {
-  private final BiInt2ObjectMap<ProteusService> registeredServices;
+  private final ConcurrentMap<String, ProteusService> registeredServices = new ConcurrentHashMap<>();
 
   public RequestHandlingRSocket(ProteusService... services) {
-    this.registeredServices = new BiInt2ObjectMap<>();
-
     for (ProteusService proteusService : services) {
-      int namespaceId = proteusService.getNamespaceId();
-      int serviceId = proteusService.getServiceId();
-      registeredServices.put(namespaceId, serviceId, proteusService);
+      String service = proteusService.getService();
+      registeredServices.put(service, proteusService);
     }
   }
 
-  public synchronized void addService(ProteusService service) {
-    int namespaceId = service.getNamespaceId();
-    int serviceId = service.getServiceId();
-    registeredServices.put(namespaceId, serviceId, service);
+  public void addService(ProteusService proteusService) {
+    String service = proteusService.getService();
+    registeredServices.put(service, proteusService);
   }
 
-  private synchronized ProteusService getService(int namespaceId, int serviceId) {
-    return registeredServices.get(namespaceId, serviceId);
+  private ProteusService getService(String service) {
+    return registeredServices.get(service);
   }
 
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
     try {
       ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
-      int namespaceId = ProteusMetadata.namespaceId(metadata);
-      int serviceId = ProteusMetadata.serviceId(metadata);
+      String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(namespaceId, serviceId);
+      ProteusService proteusService = getService(service);
 
       if (proteusService == null) {
-        return Mono.error(new ServiceNotFound(namespaceId, serviceId));
+        return Mono.error(new ServiceNotFound(service));
       }
 
       return proteusService.fireAndForget(payload);
@@ -60,13 +57,12 @@ public class RequestHandlingRSocket extends AbstractRSocket {
   public Mono<Payload> requestResponse(Payload payload) {
     try {
       ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
-      int namespaceId = ProteusMetadata.namespaceId(metadata);
-      int serviceId = ProteusMetadata.serviceId(metadata);
+      String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(namespaceId, serviceId);
+      ProteusService proteusService = getService(service);
 
       if (proteusService == null) {
-        return Mono.error(new ServiceNotFound(namespaceId, serviceId));
+        return Mono.error(new ServiceNotFound(service));
       }
 
       return proteusService.requestResponse(payload);
@@ -80,13 +76,12 @@ public class RequestHandlingRSocket extends AbstractRSocket {
   public Flux<Payload> requestStream(Payload payload) {
     try {
       ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
-      int namespaceId = ProteusMetadata.namespaceId(metadata);
-      int serviceId = ProteusMetadata.serviceId(metadata);
+      String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(namespaceId, serviceId);
+      ProteusService proteusService = getService(service);
 
       if (proteusService == null) {
-        return Flux.error(new ServiceNotFound(namespaceId, serviceId));
+        return Flux.error(new ServiceNotFound(service));
       }
 
       return proteusService.requestStream(payload);
@@ -102,13 +97,12 @@ public class RequestHandlingRSocket extends AbstractRSocket {
         payloads,
         (payload, flux) -> {
           ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
-          int namespaceId = ProteusMetadata.namespaceId(metadata);
-          int serviceId = ProteusMetadata.serviceId(metadata);
+          String service = ProteusMetadata.getService(metadata);
 
-          ProteusService proteusService = getService(namespaceId, serviceId);
+          ProteusService proteusService = getService(service);
 
           if (proteusService == null) {
-            return Flux.error(new ServiceNotFound(namespaceId, serviceId));
+            return Flux.error(new ServiceNotFound(service));
           }
 
           return proteusService.requestChannel(payload, flux);

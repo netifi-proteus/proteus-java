@@ -15,7 +15,7 @@
  */
 package io.netifi.proteus.stats;
 
-import io.netifi.proteus.util.Xoroshiro128PlusRandom;
+import java.util.SplittableRandom;
 
 /**
  * Reference: Ma, Qiang, S. Muthukrishnan, and Mark Sandler. "Frugal Streaming for Estimating
@@ -30,7 +30,7 @@ public class FrugalQuantile implements Quantile {
   int step;
   int sign;
   private double quantile;
-  private Xoroshiro128PlusRandom rnd;
+  private SplittableRandom rnd;
 
   public FrugalQuantile(double quantile, double increment) {
     this.increment = increment;
@@ -38,7 +38,7 @@ public class FrugalQuantile implements Quantile {
     this.estimate = 0.0;
     this.step = 1;
     this.sign = 0;
-    this.rnd = new Xoroshiro128PlusRandom(System.nanoTime());
+    this.rnd = new SplittableRandom(System.nanoTime());
   }
 
   public FrugalQuantile(double quantile) {
