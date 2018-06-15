@@ -441,6 +441,7 @@ static void PrintClient(const ServiceDescriptor* service,
     (*vars)["method_id_name"] = MethodIdFieldName(method);
     bool client_streaming = method->client_streaming();
     bool server_streaming = method->server_streaming();
+    const Descriptor* output_type = method->output_type();
 
     // Method signature
     if (server_streaming) {
@@ -452,7 +453,6 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "public $output_type$ $lower_method_name$");
     } else {
-      const Descriptor* output_type = method->output_type();
       if (output_type->field_count() > 0) {
         p->Print(
             *vars,
@@ -469,9 +469,15 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($Iterable$<$input_type$> messages) {\n");
       p->Indent();
-      p->Print(
-          *vars,
-          "return $lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
+      if (output_type->field_count() > 0) {
+          p->Print(
+              *vars,
+              "return $lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
+      } else {
+          p->Print(
+              *vars,
+              "$lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
+      }
       p->Outdent();
       p->Print("}\n\n");
     } else {
@@ -480,9 +486,15 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($input_type$ message) {\n");
       p->Indent();
-      p->Print(
-          *vars,
-          "return $lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
+      if (output_type->field_count() > 0) {
+          p->Print(
+              *vars,
+              "return $lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
+      } else {
+          p->Print(
+              *vars,
+              "$lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
+      }
       p->Outdent();
       p->Print("}\n\n");
     }
@@ -542,11 +554,17 @@ static void PrintClient(const ServiceDescriptor* service,
     } else if (client_streaming) {
         p->Print(
           *vars,
-          "($input_type$ message, $ByteBuf$ metadata) {\n");
+          "($Iterable$<$input_type$> messages, $ByteBuf$ metadata) {\n");
         p->Indent();
-        p->Print(
-         *vars,
-         "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
+        if (output_type->field_count() > 0) {
+            p->Print(
+             *vars,
+             "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
+        } else {
+            p->Print(
+            *vars,
+            "delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
+        }
         p->Outdent();
         p->Print("}\n\n");
     } else  {
@@ -554,9 +572,15 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($input_type$ message, $ByteBuf$ metadata) {\n");
         p->Indent();
-        p->Print(
-         *vars,
-         "return delegate.$lower_method_name$(message, metadata).block();\n");
+         if (output_type->field_count() > 0) {
+            p->Print(
+                *vars,
+                "return delegate.$lower_method_name$(message, metadata).block();\n");
+         } else {
+            p->Print(
+                *vars,
+                "delegate.$lower_method_name$(message, metadata).block();\n");
+         }
         p->Outdent();
         p->Print("}\n\n");
     }
@@ -595,6 +619,10 @@ static void PrintServer(const ServiceDescriptor* service,
       *vars,
       "private final $service_name$ service;\n");
 
+  p->Print(
+      *vars,
+      "private final $Scheduler$ scheduler;\n");
+
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
@@ -627,12 +655,12 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Print(
       *vars,
       "\n"
-      "public $server_class_name$($service_name$ service) {\n");
+      "public $server_class_name$($service_name$ service, $Scheduler$ scheduler) {\n");
   p->Indent();
   p->Print(
       *vars,
+      "this.scheduler = scheduler;\n"
       "this.service = service;\n");
-
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
@@ -642,7 +670,27 @@ static void PrintServer(const ServiceDescriptor* service,
         *vars,
         "this.$lower_method_name$ = $Function$.identity();\n");
   }
+  p->Outdent();
+  p->Print("}\n\n");
 
+  p->Print(
+      *vars,
+      "\n"
+      "public $server_class_name$($service_name$ service) {\n");
+  p->Indent();
+  p->Print(
+      *vars,
+      "this.scheduler = $Schedulers$.elastic();\n"
+      "this.service = service;\n");
+  // RPC metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$ = $Function$.identity();\n");
+  }
   p->Outdent();
   p->Print("}\n\n");
 
@@ -652,8 +700,8 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
       *vars,
+      "this.scheduler = $Schedulers$.elastic();\n"
       "this.service = service;\n");
-
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
@@ -663,7 +711,26 @@ static void PrintServer(const ServiceDescriptor* service,
         *vars,
         "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.server\", \"namespace\", \"$Package$\", \"service\", \"$service_name$\", \"method\", \"$lower_method_name$\");\n");
   }
+  p->Outdent();
+  p->Print("}\n\n");
 
+  p->Print(
+      *vars,
+      "public $server_class_name$($service_name$ service, $Scheduler$ scheduler, $MeterRegistry$ registry) {\n");
+  p->Indent();
+  p->Print(
+      *vars,
+      "this.scheduler = scheduler;\n"
+      "this.service = service;\n");
+  // RPC metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.server\", \"namespace\", \"$Package$\", \"service\", \"$service_name$\", \"method\", \"$lower_method_name$\");\n");
+  }
   p->Outdent();
   p->Print("}\n\n");
 
@@ -745,7 +812,8 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata);\n");
+          "$input_type$ message = $input_type$.parseFrom(is);\n"
+          "return $Mono$.<Void>fromRunnable(()->service.$lower_method_name$(message, metadata)).subscribeOn(scheduler);\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -809,7 +877,8 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$);\n");
+          "$input_type$ message = $input_type$.parseFrom(is);\n"
+          "return $Mono$.fromSupplier(() -> service.$lower_method_name$(message, metadata)).map(serializer).transform($lower_method_name$).subscribeOn(scheduler);\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -873,7 +942,8 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$);\n");
+          "$input_type$ message = $input_type$.parseFrom(is);\n"
+          "return $Flux$.defer(() -> $Flux$.fromIterable(service.$lower_method_name$(message, metadata)).map(serializer).transform($lower_method_name$)).subscribeOn(scheduler);\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -945,11 +1015,11 @@ static void PrintServer(const ServiceDescriptor* service,
       if (method->server_streaming()) {
         p->Print(
             *vars,
-            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$);\n");
+            "return $Flux$.defer(() -> $Flux$.fromIterable(service.$lower_method_name$(messages.toIterable(), metadata)).map(serializer).transform($lower_method_name$)).subscribeOn(scheduler);\n");
       } else {
         p->Print(
             *vars,
-            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$).$flux$();\n");
+            "return $Mono$.fromSupplier(() -> service.$lower_method_name$(messages.toIterable(), metadata)).map(serializer).transform($lower_method_name$).$flux$().subscribeOn(scheduler);\n");
       }
 
       p->Outdent();
@@ -1205,6 +1275,8 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Parser"] = "com.google.protobuf.Parser";
   vars["BlockingIterable"] = " io.netifi.proteus.BlockingIterable";
   vars["Iterable"] = "Iterable";
+  vars["Scheduler"] = "reactor.core.scheduler.Scheduler";
+  vars["Schedulers"] = "reactor.core.scheduler.Schedulers";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
