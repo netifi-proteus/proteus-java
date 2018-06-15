@@ -9,7 +9,7 @@ repositories {
 compileJava {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
-    options.compilerArgs << '-Xlint:all,-overloads,-rawtypes,-unchecked'
+   // options.compilerArgs << '-Xlint:all,-overloads,-rawtypes,-unchecked'
 }
 
 googleJavaFormat {
