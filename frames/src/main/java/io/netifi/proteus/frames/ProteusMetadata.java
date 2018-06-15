@@ -2,46 +2,65 @@ package io.netifi.proteus.frames;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.rsocket.util.NumberUtils;
+
+import java.nio.charset.StandardCharsets;
 
 public class ProteusMetadata {
-  private static final int VERSION_SIZE = Short.BYTES;
-  private static final int NAMESPACE_ID_SIZE = Integer.BYTES;
-  private static final int SERVICE_ID_SIZE = Integer.BYTES;
-  private static final int METHOD_ID_SIZE = Integer.BYTES;
+  // Version
+  public static final short VERSION = 1;
 
-  public static ByteBuf encode(
-      ByteBufAllocator allocator, int namespaceId, int serviceId, int methodId, ByteBuf metadata) {
-    ByteBuf byteBuf = allocator.buffer()
-        .writeShort(1)
-        .writeInt(namespaceId)
-        .writeInt(serviceId)
-        .writeInt(methodId)
-        .writeBytes(metadata, metadata.readerIndex(), metadata.readableBytes());
+  public static ByteBuf encode(ByteBufAllocator allocator, String service, String method, ByteBuf metadata) {
+    ByteBuf byteBuf = allocator.buffer().writeShort(VERSION);
+
+    int serviceLength = NumberUtils.requireUnsignedShort(ByteBufUtil.utf8Bytes(service));
+    byteBuf.writeShort(serviceLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, service, serviceLength);
+
+    int methodLength = NumberUtils.requireUnsignedShort(ByteBufUtil.utf8Bytes(method));
+    byteBuf.writeShort(methodLength);
+    ByteBufUtil.reserveAndWriteUtf8(byteBuf, method, methodLength);
+
+    byteBuf.writeBytes(metadata, metadata.readerIndex(), metadata.readableBytes());
 
     return byteBuf;
   }
 
-  public static int version(ByteBuf byteBuf) {
+  public static int getVersion(ByteBuf byteBuf) {
     return byteBuf.getShort(0) & 0x7FFF;
   }
 
-  public static int namespaceId(ByteBuf byteBuf) {
-    int offset = VERSION_SIZE;
-    return byteBuf.getInt(offset);
+  public static String getService(ByteBuf byteBuf) {
+    int offset = Short.BYTES;
+
+    int serviceLength = byteBuf.getShort(offset);
+    offset += Short.BYTES;
+
+    return byteBuf.toString(offset, serviceLength, StandardCharsets.UTF_8);
   }
 
-  public static int serviceId(ByteBuf byteBuf) {
-    int offset = VERSION_SIZE + NAMESPACE_ID_SIZE;
-    return byteBuf.getInt(offset);
+  public static String getMethod(ByteBuf byteBuf) {
+    int offset = Short.BYTES;
+
+    int serviceLength = byteBuf.getShort(offset);
+    offset += Short.BYTES + serviceLength;
+
+    int methodLength = byteBuf.getShort(offset);
+    offset += Short.BYTES;
+
+    return byteBuf.toString(offset, methodLength, StandardCharsets.UTF_8);
   }
 
-  public static int methodId(ByteBuf byteBuf) {
-    int offset = VERSION_SIZE + NAMESPACE_ID_SIZE + SERVICE_ID_SIZE;
-    return byteBuf.getInt(offset);
-  }
+  public static ByteBuf getMetadata(ByteBuf byteBuf) {
+    int offset = Short.BYTES;
 
-  public static ByteBuf metadata(ByteBuf byteBuf) {
-    int offset = VERSION_SIZE + NAMESPACE_ID_SIZE + SERVICE_ID_SIZE + METHOD_ID_SIZE;
+    int serviceLength = byteBuf.getShort(offset);
+    offset += Short.BYTES + serviceLength;
+
+    int methodLength = byteBuf.getShort(offset);
+    offset += Short.BYTES + methodLength;
+
     int metadataLength = byteBuf.readableBytes() - offset;
     return byteBuf.slice(offset, metadataLength);
   }
