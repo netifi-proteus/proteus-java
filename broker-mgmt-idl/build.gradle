@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    protobuf project (':protobuf-rpc')
     protobuf project (':broker-info-idl')
 
     compile 'com.google.protobuf:protobuf-java:3.5.0'
