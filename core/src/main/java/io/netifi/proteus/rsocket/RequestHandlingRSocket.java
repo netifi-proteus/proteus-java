@@ -4,7 +4,7 @@ import io.netifi.proteus.ProteusService;
 import io.netifi.proteus.exception.ServiceNotFound;
 import io.netifi.proteus.frames.ProteusMetadata;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import io.rsocket.AbstractRSocket;
 import io.rsocket.Payload;
 import io.rsocket.internal.SwitchTransform;
@@ -30,25 +30,22 @@ public class RequestHandlingRSocket extends AbstractRSocket {
     registeredServices.put(service, proteusService);
   }
 
-  private ProteusService getService(String service) {
-    return registeredServices.get(service);
-  }
-
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
     try {
-      ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
+      ByteBuf metadata = payload.sliceMetadata();
       String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(service);
+      ProteusService proteusService = registeredServices.get(service);
 
       if (proteusService == null) {
+        ReferenceCountUtil.safeRelease(payload);
         return Mono.error(new ServiceNotFound(service));
       }
 
       return proteusService.fireAndForget(payload);
-
     } catch (Throwable t) {
+      ReferenceCountUtil.safeRelease(payload);
       return Mono.error(t);
     }
   }
@@ -56,18 +53,19 @@ public class RequestHandlingRSocket extends AbstractRSocket {
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
     try {
-      ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
+      ByteBuf metadata = payload.sliceMetadata();
       String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(service);
+      ProteusService proteusService = registeredServices.get(service);
 
       if (proteusService == null) {
+        ReferenceCountUtil.safeRelease(payload);
         return Mono.error(new ServiceNotFound(service));
       }
 
       return proteusService.requestResponse(payload);
-
     } catch (Throwable t) {
+      ReferenceCountUtil.safeRelease(payload);
       return Mono.error(t);
     }
   }
@@ -75,18 +73,19 @@ public class RequestHandlingRSocket extends AbstractRSocket {
   @Override
   public Flux<Payload> requestStream(Payload payload) {
     try {
-      ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
+      ByteBuf metadata = payload.sliceMetadata();
       String service = ProteusMetadata.getService(metadata);
 
-      ProteusService proteusService = getService(service);
+      ProteusService proteusService = registeredServices.get(service);
 
       if (proteusService == null) {
+        ReferenceCountUtil.safeRelease(payload);
         return Flux.error(new ServiceNotFound(service));
       }
 
       return proteusService.requestStream(payload);
-
     } catch (Throwable t) {
+      ReferenceCountUtil.safeRelease(payload);
       return Flux.error(t);
     }
   }
@@ -96,16 +95,22 @@ public class RequestHandlingRSocket extends AbstractRSocket {
     return new SwitchTransform<>(
         payloads,
         (payload, flux) -> {
-          ByteBuf metadata = Unpooled.wrappedBuffer(payload.getMetadata());
-          String service = ProteusMetadata.getService(metadata);
+          try {
+            ByteBuf metadata = payload.sliceMetadata();
+            String service = ProteusMetadata.getService(metadata);
 
-          ProteusService proteusService = getService(service);
+            ProteusService proteusService = registeredServices.get(service);
 
-          if (proteusService == null) {
-            return Flux.error(new ServiceNotFound(service));
+            if (proteusService == null) {
+              ReferenceCountUtil.safeRelease(payload);
+              return Flux.error(new ServiceNotFound(service));
+            }
+
+            return proteusService.requestChannel(payload, flux);
+          } catch (Throwable t) {
+            ReferenceCountUtil.safeRelease(payload);
+            return Flux.error(t);
           }
-
-          return proteusService.requestChannel(payload, flux);
         });
   }
 }
