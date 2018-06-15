@@ -357,20 +357,20 @@ static void PrintInterface(const ServiceDescriptor* service,
     WriteMethodDocComment(p, method);
 
     if (server_streaming) {
-      p->Print(*vars, "$Flux$<$output_type$> $lower_method_name$");
+      p->Print(*vars, "$Iterable$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
-      p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
+      p->Print(*vars, "$output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
       if (output_type->field_count() > 0) {
-        p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
+        p->Print(*vars, "$output_type$ $lower_method_name$");
       } else {
-        p->Print(*vars, "$Mono$<Void> $lower_method_name$");
+        p->Print(*vars, "void $lower_method_name$");
       }
     }
     if (client_streaming) {
       // Bidirectional streaming or client streaming
-      p->Print(*vars, "($Publisher$<$input_type$> messages, $ByteBuf$ metadata);\n");
+      p->Print(*vars, "($Iterable$<$input_type$> messages, $ByteBuf$ metadata);\n");
     } else {
       // Server streaming or simple RPC
       p->Print(*vars, "($input_type$ message, $ByteBuf$ metadata);\n");
@@ -407,37 +407,7 @@ static void PrintClient(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "private final $RSocket$ rSocket;\n");
-
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["output_type"] = MessageFullJavaName(method->output_type());
-    (*vars)["lower_method_name"] = LowerMethodName(method);
-    bool client_streaming = method->client_streaming();
-    bool server_streaming = method->server_streaming();
-
-    if (server_streaming) {
-      p->Print(
-          *vars,
-          "private final $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>> $lower_method_name$;\n");
-    } else if (client_streaming) {
-      p->Print(
-          *vars,
-          "private final $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>> $lower_method_name$;\n");
-    } else {
-      const Descriptor* output_type = method->output_type();
-      if (output_type->field_count() > 0) {
-        p->Print(
-            *vars,
-            "private final $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>> $lower_method_name$;\n");
-      } else {
-        p->Print(
-            *vars,
-            "private final $Function$<? super $Publisher$<Void>, ? extends $Publisher$<Void>> $lower_method_name$;\n");
-      }
-    }
-  }
+      "private final $PackageName$.$client_class_name$ delegate;\n");
 
   p->Print(
       *vars,
@@ -446,17 +416,7 @@ static void PrintClient(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
       *vars,
-      "this.rSocket = rSocket;\n");
-
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
-
-    p->Print(
-        *vars,
-        "this.$lower_method_name$ = $Function$.identity();\n");
-  }
+      "this.delegate = new $PackageName$.$client_class_name$(rSocket);\n");
 
   p->Outdent();
   p->Print("}\n\n");
@@ -467,17 +427,7 @@ static void PrintClient(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
       *vars,
-      "this.rSocket = rSocket;\n");
-
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
-
-    p->Print(
-        *vars,
-        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.client\", \"namespace\", \"$Package$\", \"service\", \"$service_name$\", \"method\", \"$lower_method_name$\");\n");
-  }
+      "this.delegate = new $PackageName$.$client_class_name$(rSocket, registry);\n");
 
   p->Outdent();
   p->Print("}\n\n");
@@ -496,28 +446,28 @@ static void PrintClient(const ServiceDescriptor* service,
     if (server_streaming) {
       p->Print(
           *vars,
-          "public $Flux$<$output_type$> $lower_method_name$");
+          "public $BlockingIterable$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
       p->Print(
           *vars,
-          "public $Mono$<$output_type$> $lower_method_name$");
+          "public $output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
       if (output_type->field_count() > 0) {
         p->Print(
             *vars,
-            "public $Mono$<$output_type$> $lower_method_name$");
+            "public $output_type$ $lower_method_name$");
       } else {
         p->Print(
             *vars,
-            "public $Mono$<Void> $lower_method_name$");
+            "public void $lower_method_name$");
       }
     }
 
     if (client_streaming) {
       p->Print(
           *vars,
-          "($Publisher$<$input_type$> messages) {\n");
+          "($Iterable$<$input_type$> messages) {\n");
       p->Indent();
       p->Print(
           *vars,
@@ -542,228 +492,79 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "@$Override$\n"
-          "public $Flux$<$output_type$> $lower_method_name$");
+          "public $BlockingIterable$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
       p->Print(
           *vars,
           "@$Override$\n"
-          "public $Mono$<$output_type$> $lower_method_name$");
+          "public $output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
       if (output_type->field_count() > 0) {
         p->Print(
             *vars,
             "@$Override$\n"
-            "public $Mono$<$output_type$> $lower_method_name$");
+            "public $output_type$ $lower_method_name$");
       } else {
         p->Print(
             *vars,
             "@$Override$\n"
-            "public $Mono$<Void> $lower_method_name$");
+            "public void $lower_method_name$");
       }
     }
-    if (client_streaming) {
-      // Bidirectional streaming or client streaming
+
+    if (client_streaming && server_streaming) {
       p->Print(
           *vars,
-          "($Publisher$<$input_type$> messages, $ByteBuf$ metadata) {\n");
+      "($Iterable$<$input_type$> messages, $ByteBuf$ metadata) {\n");
       p->Indent();
       p->Print(
           *vars,
-          "return rSocket.requestChannel($Flux$.$from$(messages).map(\n");
-      p->Indent();
+          "$Flux$ stream = delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata);\n");
       p->Print(
-          *vars,
-          "new $Function$<$MessageLite$, $Payload$>() {\n");
-      p->Indent();
-      p->Print(
-          *vars,
-          "private final $AtomicBoolean$ once = new $AtomicBoolean$(false);\n\n"
-          "@$Override$\n"
-          "public $Payload$ apply($MessageLite$ message) {\n");
-      p->Indent();
-      p->Print(
-          *vars,
-          "$ByteBuf$ data = serialize(message);\n"
-          "if (once.compareAndSet(false, true)) {\n");
-      p->Indent();
-      p->Print(
-          *vars,
-          "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
-          "return $ByteBufPayload$.create(data, metadataBuf);\n");
-      p->Outdent();
-      p->Print("} else {\n");
-      p->Indent();
-      p->Print(
-          *vars,
-          "return $ByteBufPayload$.create(data);\n");
-      p->Outdent();
-      p->Print("}\n");
-      p->Outdent();
-      p->Print("}\n");
-      p->Outdent();
-      if (server_streaming) {
-        p->Print(
-            *vars,
-            "})).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
-      } else {
-        p->Print(
-            *vars,
-            "})).map(deserializer($output_type$.parser())).single().transform($lower_method_name$);\n");
-      }
-      p->Outdent();
+         *vars,
+         "return new $BlockingIterable$<>(stream, $Queues$.SMALL_BUFFER_SIZE, $Queues$.small());\n");
       p->Outdent();
       p->Print("}\n\n");
-    } else {
-      // Server streaming or simple RPC
+    } else if (server_streaming) {
       p->Print(
           *vars,
           "($input_type$ message, $ByteBuf$ metadata) {\n");
       p->Indent();
-
-      if (server_streaming) {
-        p->Print(
-            *vars,
-            "return $Flux$.defer(new $Supplier$<$Flux$<$Payload$>>() {\n");
-        p->Indent();
-        p->Print(
-            *vars,
-            "@$Override$\n"
-            "public $Flux$<$Payload$> get() {\n");
-        p->Indent();
-        p->Print(
-            *vars,
-            "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
-            "$ByteBuf$ data = serialize(message);\n"
-            "return rSocket.requestStream($ByteBufPayload$.create(data, metadataBuf));\n");
-        p->Outdent();
-        p->Print("}\n");
-        p->Outdent();
-        p->Print(
-            *vars,
-            "}).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
-      } else {
-        const Descriptor* output_type = method->output_type();
-        if (output_type->field_count() > 0) {
-          p->Print(
-              *vars,
-              "return $Mono$.defer(new $Supplier$<$Mono$<$Payload$>>() {\n");
-          p->Indent();
-          p->Print(
-              *vars,
-              "@$Override$\n"
-              "public $Mono$<$Payload$> get() {\n");
-          p->Indent();
-          p->Print(
-              *vars,
-              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
-              "$ByteBuf$ data = serialize(message);\n"
-              "return rSocket.requestResponse($ByteBufPayload$.create(data, metadataBuf));\n");
-          p->Outdent();
-          p->Print("}\n");
-          p->Outdent();
-          p->Print(
-              *vars,
-              "}).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
-        } else {
-          p->Print(
-              *vars,
-              "return $Mono$.defer(new $Supplier$<$Mono$<Void>>() {\n");
-          p->Indent();
-          p->Print(
-              *vars,
-              "@$Override$\n"
-              "public $Mono$<Void> get() {\n");
-          p->Indent();
-          p->Print(
-              *vars,
-              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$namespace_id_name$, $service_name$.$service_id_name$, $service_name$.$method_id_name$, metadata);\n"
-              "$ByteBuf$ data = serialize(message);\n"
-              "return rSocket.fireAndForget($ByteBufPayload$.create(data, metadataBuf));\n");
-          p->Outdent();
-          p->Print("}\n");
-          p->Outdent();
-          p->Print(
-              *vars,
-              "}).transform($lower_method_name$);\n");
-        }
-      }
-
+      p->Print(
+          *vars,
+          "$Flux$ stream = delegate.$lower_method_name$(message, metadata);\n");
+      p->Print(
+         *vars,
+         "return new $BlockingIterable$<>(stream, $Queues$.SMALL_BUFFER_SIZE, $Queues$.small());\n");
       p->Outdent();
       p->Print("}\n\n");
+    } else if (client_streaming) {
+        p->Print(
+          *vars,
+          "($input_type$ message, $ByteBuf$ metadata) {\n");
+        p->Indent();
+        p->Print(
+         *vars,
+         "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
+        p->Outdent();
+        p->Print("}\n\n");
+    } else  {
+        p->Print(
+          *vars,
+          "($input_type$ message, $ByteBuf$ metadata) {\n");
+        p->Indent();
+        p->Print(
+         *vars,
+         "return delegate.$lower_method_name$(message, metadata).block();\n");
+        p->Outdent();
+        p->Print("}\n\n");
     }
+
   }
 
-  // Serialize method
-  p->Print(
-  *vars,
-  "private static $ByteBuf$ serialize(final $MessageLite$ message) {\n");
-  p->Indent();
-  p->Print(
-    *vars,
-    "int length = message.getSerializedSize();\n"
-    "$ByteBuf$ byteBuf = $ByteBufAllocator$.DEFAULT.buffer(length);\n");
-  p->Print("try {\n");
-  p->Indent();
-  p->Print(
-    *vars,
-    "message.writeTo($CodedOutputStream$.newInstance(byteBuf.internalNioBuffer(0, length)));\n"
-    "byteBuf.writerIndex(length);\n"
-    "return byteBuf;\n");
-  p->Outdent();
-  p->Print("} catch (Throwable t) {\n");
-  p->Indent();
-  p->Print(
-    "byteBuf.release();\n"
-    "throw new RuntimeException(t);\n");
-  p->Outdent();
-  p->Print("}\n");
   p->Outdent();
   p->Print("}\n\n");
-
-  // Deserializer
-  p->Print(
-      *vars,
-      "private static <T> $Function$<$Payload$, T> deserializer(final $Parser$<T> parser) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "return new $Function$<$Payload$, T>() {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "@$Override$\n"
-      "public T apply($Payload$ payload) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "try {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-      "return parser.parseFrom(is);\n");
-  p->Outdent();
-  p->Print("} catch (Throwable t) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "throw new RuntimeException(t);\n");
-  p->Outdent();
-  p->Print("} finally {\n");
-  p->Indent();
-  p->Print("payload.release();\n");
-  p->Outdent();
-  p->Print("}\n");
-  p->Outdent();
-  p->Print("}\n");
-  p->Outdent();
-  p->Print("};\n");
-  p->Outdent();
-  p->Print("}\n");
-
-  p->Outdent();
-  p->Print("}\n");
 }
 
 static void PrintServer(const ServiceDescriptor* service,
@@ -1298,11 +1099,9 @@ void GenerateInterface(const ServiceDescriptor* service,
   // All non-generated classes must be referred by fully qualified names to
   // avoid collision with generated classes.
   std::map<string, string> vars;
-  vars["Flux"] = "reactor.core.publisher.Flux";
-  vars["Mono"] = "reactor.core.publisher.Mono";
-  vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";
   vars["ByteBuf"] = "io.netty.buffer.ByteBuf";
+  vars["Iterable"] = "Iterable";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
@@ -1350,6 +1149,10 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["MeterRegistry"] = "io.micrometer.core.instrument.MeterRegistry";
   vars["MessageLite"] = "com.google.protobuf.MessageLite";
   vars["Parser"] = "com.google.protobuf.Parser";
+  vars["BlockingIterable"] = " io.netifi.proteus.BlockingIterable";
+  vars["Iterable"] = "Iterable";
+  vars["PackageName"] = ServiceJavaPackage(service->file());
+  vars["Queues"] = "reactor.util.concurrent.Queues";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
@@ -1400,6 +1203,8 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["CodedOutputStream"] = "com.google.protobuf.CodedOutputStream";
   vars["MessageLite"] = "com.google.protobuf.MessageLite";
   vars["Parser"] = "com.google.protobuf.Parser";
+  vars["BlockingIterable"] = " io.netifi.proteus.BlockingIterable";
+  vars["Iterable"] = "Iterable";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
