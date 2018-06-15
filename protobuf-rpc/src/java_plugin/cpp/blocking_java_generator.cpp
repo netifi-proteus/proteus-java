@@ -81,7 +81,7 @@ static inline string LowerMethodName(const MethodDescriptor* method) {
   return MixedLower(method->name());
 }
 
-static inline string MethodIdFieldName(const MethodDescriptor* method) {
+static inline string MethodFieldName(const MethodDescriptor* method) {
   return "METHOD_" + ToAllUpperCase(method->name());
 }
 
@@ -94,7 +94,7 @@ static inline string MessageFullJavaName(const Descriptor* desc) {
   return google::protobuf::compiler::java::ClassName(desc);
 }
 
-static inline string ServiceIdFieldName(const ServiceDescriptor* service) { return "SERVICE_ID"; }
+static inline string ServiceFieldName(const ServiceDescriptor* service) { return "SERVICE_ID"; }
 
 static inline string ServiceId(const ServiceDescriptor* service) {
   int32_t hash = Hash(service->name());
@@ -311,10 +311,7 @@ static void PrintInterface(const ServiceDescriptor* service,
                            ProtoFlavor flavor,
                            bool disable_version) {
   (*vars)["service_name"] = service->name();
-  (*vars)["namespace_id_name"] = NamespaceIdFieldName(service);
-  (*vars)["namespace_id"] = NamespaceId(service);
-  (*vars)["service_id_name"] = ServiceIdFieldName(service);
-  (*vars)["service_id"] = ServiceId(service);
+  (*vars)["service_field_name"] = ServiceFieldName(service);
   (*vars)["file_name"] = service->file()->name();
   (*vars)["proteus_version"] = "";
   #ifdef PROTEUS_VERSION
@@ -332,15 +329,14 @@ static void PrintInterface(const ServiceDescriptor* service,
   p->Indent();
 
   // Service IDs
-  p->Print(*vars, "int $namespace_id_name$ = $namespace_id$;\n");
-  p->Print(*vars, "int $service_id_name$ = $service_id$;\n");
+  p->Print(*vars, "String $service_field_name$ = \"$Package$$service_name$\";\n");
 
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
-    (*vars)["method_id_name"] = MethodIdFieldName(method);
-    (*vars)["method_id"] = MethodId(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+    (*vars)["method_name"] = method->name();
 
-    p->Print(*vars, "int $method_id_name$ = $method_id$;\n");
+    p->Print(*vars, "String $method_field_name$ = \"$method_name$\";\n");
   }
 
   // RPC methods
@@ -388,7 +384,7 @@ static void PrintClient(const ServiceDescriptor* service,
                         bool disable_version) {
   (*vars)["service_name"] = service->name();
   (*vars)["namespace_id_name"] = NamespaceIdFieldName(service);
-  (*vars)["service_id_name"] = ServiceIdFieldName(service);
+  (*vars)["service_id_name"] = ServiceFieldName(service);
   (*vars)["file_name"] = service->file()->name();
   (*vars)["client_class_name"] = ClientClassName(service);
   (*vars)["proteus_version"] = "";
@@ -438,7 +434,7 @@ static void PrintClient(const ServiceDescriptor* service,
     (*vars)["input_type"] = MessageFullJavaName(method->input_type());
     (*vars)["output_type"] = MessageFullJavaName(method->output_type());
     (*vars)["lower_method_name"] = LowerMethodName(method);
-    (*vars)["method_id_name"] = MethodIdFieldName(method);
+    (*vars)["method_id_name"] = MethodFieldName(method);
     bool client_streaming = method->client_streaming();
     bool server_streaming = method->server_streaming();
     const Descriptor* output_type = method->output_type();
@@ -598,7 +594,7 @@ static void PrintServer(const ServiceDescriptor* service,
                         bool disable_version) {
   (*vars)["service_name"] = service->name();
   (*vars)["namespace_id_name"] = NamespaceIdFieldName(service);
-  (*vars)["service_id_name"] = ServiceIdFieldName(service);
+  (*vars)["service_id_name"] = ServiceFieldName(service);
   (*vars)["file_name"] = service->file()->name();
   (*vars)["server_class_name"] = ServerClassName(service);
   (*vars)["proteus_version"] = "";
@@ -737,18 +733,7 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Print(
       *vars,
       "@$Override$\n"
-      "public int getNamespaceId() {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "return $service_name$.$namespace_id_name$;\n");
-  p->Outdent();
-  p->Print("}\n\n");
-
-  p->Print(
-      *vars,
-      "@$Override$\n"
-      "public int getServiceId() {\n");
+      "public String getService() {\n");
   p->Indent();
   p->Print(
       *vars,
@@ -798,13 +783,13 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
-        "switch($ProteusMetadata$.methodId(metadata)) {\n");
+        "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = fire_and_forget.begin(); it != fire_and_forget.end(); ++it) {
       const MethodDescriptor* method = *it;
       (*vars)["input_type"] = MessageFullJavaName(method->input_type());
       (*vars)["lower_method_name"] = LowerMethodName(method);
-      (*vars)["method_id_name"] = MethodIdFieldName(method);
+      (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
           "case $service_name$.$method_id_name$: {\n");
@@ -862,14 +847,14 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
-        "switch($ProteusMetadata$.methodId(metadata)) {\n");
+        "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_response.begin(); it != request_response.end(); ++it) {
       const MethodDescriptor* method = *it;
       (*vars)["input_type"] = MessageFullJavaName(method->input_type());
       (*vars)["output_type"] = MessageFullJavaName(method->output_type());
       (*vars)["lower_method_name"] = LowerMethodName(method);
-      (*vars)["method_id_name"] = MethodIdFieldName(method);
+      (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
           "case $service_name$.$method_id_name$: {\n");
@@ -927,14 +912,14 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
-        "switch($ProteusMetadata$.methodId(metadata)) {\n");
+        "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_stream.begin(); it != request_stream.end(); ++it) {
       const MethodDescriptor* method = *it;
       (*vars)["input_type"] = MessageFullJavaName(method->input_type());
       (*vars)["output_type"] = MessageFullJavaName(method->output_type());
       (*vars)["lower_method_name"] = LowerMethodName(method);
-      (*vars)["method_id_name"] = MethodIdFieldName(method);
+      (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
           "case $service_name$.$method_id_name$: {\n");
@@ -992,14 +977,14 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
-        "switch($ProteusMetadata$.methodId(metadata)) {\n");
+        "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_channel.begin(); it != request_channel.end(); ++it) {
       const MethodDescriptor* method = *it;
       (*vars)["input_type"] = MessageFullJavaName(method->input_type());
       (*vars)["output_type"] = MessageFullJavaName(method->output_type());
       (*vars)["lower_method_name"] = LowerMethodName(method);
-      (*vars)["method_id_name"] = MethodIdFieldName(method);
+      (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
           "case $service_name$.$method_id_name$: {\n");
