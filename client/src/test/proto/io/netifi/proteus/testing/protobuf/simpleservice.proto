@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-package io.netifi.proteus.testing;
+package io.netifi.proteus.testing.protobuf;
+
+import "proteus/core.proto";
 
 option java_package = "io.netifi.proteus.testing.protobuf";
 option java_outer_classname = "SimpleServiceProto";
@@ -9,10 +11,10 @@ option java_multiple_files = true;
 // A simple service for test.
 service SimpleService {
   // fire and forget
-  rpc FireAndForget (SimpleRequest) returns (Empty) {}
+  rpc FireAndForget (SimpleRequest) returns (io.netifi.proteus.Empty) {}
 
   // Streams when you send a Fire and Forget
-  rpc StreamOnFireAndForget (Empty) returns (stream SimpleResponse) {}
+  rpc StreamOnFireAndForget (io.netifi.proteus.Empty) returns (stream SimpleResponse) {}
 
   // Simple unary RPC.
   rpc UnaryRpc (SimpleRequest) returns (SimpleResponse) {}
@@ -29,8 +31,6 @@ service SimpleService {
   // Simple bidirectional streaming RPC.
   rpc BidiStreamingRpc (stream SimpleRequest) returns (stream SimpleResponse) {}
 }
-
-message Empty {}
 
 // A simple request message type for test.
 message SimpleRequest {

@@ -1,5 +1,6 @@
 package io.netifi.proteus.integration;
 
+import io.netifi.proteus.Empty;
 import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netty.buffer.ByteBuf;
