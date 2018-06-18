@@ -1,9 +1,6 @@
 package io.netifi.proteus.rsocket;
 
-import io.netifi.proteus.frames.DestinationFlyweight;
-import io.netifi.proteus.frames.FrameHeaderFlyweight;
-import io.netifi.proteus.frames.FrameType;
-import io.netifi.proteus.frames.GroupFlyweight;
+import io.netifi.proteus.frames.*;
 import io.netty.buffer.ByteBuf;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
@@ -21,39 +18,59 @@ public class UnwrappingRSocket extends RSocketProxy {
   }
 
   private Payload unwrap(Payload payload) {
-    ByteBuf data = payload.sliceData();
-    ByteBuf metadata = payload.sliceMetadata();
-    ByteBuf unwrappedMetadata;
-    FrameType frameType = FrameHeaderFlyweight.frameType(metadata);
-    switch (frameType) {
-      case DESTINATION:
-        unwrappedMetadata = DestinationFlyweight.metadata(metadata);
-        break;
-      case GROUP:
-        unwrappedMetadata = GroupFlyweight.metadata(metadata);
-        break;
-      default:
-        throw new IllegalStateException("unknown frame type " + frameType);
-    }
+    try {
+      ByteBuf data = payload.sliceData();
+      ByteBuf metadata = payload.sliceMetadata();
+      ByteBuf unwrappedMetadata;
+      FrameType frameType = FrameHeaderFlyweight.frameType(metadata);
+      switch (frameType) {
+        case DESTINATION:
+          unwrappedMetadata = DestinationFlyweight.metadata(metadata);
+          break;
+        case GROUP:
+          unwrappedMetadata = GroupFlyweight.metadata(metadata);
+          break;
+        case BROADCAST:
+          unwrappedMetadata = BroadcastFlyweight.metadata(metadata);
+          break;
+        case SHARD:
+          unwrappedMetadata = ShardFlyweight.metadata(metadata);
+          break;
+        default:
+          throw new IllegalStateException("unknown frame type " + frameType);
+      }
 
-    Payload unwrappedPayload = ByteBufPayload.create(data.retain(), unwrappedMetadata.retain());
-    payload.release();
-    return unwrappedPayload;
+      return ByteBufPayload.create(data.retain(), unwrappedMetadata.retain());
+    } finally {
+      payload.release();
+    }
   }
 
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
-    return super.fireAndForget(unwrap(payload));
+    try {
+      return super.fireAndForget(unwrap(payload));
+    } catch (Throwable t) {
+      return Mono.error(t);
+    }
   }
 
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
-    return super.requestResponse(unwrap(payload));
+    try {
+      return super.requestResponse(unwrap(payload));
+    } catch (Throwable t) {
+      return Mono.error(t);
+    }
   }
 
   @Override
   public Flux<Payload> requestStream(Payload payload) {
-    return super.requestStream(unwrap(payload));
+    try {
+      return super.requestStream(unwrap(payload));
+    } catch (Throwable t) {
+      return Flux.error(t);
+    }
   }
 
   @Override
@@ -63,6 +80,10 @@ public class UnwrappingRSocket extends RSocketProxy {
 
   @Override
   public Mono<Void> metadataPush(Payload payload) {
-    return super.metadataPush(unwrap(payload));
+    try {
+      return super.metadataPush(unwrap(payload));
+    } catch (Throwable t) {
+      return Mono.error(t);
+    }
   }
 }
