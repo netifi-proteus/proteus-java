@@ -42,7 +42,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
   private final RSocket requestHandlingRSocket;
-  private final SplittableRandom rnd = new SplittableRandom(System.nanoTime());
+  private final SplittableRandom rnd = new SplittableRandom();
   private final String group;
   private final DestinationNameFactory destinationNameFactory;
   private final boolean keepalive;
