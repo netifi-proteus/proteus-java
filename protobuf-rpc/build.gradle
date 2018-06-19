@@ -167,6 +167,21 @@ clean {
     delete protobuf.generatedFilesBaseDir
 }
 
+// custom tasks for creating source/javadoc jars
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+    baseName = "${project.ext.artifactName}"
+    version = "${project.version}"
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+    baseName = "${project.ext.artifactName}"
+    version = "${project.version}"
+}
+
 artifacts {
     archives("$pathToPlugin" as File) {
         classifier osdetector.os + "-" + osdetector.arch
@@ -176,6 +191,11 @@ artifacts {
     }
 
     archives sourcesJar, javadocJar
+}
+
+jar {
+    baseName = "${artifactName}"
+    version = "${project.version}"
 }
 
 publishing {
@@ -190,12 +210,12 @@ publishing {
 
         maven2(MavenPublication) {
             from components.java
+            artifact sourcesJar
+            artifact javadocJar
 
             groupId = "io.netifi.proteus"
             artifactId "${artifactName}"
-
-            artifact sourcesJar
-            artifact javadocJar
+            version = "${releaseVersion}"
         }
     }
 }
