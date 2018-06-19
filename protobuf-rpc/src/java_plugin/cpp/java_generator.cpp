@@ -323,7 +323,7 @@ static void PrintInterface(const ServiceDescriptor* service,
       p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->field_count() > 0) {
+      if (output_type->full_name() != "io.netifi.proteus.Empty") {
         p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
       } else {
         p->Print(*vars, "$Mono$<Void> $lower_method_name$");
