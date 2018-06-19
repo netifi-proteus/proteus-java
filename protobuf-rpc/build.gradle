@@ -178,12 +178,20 @@ artifacts {
 
 publishing {
     publications {
-        maven(MavenPublication) {
+        pub1(MavenPublication) {
             artifactId "${project.ext.artifactName}"
             artifact(pathToPlugin) {
                 classifier osdetector.os + "-" + osdetector.arch
                 builtBy buildArtifacts
             }
+        }
+
+        pub2(MavenPublication) {
+            from components.java
+
+            artifactId "${artifactName}"
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
