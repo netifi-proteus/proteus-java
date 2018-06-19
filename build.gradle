@@ -59,6 +59,14 @@ project(':core') {
     apply from: file('../gradle/java.gradle')
 }
 
+project(':core-idl') {
+    description = 'Netifi Core Library IDL'
+    ext.artifactName = 'core-idl'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
 project(':frames') {
     description = 'Netifi Proteus Frames'
     ext.artifactName = 'frames'

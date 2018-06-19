@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    protobuf project (':protobuf-rpc')
+    protobuf project (':core-idl')
 
     compile 'com.google.protobuf:protobuf-java:3.5.0'
 }
