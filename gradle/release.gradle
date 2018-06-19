@@ -27,7 +27,7 @@ build.dependsOn versionArchives
 bintray {
     user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
     key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
-    publications = ['maven']
+    publications = ['maven', 'maven2']
 
     publish = (osdetector.os == 'osx')
 
