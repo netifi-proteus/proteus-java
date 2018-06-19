@@ -23,6 +23,7 @@ dependencies {
     compileOnly 'com.google.protobuf:protobuf-java-util:3.5.0'
 
     testCompile project(':core')
+    testProtobuf project (':core-idl')
     testCompile 'junit:junit:4.12'
 }
 
