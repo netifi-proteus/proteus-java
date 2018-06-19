@@ -167,21 +167,6 @@ clean {
     delete protobuf.generatedFilesBaseDir
 }
 
-// custom tasks for creating source/javadoc jars
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-    baseName = "${project.ext.artifactName}"
-    version = "${project.version}"
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-    baseName = "${project.ext.artifactName}"
-    version = "${project.version}"
-}
-
 artifacts {
     archives("$pathToPlugin" as File) {
         classifier osdetector.os + "-" + osdetector.arch
@@ -189,13 +174,6 @@ artifacts {
         extension "exe"
         builtBy buildArtifacts
     }
-
-    archives sourcesJar, javadocJar
-}
-
-jar {
-    baseName = "${artifactName}"
-    version = "${project.version}"
 }
 
 publishing {
@@ -206,41 +184,6 @@ publishing {
                 classifier osdetector.os + "-" + osdetector.arch
                 builtBy buildArtifacts
             }
-        }
-
-        maven2(MavenPublication) {
-            from components.java
-            artifact sourcesJar
-            artifact javadocJar
-
-            groupId = "io.netifi.proteus"
-            artifactId "${artifactName}"
-            version = "${releaseVersion}"
-        }
-    }
-}
-
-bintray {
-    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-    key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
-    publications = ['maven', 'maven2']
-
-    publish = (osdetector.os == 'osx')
-
-    pkg {
-        repo = 'netifi-oss'
-        name = "${artifactName}"
-        userOrg = 'netifi'
-        desc = "${project.description}"
-        websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
-        issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
-        vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
-        licenses = ['Apache-2.0']
-        githubRepo = 'netifi-proteus/proteus-java'
-        githubReleaseNotesFile = 'CHANGELOG.md'
-
-        version {
-            name = "${releaseVersion}"
         }
     }
 }
