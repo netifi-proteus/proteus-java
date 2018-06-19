@@ -80,4 +80,5 @@ project(':protobuf-rpc') {
     ext.artifactName = 'protobuf-rpc'
 
     apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
 }
