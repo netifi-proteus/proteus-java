@@ -189,7 +189,10 @@ publishing {
         maven2(MavenPublication) {
             from components.java
 
-            group
+            println("**** " + group)
+            println("**** ${artifactName}")
+            println("**** " + releaseVersion)
+
             artifactId "${artifactName}"
             artifact sourcesJar
             artifact javadocJar
