@@ -175,7 +175,9 @@ artifacts {
         builtBy buildArtifacts
     }
 
-    archives sourcesJar, javadocJar
+    if (osdetector.os != "osx") {
+        archives sourcesJar, javadocJar
+    }
 }
 
 publishing {
@@ -186,8 +188,11 @@ publishing {
                 classifier osdetector.os + "-" + osdetector.arch
                 builtBy buildArtifacts
             }
-            artifact sourcesJar
-            artifact javadocJar
+
+            if (osdetector.os != "osx") {
+                artifact sourcesJar
+                artifact javadocJar
+            }
         }
     }
 }
