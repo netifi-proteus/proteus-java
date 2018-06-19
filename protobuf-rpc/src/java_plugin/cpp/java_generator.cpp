@@ -772,7 +772,7 @@ static void PrintServer(const ServiceDescriptor* service,
           "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->field_count() > 0) {
+      if (output_type->full_name() != "io.netifi.proteus.Empty") {
         p->Print(
             *vars,
             "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
