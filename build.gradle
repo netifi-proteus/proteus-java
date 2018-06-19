@@ -1,5 +1,5 @@
 plugins {
-    id 'com.gradle.build-scan' version '1.9' // declare before any other plugin
+    id 'com.gradle.build-scan' version '1.14' // declare before any other plugin
     id 'com.jfrog.bintray' version '1.8.0'
     id 'com.google.osdetector' version '1.4.0'
     id 'com.github.sherter.google-java-format' version '0.6' apply false
@@ -8,7 +8,7 @@ plugins {
     id 'io.morethan.jmhreport' version '0.6.2.1' apply false
 }
 
-buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
+buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes'; publishAlways() }
 
 project(':auth') {
     description = 'Netifi Proteus Authentication Utilities'
