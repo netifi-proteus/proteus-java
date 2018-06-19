@@ -175,9 +175,7 @@ artifacts {
         builtBy buildArtifacts
     }
 
-    if (osdetector.os != "osx") {
-        archives sourcesJar, javadocJar
-    }
+    archives sourcesJar, javadocJar
 }
 
 publishing {
@@ -188,11 +186,41 @@ publishing {
                 classifier osdetector.os + "-" + osdetector.arch
                 builtBy buildArtifacts
             }
+        }
 
-            if (osdetector.os != "osx") {
-                artifact sourcesJar
-                artifact javadocJar
-            }
+        maven2(MavenPublication) {
+            from components.java
+
+            groupId = "io.netifi.proteus"
+            artifactId "${artifactName}"
+
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+    key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
+    publications = ['maven', 'maven2']
+
+    publish = (osdetector.os == 'osx')
+
+    pkg {
+        repo = 'netifi-oss'
+        name = "${artifactName}"
+        userOrg = 'netifi'
+        desc = "${project.description}"
+        websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
+        issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
+        vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
+        licenses = ['Apache-2.0']
+        githubRepo = 'netifi-proteus/proteus-java'
+        githubReleaseNotesFile = 'CHANGELOG.md'
+
+        version {
+            name = "${releaseVersion}"
         }
     }
 }
