@@ -6,7 +6,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    protobuf project (':protobuf-rpc')
+    protobuf project (':core-idl')
     protobuf project (':broker-info-idl')
 
     compile project (':core')
