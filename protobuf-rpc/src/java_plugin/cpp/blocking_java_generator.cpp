@@ -741,6 +741,17 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Outdent();
   p->Print("}\n\n");
 
+  p->Print(
+        *vars,
+        "@$Override$\n"
+        "public Class<?> getServiceClass() {\n");
+    p->Indent();
+    p->Print(
+        *vars,
+        "return service.getClass();\n");
+    p->Outdent();
+    p->Print("}\n\n");
+
   std::vector<const MethodDescriptor*> fire_and_forget;
   std::vector<const MethodDescriptor*> request_response;
   std::vector<const MethodDescriptor*> request_stream;

@@ -19,4 +19,6 @@ public abstract class AbstractProteusService extends AbstractRSocket implements 
   public double availability() {
     return 1.0;
   }
+  
+  public abstract Class<?> getServiceClass();
 }
