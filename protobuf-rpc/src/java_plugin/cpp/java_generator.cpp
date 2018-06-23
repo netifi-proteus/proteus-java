@@ -750,6 +750,8 @@ static void PrintServer(const ServiceDescriptor* service,
       "    comments = \"Source: $file_name$\")\n"
       "@$ProteusGenerated$(\n"
       "    idlClass = $service_name$.class)\n"
+      "@$Named$(\n"
+      "    value =\"$server_class_name$\")\n"
       "public final class $server_class_name$ extends $AbstractProteusService$ {\n");
   p->Indent();
 
@@ -1370,6 +1372,7 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Parser"] = "com.google.protobuf.Parser";
   vars["Optional"] = "java.util.Optional";
   vars["Inject"] = "javax.inject.Inject";
+  vars["Named"] = "javax.inject.Named";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
