@@ -9,8 +9,8 @@ dependencies {
     protobuf project (':metrics-idl')
     compile project (':frames')
 
+    compile 'javax.inject:javax.inject:1'
     compile 'com.google.protobuf:protobuf-java:3.5.0'
-
     compile 'io.rsocket:rsocket-core:0.11.3'
     compile 'io.rsocket:rsocket-transport-netty:0.11.3'
     compile 'io.micrometer:micrometer-core:1.0.3'

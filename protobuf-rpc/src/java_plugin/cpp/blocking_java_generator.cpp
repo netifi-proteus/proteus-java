@@ -608,6 +608,8 @@ static void PrintServer(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
+      "@$ProteusGenerated$(\n"
+      "    idlClass = Blocking$service_name$.class)\n"
       "public final class Blocking$server_class_name$ extends $AbstractProteusService$ {\n");
   p->Indent();
 
@@ -659,7 +661,7 @@ static void PrintServer(const ServiceDescriptor* service,
       "this.service = service;\n");
   p->Print(
         *vars,
-        "if (registry.isPresent()) {\n"
+        "if (!registry.isPresent()) {\n"
     );
     p->Indent();
      // RPC metrics
@@ -1219,6 +1221,7 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Override"] = "java.lang.Override";
   vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";
+  vars["ProteusGenerated"] = "io.netifi.proteus.annotations.internal.ProteusGenerated";
   vars["RSocket"] = "io.rsocket.RSocket";
   vars["Payload"] = "io.rsocket.Payload";
   vars["ByteBufPayload"] = "io.rsocket.util.ByteBufPayload";
