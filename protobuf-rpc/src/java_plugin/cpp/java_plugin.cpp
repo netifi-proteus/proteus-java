@@ -90,20 +90,20 @@ class JavaProteusGenerator : public google::protobuf::compiler::CodeGenerator {
         }
     }
 
-    string package_name = blocking_java_proteus_generator::ServiceJavaPackage(file) + ".blocking";
+    string package_name = blocking_java_proteus_generator::ServiceJavaPackage(file);
     string package_filename = JavaPackageToDir(package_name);
     for (int i = 0; i < file->service_count(); ++i) {
         const google::protobuf::ServiceDescriptor* service = file->service(i);
 
-        string interface_filename = package_filename + service->name() + ".java";
+        string interface_filename = package_filename + "Blocking" + service->name() + ".java";
         std::unique_ptr<google::protobuf::io::ZeroCopyOutputStream> interface_file(context->Open(interface_filename));
         blocking_java_proteus_generator::GenerateInterface(service, interface_file.get(), flavor, disable_version);
 
-        string client_filename = package_filename + java_proteus_generator::ClientClassName(service) + ".java";
+        string client_filename = package_filename + "Blocking" + java_proteus_generator::ClientClassName(service) + ".java";
         std::unique_ptr<google::protobuf::io::ZeroCopyOutputStream> client_file(context->Open(client_filename));
         blocking_java_proteus_generator::GenerateClient(service, client_file.get(), flavor, disable_version);
 
-        string server_filename = package_filename + java_proteus_generator::ServerClassName(service) + ".java";
+        string server_filename = package_filename + "Blocking" + java_proteus_generator::ServerClassName(service) + ".java";
         std::unique_ptr<google::protobuf::io::ZeroCopyOutputStream> server_file(context->Open(server_filename));
         blocking_java_proteus_generator::GenerateServer(service, server_file.get(), flavor, disable_version);
     }

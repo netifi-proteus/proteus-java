@@ -15,6 +15,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,7 +57,7 @@ public class ProteusIntegrationTest {
             .port(port)
             .build();
 
-    server.addService(new SimpleServiceServer(new DefaultSimpleService()));
+    server.addService(new SimpleServiceServer(new DefaultSimpleService(), Optional.empty()));
 
     proteusSocket = client.group("test.server");
   }

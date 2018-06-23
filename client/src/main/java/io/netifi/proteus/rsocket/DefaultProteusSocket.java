@@ -1,9 +1,11 @@
 package io.netifi.proteus.rsocket;
 
-import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
@@ -12,6 +14,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class DefaultProteusSocket implements ProteusSocket {
+
+  private static final Logger logger = LoggerFactory.getLogger(DefaultProteusSocket.class);
   private final Function<Payload, Payload> payloadTransformer;
   private final Supplier<RSocket> rSocketSupplier;
   private final MonoProcessor<Void> onClose;
@@ -28,8 +32,8 @@ public class DefaultProteusSocket implements ProteusSocket {
     return Mono.defer(
         () -> {
           Payload transformedPayload = payloadTransformer.apply(payload);
-          if (transformedPayload != null) {
-            ReferenceCountUtil.safeRelease(payload);
+          if (transformedPayload != null && payload.refCnt() > 0) {
+            quietRelease(payload);
           }
 
           return rSocketSupplier.get().fireAndForget(transformedPayload);
@@ -42,7 +46,7 @@ public class DefaultProteusSocket implements ProteusSocket {
         () -> {
           Payload transformedPayload = payloadTransformer.apply(payload);
           if (transformedPayload != null) {
-            ReferenceCountUtil.safeRelease(payload);
+            quietRelease(payload);
           }
 
           return rSocketSupplier.get().requestResponse(transformedPayload);
@@ -55,7 +59,7 @@ public class DefaultProteusSocket implements ProteusSocket {
         () -> {
           Payload transformedPayload = payloadTransformer.apply(payload);
           if (transformedPayload != null) {
-            ReferenceCountUtil.safeRelease(payload);
+            quietRelease(payload);
           }
 
           return rSocketSupplier.get().requestStream(transformedPayload);
@@ -70,7 +74,7 @@ public class DefaultProteusSocket implements ProteusSocket {
                 payload -> {
                   Payload transformedPayload = payloadTransformer.apply(payload);
                   if (transformedPayload != null) {
-                    ReferenceCountUtil.safeRelease(payload);
+                    quietRelease(payload);
                   }
                   return transformedPayload;
                 });
@@ -84,11 +88,21 @@ public class DefaultProteusSocket implements ProteusSocket {
         () -> {
           Payload transformedPayload = payloadTransformer.apply(payload);
           if (transformedPayload != null) {
-            ReferenceCountUtil.safeRelease(payload);
+            quietRelease(payload);
           }
 
           return rSocketSupplier.get().metadataPush(transformedPayload);
         });
+  }
+
+  private static void quietRelease(ReferenceCounted ref) {
+    try {
+      if (ref.refCnt() > 0) {
+        ref.release();
+      }
+    } catch (Throwable t) {
+      logger.trace("error releasing", t);
+    }
   }
 
   @Override

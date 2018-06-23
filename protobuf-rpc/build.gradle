@@ -21,9 +21,11 @@ dependencies {
     compileOnly 'io.projectreactor:reactor-core:3.1.7.RELEASE'
     compileOnly 'com.google.protobuf:protobuf-java:3.5.0'
     compileOnly 'com.google.protobuf:protobuf-java-util:3.5.0'
+    compileOnly 'javax.inject:javax.inject:1'
 
     testCompile project(':core')
     testProtobuf project (':core-idl')
+    testCompile 'javax.inject:javax.inject:1'
     testCompile 'junit:junit:4.12'
 }
 

@@ -4,6 +4,7 @@ apply plugin: 'com.github.sherter.google-java-format'
 
 repositories {
     jcenter()
+    mavenLocal()
 }
 
 compileJava {
@@ -54,8 +55,11 @@ publishing {
 }
 
 dependencies {
+    compileOnly 'javax.inject:javax.inject:1'
+
     testCompile 'junit:junit:4.12'
 
+    testCompile 'javax.inject:javax.inject:1'
     testCompile 'io.projectreactor:reactor-test:3.1.7.RELEASE'
     testCompile 'com.google.protobuf:protobuf-java:3.5.0'
     testCompile 'org.hdrhistogram:HdrHistogram:2.1.10'

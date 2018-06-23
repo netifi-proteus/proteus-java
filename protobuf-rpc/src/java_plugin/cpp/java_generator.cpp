@@ -786,34 +786,34 @@ static void PrintServer(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "\n"
-      "public $server_class_name$($service_name$ service) {\n");
+      "@$Inject$\n"
+      "public $server_class_name$($service_name$ service, $Optional$<$MeterRegistry$> registry) {\n");
   p->Indent();
   p->Print(
       *vars,
       "this.service = service;\n");
 
-  // RPC metrics
+  p->Print(
+      *vars,
+      "if (registry.isPresent()) {\n"
+  );
+  p->Indent();
+   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
 
     p->Print(
-        *vars,
-        "this.$lower_method_name$ = $Function$.identity();\n");
+       *vars,
+       "this.$lower_method_name$ = $Function$.identity();\n");
   }
 
   p->Outdent();
-  p->Print("}\n\n");
-
   p->Print(
       *vars,
-      "public $server_class_name$($service_name$ service, $MeterRegistry$ registry) {\n");
+      "} else {\n"
+  );
   p->Indent();
-  p->Print(
-      *vars,
-      "this.service = service;\n");
-
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
@@ -822,8 +822,11 @@ static void PrintServer(const ServiceDescriptor* service,
 
     p->Print(
         *vars,
-        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.server\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
+        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry.get(), \"proteus.server\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
   }
+
+  p->Outdent();
+  p->Print("}\n\n");
 
   p->Outdent();
   p->Print("}\n\n");
@@ -1362,6 +1365,8 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["CodedOutputStream"] = "com.google.protobuf.CodedOutputStream";
   vars["MessageLite"] = "com.google.protobuf.MessageLite";
   vars["Parser"] = "com.google.protobuf.Parser";
+  vars["Optional"] = "java.util.Optional";
+  vars["Inject"] = "javax.inject.Inject";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());

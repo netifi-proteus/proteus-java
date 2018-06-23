@@ -325,7 +325,7 @@ static void PrintInterface(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
-      "public interface $service_name$ {\n");
+      "public interface Blocking$service_name$ {\n");
   p->Indent();
 
   // Service IDs
@@ -398,7 +398,7 @@ static void PrintClient(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
-      "public final class $client_class_name$ implements $service_name$ {\n");
+      "public final class Blocking$client_class_name$ implements Blocking$service_name$ {\n");
   p->Indent();
 
   p->Print(
@@ -408,7 +408,7 @@ static void PrintClient(const ServiceDescriptor* service,
   p->Print(
       *vars,
       "\n"
-      "public $client_class_name$($RSocket$ rSocket) {\n");
+      "public Blocking$client_class_name$($RSocket$ rSocket) {\n");
   p->Indent();
   p->Print(
       *vars,
@@ -419,7 +419,7 @@ static void PrintClient(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "public $client_class_name$($RSocket$ rSocket, $MeterRegistry$ registry) {\n");
+      "public Blocking$client_class_name$($RSocket$ rSocket, $MeterRegistry$ registry) {\n");
   p->Indent();
   p->Print(
       *vars,
@@ -608,12 +608,12 @@ static void PrintServer(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
-      "public final class $server_class_name$ extends $AbstractProteusService$ {\n");
+      "public final class Blocking$server_class_name$ extends $AbstractProteusService$ {\n");
   p->Indent();
 
   p->Print(
       *vars,
-      "private final $service_name$ service;\n");
+      "private final Blocking$service_name$ service;\n");
 
   p->Print(
       *vars,
@@ -650,85 +650,50 @@ static void PrintServer(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "\n"
-      "public $server_class_name$($service_name$ service, $Scheduler$ scheduler) {\n");
+      "@$Inject$\n"
+      "public Blocking$server_class_name$(Blocking$service_name$ service, $Optional$<$Scheduler$> scheduler, $Optional$<$MeterRegistry$> registry) {\n");
   p->Indent();
   p->Print(
       *vars,
-      "this.scheduler = scheduler;\n"
+      "this.scheduler = scheduler.orElse($Schedulers$.elastic());\n"
       "this.service = service;\n");
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
+  p->Print(
+        *vars,
+        "if (registry.isPresent()) {\n"
+    );
+    p->Indent();
+     // RPC metrics
+    for (int i = 0; i < service->method_count(); ++i) {
+      const MethodDescriptor* method = service->method(i);
+      (*vars)["lower_method_name"] = LowerMethodName(method);
 
+      p->Print(
+         *vars,
+         "this.$lower_method_name$ = $Function$.identity();\n");
+    }
+
+    p->Outdent();
     p->Print(
         *vars,
-        "this.$lower_method_name$ = $Function$.identity();\n");
-  }
-  p->Outdent();
-  p->Print("}\n\n");
+        "} else {\n"
+    );
+    p->Indent();
+    // RPC metrics
+    for (int i = 0; i < service->method_count(); ++i) {
+      const MethodDescriptor* method = service->method(i);
+      (*vars)["lower_method_name"] = LowerMethodName(method);
+      (*vars)["method_field_name"] = MethodFieldName(method);
 
-  p->Print(
-      *vars,
-      "\n"
-      "public $server_class_name$($service_name$ service) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "this.scheduler = $Schedulers$.elastic();\n"
-      "this.service = service;\n");
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
+      p->Print(
+          *vars,
+          "this.$lower_method_name$ = $ProteusMetrics$.timed(registry.get(), \"proteus.server\", \"service\", Blocking$service_name$.$service_id_name$, \"method\", Blocking$service_name$.$method_field_name$);\n");
+    }
 
-    p->Print(
-        *vars,
-        "this.$lower_method_name$ = $Function$.identity();\n");
-  }
-  p->Outdent();
-  p->Print("}\n\n");
+    p->Outdent();
+    p->Print("}\n\n");
 
-  p->Print(
-      *vars,
-      "public $server_class_name$($service_name$ service, $MeterRegistry$ registry) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "this.scheduler = $Schedulers$.elastic();\n"
-      "this.service = service;\n");
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
-
-    p->Print(
-        *vars,
-        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.server\", \"namespace\", \"$Package$\", \"service\", \"$service_name$\", \"method\", \"$lower_method_name$\");\n");
-  }
-  p->Outdent();
-  p->Print("}\n\n");
-
-  p->Print(
-      *vars,
-      "public $server_class_name$($service_name$ service, $Scheduler$ scheduler, $MeterRegistry$ registry) {\n");
-  p->Indent();
-  p->Print(
-      *vars,
-      "this.scheduler = scheduler;\n"
-      "this.service = service;\n");
-  // RPC metrics
-  for (int i = 0; i < service->method_count(); ++i) {
-    const MethodDescriptor* method = service->method(i);
-    (*vars)["lower_method_name"] = LowerMethodName(method);
-
-    p->Print(
-        *vars,
-        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.server\", \"namespace\", \"$Package$\", \"service\", \"$service_name$\", \"method\", \"$lower_method_name$\");\n");
-  }
-  p->Outdent();
-  p->Print("}\n\n");
+    p->Outdent();
+    p->Print("}\n\n");
 
   p->Print(
       *vars,
@@ -737,7 +702,7 @@ static void PrintServer(const ServiceDescriptor* service,
   p->Indent();
   p->Print(
       *vars,
-      "return $service_name$.$service_id_name$;\n");
+      "return Blocking$service_name$.$service_id_name$;\n");
   p->Outdent();
   p->Print("}\n\n");
 
@@ -933,7 +898,7 @@ static void PrintServer(const ServiceDescriptor* service,
       (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
-          "case $service_name$.$method_id_name$: {\n");
+          "case Blocking$service_name$.$method_id_name$: {\n");
       p->Indent();
       p->Print(
           *vars,
@@ -998,7 +963,7 @@ static void PrintServer(const ServiceDescriptor* service,
       (*vars)["method_id_name"] = MethodFieldName(method);
       p->Print(
           *vars,
-          "case $service_name$.$method_id_name$: {\n");
+          "case Blocking$service_name$.$method_id_name$: {\n");
       p->Indent();
       p->Print(
           *vars,
@@ -1170,19 +1135,19 @@ void GenerateInterface(const ServiceDescriptor* service,
   vars["Iterable"] = "Iterable";
 
   Printer printer(out, '$');
-  string package_name = ServiceJavaPackage(service->file());
-  if (!package_name.empty()) {
-    package_name = package_name + ".blocking";
-    printer.Print(
-        "package $package_name$;\n\n",
-        "package_name", package_name);
-  } else {
-    package_name = "blocking";
-  }
+    string package_name = ServiceJavaPackage(service->file());
+    if (!package_name.empty()) {
+      printer.Print(
+          "package $package_name$;\n\n",
+          "package_name", package_name);
+    }
 
-  // Package string is used to fully qualify method names.
-  vars["Package"] = service->file()->package();
-  PrintInterface(service, &vars, &printer, flavor, disable_version);
+    // Package string is used to fully qualify method names.
+    vars["Package"] = service->file()->package();
+    if (!vars["Package"].empty()) {
+      vars["Package"].append(".");
+    }
+    PrintInterface(service, &vars, &printer, flavor, disable_version);
 }
 
 void GenerateClient(const ServiceDescriptor* service,
@@ -1221,19 +1186,19 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["Queues"] = "reactor.util.concurrent.Queues";
 
   Printer printer(out, '$');
-  string package_name = ServiceJavaPackage(service->file());
-  if (!package_name.empty()) {
-      package_name = package_name + ".blocking";
+    string package_name = ServiceJavaPackage(service->file());
+    if (!package_name.empty()) {
       printer.Print(
           "package $package_name$;\n\n",
           "package_name", package_name);
-  } else {
-      package_name = "blocking";
-  }
+    }
 
-  // Package string is used to fully qualify method names.
-  vars["Package"] = service->file()->package();
-  PrintClient(service, &vars, &printer, flavor, disable_version);
+    // Package string is used to fully qualify method names.
+    vars["Package"] = service->file()->package();
+    if (!vars["Package"].empty()) {
+      vars["Package"].append(".");
+    }
+    PrintClient(service, &vars, &printer, flavor, disable_version);
 }
 
 void GenerateServer(const ServiceDescriptor* service,
@@ -1273,21 +1238,23 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Iterable"] = "Iterable";
   vars["Scheduler"] = "reactor.core.scheduler.Scheduler";
   vars["Schedulers"] = "reactor.core.scheduler.Schedulers";
+  vars["Optional"] = "java.util.Optional";
+  vars["Inject"] = "javax.inject.Inject";
 
   Printer printer(out, '$');
-  string package_name = ServiceJavaPackage(service->file());
-  if (!package_name.empty()) {
-      package_name = package_name + ".blocking";
+    string package_name = ServiceJavaPackage(service->file());
+    if (!package_name.empty()) {
       printer.Print(
           "package $package_name$;\n\n",
           "package_name", package_name);
-  } else {
-      package_name = "blocking";
-  }
+    }
 
-  // Package string is used to fully qualify method names.
-  vars["Package"] = service->file()->package() + ".blocking";
-  PrintServer(service, &vars, &printer, flavor, disable_version);
+    // Package string is used to fully qualify method names.
+    vars["Package"] = service->file()->package();
+    if (!vars["Package"].empty()) {
+      vars["Package"].append(".");
+    }
+    PrintServer(service, &vars, &printer, flavor, disable_version);
 }
 
 string ServiceJavaPackage(const FileDescriptor* file) {

@@ -26,7 +26,7 @@ public class DefaultProteusSocketTest {
     Payload block = socket.requestResponse(incoming).block();
 
     Assert.assertTrue(block == outgoing);
-    Mockito.verify(incoming, Mockito.times(1)).release();
+    Mockito.verify(incoming, Mockito.times(0)).release();
   }
 
   @Test
@@ -40,7 +40,7 @@ public class DefaultProteusSocketTest {
     DefaultProteusSocket socket = new DefaultProteusSocket(payload -> transformed, () -> mock);
     socket.fireAndForget(incoming).block();
 
-    Mockito.verify(incoming, Mockito.times(1)).release();
+    Mockito.verify(incoming, Mockito.times(0)).release();
   }
 
   @Test
@@ -56,7 +56,7 @@ public class DefaultProteusSocketTest {
     Payload block = socket.requestStream(incoming).blockLast();
 
     Assert.assertTrue(block == outgoing);
-    Mockito.verify(incoming, Mockito.times(1)).release();
+    Mockito.verify(incoming, Mockito.times(0)).release();
   }
 
   @Test
@@ -79,6 +79,6 @@ public class DefaultProteusSocketTest {
     Payload block = socket.requestChannel(Mono.just(incoming)).blockLast();
 
     Assert.assertTrue(block == outgoing);
-    Mockito.verify(incoming, Mockito.times(1)).release();
+    Mockito.verify(incoming, Mockito.times(0)).release();
   }
 }

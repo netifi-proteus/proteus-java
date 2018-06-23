@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +29,8 @@ public class SimpleServiceTest {
 
   @BeforeClass
   public static void setup() {
-    SimpleServiceServer serviceServer = new SimpleServiceServer(new DefaultSimpleService(), registry);
+    SimpleServiceServer serviceServer =
+        new SimpleServiceServer(new DefaultSimpleService(), Optional.of(registry));
 
     RSocketFactory.receive()
         .frameDecoder(Frame::retain)
