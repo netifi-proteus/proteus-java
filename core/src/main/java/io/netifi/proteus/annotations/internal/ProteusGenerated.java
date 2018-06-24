@@ -17,7 +17,15 @@ import java.lang.annotation.Target;
 public @interface ProteusGenerated {
 
     /**
+     * Type of the generated Proteus resource.
+     *
+     * @return type of generated resource
+     */
+    ProteusResourceType type();
+
+    /**
      * Class of the Proteus service hosted by the annotated class.
+     * 
      * @return Proteus service class
      */
     Class<?> idlClass();

@@ -398,6 +398,9 @@ static void PrintClient(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
+      "@$ProteusGenerated$(\n"
+      "    type = $ProteusResourceType$.CLIENT,\n"
+      "    idlClass = Blocking$service_name$.class)\n"
       "public final class Blocking$client_class_name$ implements Blocking$service_name$ {\n");
   p->Indent();
 
@@ -609,6 +612,7 @@ static void PrintServer(const ServiceDescriptor* service,
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
       "@$ProteusGenerated$(\n"
+      "    type = $ProteusResourceType$.SERVICE,\n"
       "    idlClass = Blocking$service_name$.class)\n"
       "@$Named$(\n"
       "    value =\"Blocking$server_class_name$\")\n"
@@ -1170,6 +1174,8 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["Override"] = "java.lang.Override";
   vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";
+  vars["ProteusGenerated"] = "io.netifi.proteus.annotations.internal.ProteusGenerated";
+  vars["ProteusResourceType"] = "io.netifi.proteus.annotations.internal.ProteusResourceType";
   vars["RSocket"] = "io.rsocket.RSocket";
   vars["Payload"] = "io.rsocket.Payload";
   vars["ByteBufPayload"] = "io.rsocket.util.ByteBufPayload";
@@ -1224,6 +1230,7 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";
   vars["ProteusGenerated"] = "io.netifi.proteus.annotations.internal.ProteusGenerated";
+  vars["ProteusResourceType"] = "io.netifi.proteus.annotations.internal.ProteusResourceType";
   vars["RSocket"] = "io.rsocket.RSocket";
   vars["Payload"] = "io.rsocket.Payload";
   vars["ByteBufPayload"] = "io.rsocket.util.ByteBufPayload";

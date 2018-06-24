@@ -363,6 +363,9 @@ static void PrintClient(const ServiceDescriptor* service,
       "@$Generated$(\n"
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
+      "@$ProteusGenerated$(\n"
+      "    type = $ProteusResourceType$.CLIENT,\n"
+      "    idlClass = $service_name$.class)\n"
       "public final class $client_class_name$ implements $service_name$ {\n");
   p->Indent();
 
@@ -749,6 +752,7 @@ static void PrintServer(const ServiceDescriptor* service,
       "    value = \"by Proteus proto compiler$proteus_version$\",\n"
       "    comments = \"Source: $file_name$\")\n"
       "@$ProteusGenerated$(\n"
+      "    type = $ProteusResourceType$.SERVICE,\n"
       "    idlClass = $service_name$.class)\n"
       "@$Named$(\n"
       "    value =\"$server_class_name$\")\n"
@@ -1305,6 +1309,8 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["Override"] = "java.lang.Override";
   vars["Publisher"] = "org.reactivestreams.Publisher";
   vars["Generated"] = "javax.annotation.Generated";
+  vars["ProteusGenerated"] = "io.netifi.proteus.annotations.internal.ProteusGenerated";
+  vars["ProteusResourceType"] = "io.netifi.proteus.annotations.internal.ProteusResourceType";
   vars["RSocket"] = "io.rsocket.RSocket";
   vars["Payload"] = "io.rsocket.Payload";
   vars["ByteBufPayload"] = "io.rsocket.util.ByteBufPayload";
@@ -1373,6 +1379,7 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Optional"] = "java.util.Optional";
   vars["Inject"] = "javax.inject.Inject";
   vars["Named"] = "javax.inject.Named";
+  vars["ProteusResourceType"] = "io.netifi.proteus.annotations.internal.ProteusResourceType";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
