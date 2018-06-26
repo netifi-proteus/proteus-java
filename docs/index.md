@@ -84,11 +84,11 @@ Proteus Java uses a Protobuf plugin to generate application code. Add the follow
 ```
 Protobuf {
     protoc {
-        artifact = 'com.google.Protobuf:protoc:3.5.0'
+        artifact = 'com.google.Protobuf:protoc:3.6.0'
     }
     plugins {
         proteus {
-            artifact = 'io.netifi.proteus:proteus-java:0.4.x'
+            artifact = 'io.netifi.proteus:proteus-java:0.7.x'
         }
     }
     generateProtoTasks {

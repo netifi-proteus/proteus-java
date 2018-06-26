@@ -10,7 +10,7 @@ dependencies {
     compile project (':frames')
 
     compile 'javax.inject:javax.inject:1'
-    compile 'com.google.protobuf:protobuf-java:3.5.0'
+    compile 'com.google.protobuf:protobuf-java:3.6.0'
     compile 'io.rsocket:rsocket-core:0.11.3'
     compile 'io.rsocket:rsocket-transport-netty:0.11.3'
     compile 'io.micrometer:micrometer-core:1.0.3'
@@ -22,6 +22,9 @@ def javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginB
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
     plugins {
         proteus {
             path = javaPluginPath
