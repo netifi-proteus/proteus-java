@@ -4,6 +4,13 @@ plugins {
 
 dependencies {
     protobuf project (':core-idl')
+}
 
-    compile 'com.google.protobuf:protobuf-java:3.5.0'
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
+    generateProtoTasks {
+        all()*.enabled = false
+    }
 }
