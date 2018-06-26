@@ -199,7 +199,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       connect =
           connect
               .keepAlive()
-              .keepAliveAckTimeout(Duration.ofSeconds(tickPeriodSeconds))
+              .keepAliveTickPeriod(Duration.ofSeconds(tickPeriodSeconds))
               .keepAliveAckTimeout(Duration.ofSeconds(ackTimeoutSeconds))
               .keepAliveMissedAcks(missedAcks);
     } else {
