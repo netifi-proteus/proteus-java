@@ -1,0 +1,125 @@
+---
+version: 2
+references_project_specific:
+  workspace: &workspace
+    /tmp/proteus-java
+  cache_key: &cache_key
+    v1-proteus-java-{{ arch }}-{{ checksum "/tmp/todaysdate" }}
+references:
+  attach_full_workspace: &attach_full_workspace
+    attach_workspace:
+      at: *workspace
+  container_config: &container_config
+    docker:
+      - image: netifi/cc-openjdk-8-protoc
+    working_directory: *workspace
+  os_x_config: &os_x_config
+    macos:
+      xcode: "9.3.1"
+    working_directory: *workspace
+    environment:
+      LDFLAGS: "/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
+  persist_full_workspace: &persist_full_workspace
+    persist_to_workspace:
+      paths:
+        - "."
+      root: *workspace
+  remove_gradle_lock: &remove_gradle_lock
+    run:
+      command: "rm -f $HOME/.gradle/caches/modules-2/modules-2.lock"
+      name: remove_gradle_lock
+  restore_cache: &restore_cache
+    restore_cache:
+      key: *cache_key
+  save_gradle_cache: &save_gradle_cache
+    save_cache:
+      key: *cache_key
+      paths:
+        - ~/.gradle/caches/
+        - ~/.gradle/wrapper/
+        - ~/.m2"
+  setup_date: &setup_date
+    run:
+      command: "date +%D > /tmp/todaysdate"
+      name: setup_date
+
+jobs:
+  build_linux:
+    <<: *container_config
+    steps:
+      - *setup_date
+      - *restore_cache
+      - checkout
+      - run:
+          name: Build
+          command: './gradlew clean build'
+      - *remove_gradle_lock
+      - *save_gradle_cache
+      - *persist_full_workspace
+  deploy_linux:
+    <<: *container_config
+    steps:
+      - *setup_date
+      - *restore_cache
+      - *attach_full_workspace
+      - run:
+          name: Deploy
+          command: './gradlew -PreleaseType=release -PbintrayUser="${bintrayUser}" -PbintrayKey="${bintrayKey}" clean build :protobuf-rpc:bintrayUpload --stacktrace'
+  build_os_x:
+    <<: *os_x_config
+    steps:
+      - *setup_date
+      - *restore_cache
+      - checkout
+      - run:
+          name: Setup Host
+          command: |
+            brew update
+            brew upgrade python
+            EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
+            brew install protobuf
+      - run:
+          name: Build
+          command: './gradlew clean build'
+      - *remove_gradle_lock
+      - *save_gradle_cache
+      - *persist_full_workspace
+  deploy_os_x:
+    <<: *os_x_config
+    steps:
+      - *setup_date
+      - *restore_cache
+      - *attach_full_workspace
+      - run:
+          name: Deploy
+          command: './gradlew -PreleaseType=release -PbintrayUser="${bintrayUser}" -PbintrayKey="${bintrayKey}" clean build bintrayUpload --stacktrace'
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build_linux:
+          filters:
+            tags:
+              only: /.*/
+      - deploy_linux:
+          context: bintray
+          requires:
+            - build_linux
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - build_os_x:
+          filters:
+            tags:
+              only: /.*/
+      - deploy_os_x:
+          context: bintray
+          requires:
+            - build_os_x
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
