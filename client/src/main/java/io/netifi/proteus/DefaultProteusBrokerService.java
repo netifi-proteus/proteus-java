@@ -3,6 +3,7 @@ package io.netifi.proteus;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
+import io.netifi.proteus.frames.BroadcastFlyweight;
 import io.netifi.proteus.frames.DestinationFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;
@@ -268,6 +269,25 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         },
         this::selectRSocket);
   }
+  
+  private ProteusSocket unwrappedBroadcast(String group) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              BroadcastFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  group,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
 
   @Override
   public ProteusSocket destination(String destination, String group) {
@@ -279,7 +299,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public ProteusSocket group(String group) {
     return PresenceAwareRSocket.wrap(unwrappedGroup(group), null, group, presenceNotifier);
   }
-
+  
+  @Override
+  public ProteusSocket broadcast(String group) {
+    return PresenceAwareRSocket.wrap(unwrappedBroadcast(group), null, group, presenceNotifier);
+  }
+  
   @Override
   public void dispose() {
     onClose.onComplete();
