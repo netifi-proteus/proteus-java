@@ -166,6 +166,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
     lastConnectionAttemptTs = currentTs;
 
+    attempts++;
+
     return Duration.ofSeconds(calculatedDuration);
   }
 
@@ -225,59 +227,75 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       connecting = true;
     }
 
-    Mono.delay(calculateRetryDuration())
-        .then(
-            Mono.defer(
-                () -> {
-                  WeightedClientTransportSupplier weighedClientTransportSupplier =
-                      transportSupplier.get();
-                  this.statsProcessor = getStatsProcessor();
-                  String destination = destinationNameFactory.get();
+    Mono<RSocket> connect =
+        Mono.defer(() -> Mono.delay(calculateRetryDuration()))
+            .then(
+                Mono.defer(
+                    () -> {
+                      if (onClose.isDisposed()) {
+                        return Mono.empty();
+                      }
 
-                  return getClientFactory(destination)
-                      .errorConsumer(
-                          throwable ->
-                              logger.error(
-                                  "proteus client received unhandled exception for connection with address "
-                                      + weighedClientTransportSupplier
-                                          .getSocketAddress()
-                                          .toString(),
-                                  throwable))
-                      .acceptor(
-                          r ->
-                              requestHandlingRSocket == null
-                                  ? EMPTY_SOCKET
-                                  : requestHandlingRSocket)
-                      .transport(weighedClientTransportSupplier.apply(statsProcessor))
-                      .start()
-                      .doOnNext(
-                          rSocket -> {
-                            availability = 1.0;
-                            rSocket
-                                .onClose()
-                                .doFinally(
-                                    s -> {
-                                      destinationNameFactory.release(destination);
-                                      resetStatsProcessor();
-                                      availability = 0.0;
-                                      synchronized (WeightedReconnectingRSocket.this) {
-                                        connecting = false;
-                                      }
+                      WeightedClientTransportSupplier weighedClientTransportSupplier =
+                          transportSupplier.get();
+                      this.statsProcessor = getStatsProcessor();
+                      String destination = destinationNameFactory.get();
 
-                                      connect();
-                                    })
-                                .subscribe();
-                            setRSocket(rSocket);
-                          });
-                }))
-        .doOnError(t -> logger.error("error trying to broker", t))
-        .doFinally(
-            s -> {
-              synchronized (WeightedReconnectingRSocket.this) {
-                connecting = false;
-              }
-            })
-        .subscribe();
+                      long start = System.nanoTime();
+                      return getClientFactory(destination)
+                          .errorConsumer(
+                              throwable ->
+                                  logger.error(
+                                      "proteus client received unhandled exception for connection with address "
+                                          + weighedClientTransportSupplier
+                                              .getSocketAddress()
+                                              .toString(),
+                                      throwable))
+                          .acceptor(
+                              r ->
+                                  requestHandlingRSocket == null
+                                      ? EMPTY_SOCKET
+                                      : requestHandlingRSocket)
+                          .transport(weighedClientTransportSupplier.apply(statsProcessor))
+                          .start()
+                          .doOnNext(
+                              rSocket -> {
+                                availability = 1.0;
+                                rSocket
+                                    .onClose()
+                                    .doFinally(
+                                        s -> {
+                                          long stop = System.nanoTime();
+
+                                          if (Duration.ofNanos(stop - start).getSeconds() < 2) {
+                                            logger.warn(
+                                                "connection for destionation {} closed in less than 2 seconds - make sure access key {} has a valid access token",
+                                                destinationNameFactory.peek(),
+                                                accessKey);
+                                          }
+
+                                          destinationNameFactory.release(destination);
+                                          resetStatsProcessor();
+                                          availability = 0.0;
+                                          synchronized (WeightedReconnectingRSocket.this) {
+                                            connecting = false;
+                                          }
+
+                                          connect();
+                                        })
+                                    .subscribe();
+                                setRSocket(rSocket);
+                              });
+                    }))
+            .doOnError(t -> logger.error("error trying to broker", t))
+            .doFinally(
+                s -> {
+                  synchronized (WeightedReconnectingRSocket.this) {
+                    connecting = false;
+                  }
+                });
+
+    connect.onErrorResume(t -> connect).retry().subscribe();
   }
 
   @Override
