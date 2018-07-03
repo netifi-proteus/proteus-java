@@ -503,11 +503,13 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "@$Override$\n"
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $BlockingIterable$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
       p->Print(
           *vars,
           "@$Override$\n"
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
@@ -515,11 +517,13 @@ static void PrintClient(const ServiceDescriptor* service,
         p->Print(
             *vars,
             "@$Override$\n"
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
             "public $output_type$ $lower_method_name$");
       } else {
         p->Print(
             *vars,
             "@$Override$\n"
+            "@$ProteusGeneratedMethod$(returnTypeClass = Void.class)\n"
             "public void $lower_method_name$");
       }
     }
@@ -1194,6 +1198,7 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["Iterable"] = "Iterable";
   vars["PackageName"] = ServiceJavaPackage(service->file());
   vars["Queues"] = "reactor.util.concurrent.Queues";
+  vars["ProteusGeneratedMethod"] = "io.netifi.proteus.annotations.internal.ProteusGeneratedMethod";
 
   Printer printer(out, '$');
     string package_name = ServiceJavaPackage(service->file());

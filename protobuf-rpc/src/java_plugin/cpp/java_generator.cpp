@@ -507,11 +507,13 @@ static void PrintClient(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "@$Override$\n"
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $Flux$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
       p->Print(
           *vars,
           "@$Override$\n"
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $Mono$<$output_type$> $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
@@ -519,11 +521,13 @@ static void PrintClient(const ServiceDescriptor* service,
         p->Print(
             *vars,
             "@$Override$\n"
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
             "public $Mono$<$output_type$> $lower_method_name$");
       } else {
         p->Print(
             *vars,
             "@$Override$\n"
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
             "public $Mono$<Void> $lower_method_name$");
       }
     }
@@ -1325,6 +1329,7 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["MeterRegistry"] = "io.micrometer.core.instrument.MeterRegistry";
   vars["MessageLite"] = "com.google.protobuf.MessageLite";
   vars["Parser"] = "com.google.protobuf.Parser";
+  vars["ProteusGeneratedMethod"] = "io.netifi.proteus.annotations.internal.ProteusGeneratedMethod";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
