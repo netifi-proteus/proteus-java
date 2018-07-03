@@ -446,19 +446,23 @@ static void PrintClient(const ServiceDescriptor* service,
     if (server_streaming) {
       p->Print(
           *vars,
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $BlockingIterable$<$output_type$> $lower_method_name$");
     } else if (client_streaming) {
       p->Print(
           *vars,
+          "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $output_type$ $lower_method_name$");
     } else {
       if (output_type->full_name() != "io.netifi.proteus.Empty") {
         p->Print(
             *vars,
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
             "public $output_type$ $lower_method_name$");
       } else {
         p->Print(
             *vars,
+            "@$ProteusGeneratedMethod$(returnTypeClass = Void.class)\n"
             "public void $lower_method_name$");
       }
     }
