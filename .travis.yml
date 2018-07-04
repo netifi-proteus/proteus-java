@@ -17,6 +17,7 @@ matrix:
     - brew update
     - brew upgrade python || true
     - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
+    - sed '43q;d' /usr/local/Homebrew/Library/Homebrew/config.rb
     - brew install protobuf
     script: gradle/buildViaTravis.sh
 
