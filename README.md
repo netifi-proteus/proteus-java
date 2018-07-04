@@ -23,7 +23,7 @@
 For bugs, questions, and discussions please use the [Github Issues](https://github.com/proteus/proteus-java/issues).
 
 ## License
-Copyright 2017 Netifi Inc.
+Copyright 2017 [Netifi Inc.](https://www.netifi.com)
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
