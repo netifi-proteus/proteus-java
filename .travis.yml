@@ -12,12 +12,11 @@ matrix:
   - os: osx
     osx_image: xcode9.4
     language: generic
-    env: LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
+    env:
+    - HOMEBREW_TEMP="/tmp"
+    - LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
     - brew update
-    - brew upgrade python || true
-    - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
-    - sed '43q;d' /usr/local/Homebrew/Library/Homebrew/config.rb
     - brew install protobuf
     script: gradle/buildViaTravis.sh
 
