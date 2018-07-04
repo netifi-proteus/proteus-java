@@ -14,11 +14,8 @@ matrix:
     language: generic
     env: LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
-    - rm -rf '/usr/local/lib/python2.7/site-packages/numpy/__config__.py'
-    - rm -rf '/usr/local/bin/2to3-2'
     - brew update
-    - brew upgrade
-    - brew upgrade python
+    - brew upgrade python || true
     - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
     - brew install protobuf
     script: gradle/buildViaTravis.sh
