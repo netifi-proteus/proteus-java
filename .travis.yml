@@ -14,7 +14,7 @@ matrix:
     language: generic
     env: LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
-    - cat /usr/local/Homebrew/Library/Homebrew/config.rb
+    - rm -rf '/usr/local/lib/python2.7/site-packages/numpy/__config__.py'
     - brew update
     - brew upgrade
     - brew upgrade python
