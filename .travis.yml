@@ -14,7 +14,9 @@ matrix:
     language: generic
     env: LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
+    - cat /usr/local/Homebrew/Library/Homebrew/config.rb
     - brew update
+    - brew upgrade
     - brew upgrade python
     - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
     - brew install protobuf
