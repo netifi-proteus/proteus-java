@@ -323,7 +323,7 @@ static void PrintInterface(const ServiceDescriptor* service,
       p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(*vars, "$Mono$<$output_type$> $lower_method_name$");
       } else {
         p->Print(*vars, "$Mono$<Void> $lower_method_name$");
@@ -391,7 +391,7 @@ static void PrintClient(const ServiceDescriptor* service,
           "private final $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>> $lower_method_name$;\n");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "private final $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>> $lower_method_name$;\n");
@@ -470,7 +470,7 @@ static void PrintClient(const ServiceDescriptor* service,
           "public $Mono$<$output_type$> $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
@@ -521,7 +521,7 @@ static void PrintClient(const ServiceDescriptor* service,
           "public $Mono$<$output_type$> $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "@$Override$\n"
@@ -617,7 +617,7 @@ static void PrintClient(const ServiceDescriptor* service,
             "}).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
       } else {
         const Descriptor* output_type = method->output_type();
-        if (output_type->full_name() != "io.netifi.proteus.Empty") {
+        if (output_type->full_name() != "google.protobuf.Empty") {
           p->Print(
               *vars,
               "return $Mono$.defer(new $Supplier$<$Mono$<$Payload$>>() {\n");
@@ -788,7 +788,7 @@ static void PrintServer(const ServiceDescriptor* service,
           "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
@@ -885,7 +885,7 @@ static void PrintServer(const ServiceDescriptor* service,
       request_stream.push_back(method);
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         request_response.push_back(method);
       } else {
         fire_and_forget.push_back(method);

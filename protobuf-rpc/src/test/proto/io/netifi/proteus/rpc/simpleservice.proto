@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package io.netifi.proteus.rpc;
 
-import "proteus/core.proto";
+import "google/protobuf/empty.proto";
 
 option java_package = "io.netifi.proteus.rpc";
 option java_outer_classname = "SimpleServiceProto";
@@ -13,7 +13,7 @@ service SimpleService {
   rpc RequestReply (SimpleRequest) returns (SimpleResponse) {}
 
   // Fire-and-Forget
-  rpc FireAndForget (SimpleRequest) returns (io.netifi.proteus.Empty) {}
+  rpc FireAndForget (SimpleRequest) returns (google.protobuf.Empty) {}
 
   // Single Request / Streaming Response
   rpc RequestStream (SimpleRequest) returns (stream SimpleResponse) {}

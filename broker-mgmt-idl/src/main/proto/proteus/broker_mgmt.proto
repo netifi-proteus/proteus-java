@@ -2,12 +2,15 @@ syntax = "proto3";
 
 package io.netifi.proteus.broker.info;
 
-import "proteus/core.proto";
+import "google/protobuf/empty.proto";
 import "proteus/broker_info.proto";
 
 option java_package = "io.netifi.proteus.broker.mgmt";
 option java_outer_classname = "BrokerManagement";
 option java_multiple_files = true;
+
+message Ack {
+}
 
 message Brokers {
     repeated io.netifi.proteus.broker.info.Broker brokers = 1;
@@ -15,32 +18,32 @@ message Brokers {
 
 service BrokerManagementService {
     // Shutdowns down a broker process
-    rpc shutdown (io.netifi.proteus.Empty) returns (io.netifi.proteus.Empty) {}
+    rpc shutdown (google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
     // Broker leaves the cluster, but stays running
-    rpc leave (io.netifi.proteus.Empty) returns (io.netifi.proteus.Ack) {}
+    rpc leave (google.protobuf.Empty) returns (Ack) {}
 
     // Rejoins the cluster it  has seed information for
-    rpc rejoin (io.netifi.proteus.Empty) returns (io.netifi.proteus.Ack) {}
+    rpc rejoin (google.protobuf.Empty) returns (Ack) {}
 
     // Tells the Broker to join using the provided Brokers
-    rpc join (Brokers) returns (io.netifi.proteus.Ack) {}
+    rpc join (Brokers) returns (Ack) {}
 
     // Closes connections to a specific set of destinations
-    rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (io.netifi.proteus.Ack) {}
+    rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (Ack) {}
 
     // Closes connections to a specific set of groups
-    rpc closeGroup (stream io.netifi.proteus.broker.info.Group) returns (io.netifi.proteus.Ack) {}
+    rpc closeGroup (stream io.netifi.proteus.broker.info.Group) returns (Ack) {}
 
     // Closes connections to a specific set of brokers
-    rpc closeBroker (stream io.netifi.proteus.broker.info.Broker) returns (io.netifi.proteus.Ack) {}
+    rpc closeBroker (stream io.netifi.proteus.broker.info.Broker) returns (Ack) {}
 
     // Closes all connections on the broker - except broker to broker connections
-    rpc closeDestinations (io.netifi.proteus.Empty) returns (io.netifi.proteus.Ack) {}
+    rpc closeDestinations (google.protobuf.Empty) returns (Ack) {}
 
     // Closes connections to all other brokers
-    rpc closeBrokers (io.netifi.proteus.Empty) returns (io.netifi.proteus.Ack) {}
+    rpc closeBrokers (google.protobuf.Empty) returns (Ack) {}
 
     // Closes all connections on the broker including broker to broker connections
-    rpc closeAll (io.netifi.proteus.Empty) returns (io.netifi.proteus.Ack) {}
+    rpc closeAll (google.protobuf.Empty) returns (Ack) {}
 }

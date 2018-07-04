@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    protobuf project (':core-idl')
     protobuf project (':broker-info-idl')
 }
 

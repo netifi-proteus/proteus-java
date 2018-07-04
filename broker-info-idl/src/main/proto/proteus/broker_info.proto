@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package io.netifi.proteus.broker.info;
 
-import "proteus/core.proto";
+import "google/protobuf/empty.proto";
 
 option java_package = "io.netifi.proteus.broker.info";
 option java_outer_classname = "BrokerInfo";
@@ -37,7 +37,7 @@ message Event {
 }
 
 service BrokerInfoService {
-    rpc Brokers (io.netifi.proteus.Empty) returns (stream Broker) {}
+    rpc Brokers (google.protobuf.Empty) returns (stream Broker) {}
     rpc Groups (Broker) returns (stream Group) {}
     rpc Destinations (Broker) returns (stream Destination) {}
     rpc DestinationsByBrokerAndGroup (Group) returns (stream Destination) {}
@@ -46,5 +46,5 @@ service BrokerInfoService {
     rpc BrokerWithDestination (Destination) returns (Broker) {}
     rpc streamGroupEvents (Group) returns (stream Event) {}
     rpc streamDestinationEvents (Destination) returns (stream Event) {}
-    rpc streamBrokerEvents (io.netifi.proteus.Empty) returns (stream Event) {}
+    rpc streamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
 }

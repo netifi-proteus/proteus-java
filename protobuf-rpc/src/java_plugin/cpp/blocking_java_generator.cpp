@@ -358,7 +358,7 @@ static void PrintInterface(const ServiceDescriptor* service,
       p->Print(*vars, "$output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(*vars, "$output_type$ $lower_method_name$");
       } else {
         p->Print(*vars, "void $lower_method_name$");
@@ -454,7 +454,7 @@ static void PrintClient(const ServiceDescriptor* service,
           "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $output_type$ $lower_method_name$");
     } else {
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
@@ -472,7 +472,7 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($Iterable$<$input_type$> messages) {\n");
       p->Indent();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
           p->Print(
               *vars,
               "return $lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
@@ -489,7 +489,7 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($input_type$ message) {\n");
       p->Indent();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
           p->Print(
               *vars,
               "return $lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
@@ -517,7 +517,7 @@ static void PrintClient(const ServiceDescriptor* service,
           "public $output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "@$Override$\n"
@@ -563,7 +563,7 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($Iterable$<$input_type$> messages, $ByteBuf$ metadata) {\n");
         p->Indent();
-        if (output_type->full_name() != "io.netifi.proteus.Empty") {
+        if (output_type->full_name() != "google.protobuf.Empty") {
             p->Print(
              *vars,
              "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
@@ -579,7 +579,7 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($input_type$ message, $ByteBuf$ metadata) {\n");
         p->Indent();
-         if (output_type->full_name() != "io.netifi.proteus.Empty") {
+         if (output_type->full_name() != "google.protobuf.Empty") {
             p->Print(
                 *vars,
                 "return delegate.$lower_method_name$(message, metadata).block();\n");
@@ -652,7 +652,7 @@ static void PrintServer(const ServiceDescriptor* service,
           "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         p->Print(
             *vars,
             "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
@@ -749,7 +749,7 @@ static void PrintServer(const ServiceDescriptor* service,
       request_stream.push_back(method);
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "io.netifi.proteus.Empty") {
+      if (output_type->full_name() != "google.protobuf.Empty") {
         request_response.push_back(method);
       } else {
         fire_and_forget.push_back(method);
