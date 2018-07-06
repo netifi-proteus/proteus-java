@@ -17,6 +17,7 @@ matrix:
     - LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
     - brew update
+    - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
     - brew install protobuf
     script: gradle/buildViaTravis.sh
 
