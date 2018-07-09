@@ -20,10 +20,11 @@ message Destination {
 }
 
 message Broker {
-    string brokerId  = 1;
-    string ipAddress = 2;
-    int32 port       = 3;
+    string brokerId   = 1;
+    string ipAddress  = 2;
+    int32 port        = 3;
     int32 clusterPort = 4;
+    int32 adminPort   = 5;
 }
 
 message Event {
