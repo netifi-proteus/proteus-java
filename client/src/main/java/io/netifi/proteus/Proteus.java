@@ -37,7 +37,6 @@ public class Proteus implements Closeable {
 
   private final String fromGroup;
   private final ProteusBrokerService brokerService;
-  private volatile boolean running = true;
   private MonoProcessor<Void> onClose;
   private RequestHandlingRSocket requestHandlingRSocket;
 
@@ -51,7 +50,8 @@ public class Proteus implements Closeable {
       int missedAcks,
       DestinationNameFactory destinationNameFactory,
       List<SocketAddress> seedAddresses,
-      Function<SocketAddress, ClientTransport> clientTransportFactory) {
+      Function<SocketAddress, ClientTransport> clientTransportFactory,
+      int poolSize) {
     this.onClose = MonoProcessor.create();
     this.fromGroup = group;
     this.requestHandlingRSocket = new RequestHandlingRSocket();
@@ -62,6 +62,7 @@ public class Proteus implements Closeable {
             fromGroup,
             destinationNameFactory,
             clientTransportFactory,
+            poolSize,
             keepalive,
             tickPeriodSeconds,
             ackTimeoutSeconds,
@@ -76,7 +77,6 @@ public class Proteus implements Closeable {
 
   @Override
   public void dispose() {
-    running = false;
     requestHandlingRSocket.dispose();
     onClose.onComplete();
   }
@@ -126,10 +126,16 @@ public class Proteus implements Closeable {
     private boolean exportSystemMetrics = DefaultBuilderConfig.getExportSystemMetrics();
     private Function<SocketAddress, ClientTransport> clientTransportFactory =
         address -> TcpClientTransport.create((InetSocketAddress) address);
+    private int poolSize = Runtime.getRuntime().availableProcessors();
 
-    private Builder clientTransportFactorty(
+    private Builder clientTransportFactory(
         Function<SocketAddress, ClientTransport> clientTransportFactory) {
       this.clientTransportFactory = clientTransportFactory;
+      return this;
+    }
+
+    public Builder poolSize(int poolSize) {
+      this.poolSize = poolSize;
       return this;
     }
 
@@ -228,7 +234,6 @@ public class Proteus implements Closeable {
 
     public Builder destination(String destination) {
       this.destination = destination;
-
       return this;
     }
 
@@ -279,7 +284,8 @@ public class Proteus implements Closeable {
                     missedAcks,
                     destinationNameFactory,
                     socketAddresses,
-                    clientTransportFactory);
+                    clientTransportFactory,
+                    poolSize);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             if (registry != null) {

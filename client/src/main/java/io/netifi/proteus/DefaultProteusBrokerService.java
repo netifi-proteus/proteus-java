@@ -54,7 +54,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final long accessKey;
   private final ByteBuf accessToken;
   private final Function<SocketAddress, ClientTransport> clientTransportFactory;
-  private final int poolSize = Runtime.getRuntime().availableProcessors();
+  private final int poolSize;
   private final double expFactor = DEFAULT_EXP_FACTOR;
   private final int inactivityFactor = DEFAULT_INACTIVITY_FACTOR;
   private final BrokerInfoServiceClient client;
@@ -69,6 +69,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       String group,
       DestinationNameFactory destinationNameFactory,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
+      int poolSize,
       boolean keepalive,
       long tickPeriodSeconds,
       long ackTimeoutSeconds,
@@ -94,6 +95,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.members = new ArrayList<>();
     this.suppliers = new ArrayList<>();
     this.clientTransportFactory = clientTransportFactory;
+    this.poolSize = poolSize;
     this.keepalive = keepalive;
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
