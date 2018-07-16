@@ -353,9 +353,11 @@ static void PrintClient(const ServiceDescriptor* service,
   (*vars)["file_name"] = service->file()->name();
   (*vars)["client_class_name"] = ClientClassName(service);
   (*vars)["proteus_version"] = "";
+  (*vars)["version"] = "";
   #ifdef PROTEUS_VERSION
   if (!disable_version) {
     (*vars)["proteus_version"] = " (version " XSTR(PROTEUS_VERSION) ")";
+    (*vars)["version"] = XSTR(PROTEUS_VERSION);
   }
   #endif
   p->Print(
@@ -490,6 +492,7 @@ static void PrintClient(const ServiceDescriptor* service,
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
 
     p->Print(
         *vars,
@@ -513,6 +516,7 @@ static void PrintClient(const ServiceDescriptor* service,
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
 
     p->Print(
         *vars,
@@ -523,10 +527,11 @@ static void PrintClient(const ServiceDescriptor* service,
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
 
     p->Print(
         *vars,
-        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"));\n");
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
   }
 
   p->Outdent();
@@ -558,10 +563,11 @@ static void PrintClient(const ServiceDescriptor* service,
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
 
     p->Print(
         *vars,
-        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"));\n");
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
   }
 
   p->Outdent();
@@ -880,9 +886,11 @@ static void PrintServer(const ServiceDescriptor* service,
   (*vars)["file_name"] = service->file()->name();
   (*vars)["server_class_name"] = ServerClassName(service);
   (*vars)["proteus_version"] = "";
+  (*vars)["version"] = "";
   #ifdef PROTEUS_VERSION
   if (!disable_version) {
     (*vars)["proteus_version"] = " (version " XSTR(PROTEUS_VERSION) ")";
+    (*vars)["version"] = XSTR(PROTEUS_VERSION);
   }
   #endif
   p->Print(
@@ -1043,7 +1051,7 @@ static void PrintServer(const ServiceDescriptor* service,
 
       p->Print(
           *vars,
-          "this.$lower_method_name$Trace = $ProteusTracing$.traceAsChild(this.tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"server\"));\n");
+          "this.$lower_method_name$Trace = $ProteusTracing$.traceAsChild(this.tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"server\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
     }
     //\"proteus.server\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
     p->Outdent();
