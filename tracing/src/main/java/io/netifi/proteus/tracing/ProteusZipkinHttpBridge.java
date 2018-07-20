@@ -10,9 +10,12 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.resources.PoolResources;
 import zipkin2.proto3.Span;
 
+import java.time.Duration;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private static final Logger logger = LoggerFactory.getLogger(ProteusZipkinHttpBridge.class);
@@ -31,7 +34,13 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     this.port = port;
     this.httpClient =
         HttpClient.builder()
-            .options(builder -> builder.compression(true).host(host).port(port))
+            .options(
+                builder ->
+                    builder
+                        .compression(true)
+                        .poolResources(PoolResources.fixed("proteusZipkinBridge"))
+                        .host(host)
+                        .port(port))
             .build();
   }
 
@@ -70,25 +79,37 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   @Override
   public Mono<Ack> streamSpans(Publisher<Span> messages, ByteBuf metadata) {
     return Flux.from(messages)
-        .flatMap(
+        .limitRate(256, 32)
+        .map(
             span -> {
               try {
-                String json = "[" + JsonFormat.printer().print(span) + "]";
+                String json = JsonFormat.printer().print(span);
                 if (logger.isTraceEnabled()) {
                   logger.trace(json);
                 }
-                return httpClient.post(
-                    zipkinUrl,
-                    request -> {
-                      request.addHeader("Content-Type", "application/json");
-                      return request.sendString(Mono.just(json));
-                    });
-
+                return json;
               } catch (InvalidProtocolBufferException e) {
                 throw Exceptions.propagate(e);
               }
-            },
+            })
+        .windowTimeout(128, Duration.ofMillis(1000))
+        .map(
+            strings ->
+                strings
+                    .reduce(new StringJoiner(","), StringJoiner::add)
+                    .map(stringJoiner -> "[" + stringJoiner.toString() + "]"))
+        .flatMap(
+            spans ->
+                httpClient
+                    .post(
+                        zipkinUrl,
+                        request -> {
+                          request.addHeader("Content-Type", "application/json");
+                          return request.sendString(spans);
+                        })
+                    .timeout(Duration.ofSeconds(30)),
             8)
+        .onErrorResume(t -> Mono.empty())
         .then(Mono.just(Ack.getDefaultInstance()));
   }
 }

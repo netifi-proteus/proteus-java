@@ -3,7 +3,6 @@ package io.netifi.proteus.tracing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
@@ -26,14 +25,16 @@ class ProteusReporter extends Component implements Reporter<Span> {
     this.sink = DirectProcessor.<Span>create().serialize();
     this.group = group;
     this.destination = destination;
-    
-    Flux<zipkin2.proto3.Span> map =
-        sink.onBackpressureBuffer(1 << 10, BufferOverflowStrategy.DROP_OLDEST).map(this::mapSpan);
 
+    Flux<zipkin2.proto3.Span> map =
+        sink.onBackpressureDrop().map(this::mapSpan);
+    
     this.disposable =
         Flux.defer(() -> service.streamSpans(map))
             .doOnError(throwable -> logger.error("error sending tracing data", throwable))
+            .doFinally(s -> System.out.println("FINALLY"))
             .retry()
+            .repeat()
             .subscribe();
   }
 

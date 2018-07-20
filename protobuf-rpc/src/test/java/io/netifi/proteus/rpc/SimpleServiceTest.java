@@ -11,15 +11,13 @@ import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.server.TcpServerTransport;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,7 +96,8 @@ public class SimpleServiceTest {
     Assert.assertEquals("sending a message", responseMessage);
   }
 
-  @Test//(timeout = 50_000)
+  @Test
+  @Ignore(value = "integration testing")
   public void testMultipleRequestReply() throws Exception {
     for (int j= 0; j < 1_00000; j++) {
       SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
