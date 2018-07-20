@@ -28,6 +28,8 @@ public interface DestinationNameFactory extends Supplier<String> {
   default String peek() {
     return get();
   }
+  
+  default String rootName() { return get(); }
 
   class CountingDestinationNameFactory implements DestinationNameFactory {
     private String destination;
@@ -37,7 +39,12 @@ public interface DestinationNameFactory extends Supplier<String> {
       this.destination = destination;
       this.counter = counter;
     }
-
+  
+    @Override
+    public String rootName() {
+      return destination;
+    }
+  
     @Override
     public String get() {
       return destination + "-" + counter.getAndIncrement();

@@ -22,11 +22,9 @@ dependencies {
     compileOnly 'com.google.protobuf:protobuf-java:3.6.0'
     compileOnly 'javax.inject:javax.inject:1'
 
-    testCompile project(':core')
+    testCompile project(':tracing')
     testCompile 'javax.inject:javax.inject:1'
     testCompile 'junit:junit:4.12'
-    testCompile 'io.opentracing.brave:brave-opentracing:0.31.2'
-    testCompile 'io.zipkin.reporter2:zipkin-sender-okhttp3:2.7.6'
     testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
     testCompile 'org.apache.logging.log4j:log4j-core:2.9.0'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.9.0'

@@ -276,7 +276,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                       synchronized (WeightedReconnectingRSocket.this) {
                                         connecting = false;
                                       }
-
+                                      
                                       connect();
                                     })
                                 .subscribe();
@@ -284,6 +284,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           });
                 }))
         .doOnError(t -> logger.error("error trying to broker", t))
+        .retry()
         .doFinally(
             s -> {
               if (SignalType.ON_ERROR != s) {

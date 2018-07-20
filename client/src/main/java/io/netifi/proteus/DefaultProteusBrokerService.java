@@ -17,6 +17,7 @@ import io.netifi.proteus.stats.Quantile;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.opentracing.Tracer;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.transport.ClientTransport;
@@ -30,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -60,6 +62,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final BrokerInfoServiceClient client;
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
+  private final Tracer tracer;
   private boolean clientTransportMissed = false;
   private boolean rsocketMissed = false;
 
@@ -75,7 +78,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       long ackTimeoutSeconds,
       int missedAcks,
       long accessKey,
-      ByteBuf accessToken) {
+      ByteBuf accessToken,
+      Tracer tracer) {
     Objects.requireNonNull(seedAddresses);
     if (seedAddresses.isEmpty()) {
       throw new IllegalStateException("seedAddress is empty");
@@ -103,6 +107,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.accessKey = accessKey;
     this.accessToken = accessToken;
     this.onClose = MonoProcessor.create();
+    this.tracer = tracer;
 
     seedClientTransportSupplier();
 
@@ -153,7 +158,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     if (members.size() < poolSize) {
       rsocketMissed = true;
       WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
-      System.out.println("adding...");
       members.add(rSocket);
     }
   }

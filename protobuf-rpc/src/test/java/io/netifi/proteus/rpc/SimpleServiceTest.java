@@ -1,9 +1,9 @@
 package io.netifi.proteus.rpc;
 
-import brave.Tracing;
-import brave.opentracing.BraveTracer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
+import io.netifi.proteus.tracing.ProteusTracerSupplier;
 import io.netty.buffer.ByteBuf;
 import io.opentracing.Tracer;
 import io.rsocket.Frame;
@@ -16,12 +16,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import zipkin2.Span;
-import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.Sender;
-import zipkin2.reporter.okhttp3.OkHttpSender;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -34,22 +31,27 @@ public class SimpleServiceTest {
 
   private static SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private static RSocket rSocket;
-  private static Sender sender;
-  private static AsyncReporter<Span> spanReporter;
   private static Tracer tracer;
 
   @BeforeClass
   public static void setup() {
-
-    sender = OkHttpSender.create("http://127.0.0.1:9411/api/v2/spans");
-    spanReporter = AsyncReporter.builder(sender).queuedMaxSpans(5).build();
-
-    Tracing braveTracing =
-        Tracing.newBuilder()
-            .localServiceName("my-service")
-            .spanReporter(spanReporter).build();
-
-    tracer = BraveTracer.create(braveTracing);
+  
+    String host = System.getProperty("netifi.proteus.host", "localhost");
+    int port = Integer.getInteger("netifi.proteus.port", 8001);
+    long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
+    String accessToken =
+        System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
+  
+    Proteus proteus =
+        Proteus.builder()
+            .accessKey(accessKey)
+            .accessToken(accessToken)
+            .group("simpleServiceTest")
+            .host(host)
+            .port(port)
+            .build();
+    
+    tracer = new ProteusTracerSupplier(proteus, Optional.empty()).get();
 
     SimpleServiceServer serviceServer =
         new SimpleServiceServer(
@@ -68,6 +70,7 @@ public class SimpleServiceTest {
             .transport(TcpClientTransport.create(8801))
             .start()
             .block();
+  
   }
 
   @AfterClass
@@ -95,9 +98,9 @@ public class SimpleServiceTest {
     Assert.assertEquals("sending a message", responseMessage);
   }
 
-  @Test(timeout = 50_000)
-  public void testMultipleRequestReply() {
-    for (int j= 0; j < 100; j++) {
+  @Test//(timeout = 50_000)
+  public void testMultipleRequestReply() throws Exception {
+    for (int j= 0; j < 1_00000; j++) {
       SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
       SimpleResponse response =
           Flux.range(1, 20)
@@ -108,10 +111,12 @@ public class SimpleServiceTest {
               .blockLast();
   
       String responseMessage = response.getResponseMessage();
-  
-      System.out.println(responseMessage);
-  
+
+      System.out.println("sending...");
+
       Assert.assertEquals("sending a message", responseMessage);
+      
+      Thread.sleep(1000);
     }
   }
 

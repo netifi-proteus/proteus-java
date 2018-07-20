@@ -57,7 +57,7 @@ public class ProteusIntegrationTest {
             .port(port)
             .build();
 
-    server.addService(new SimpleServiceServer(new DefaultSimpleService(), Optional.empty()));
+    server.addService(new SimpleServiceServer(new DefaultSimpleService(), Optional.empty(), Optional.empty()));
 
     proteusSocket = client.group("test.server");
   }
