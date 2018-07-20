@@ -74,7 +74,9 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
             span -> {
               try {
                 String json = "[" + JsonFormat.printer().print(span) + "]";
-                System.out.println(json);
+                if (logger.isTraceEnabled()) {
+                  logger.trace(json);
+                }
                 return httpClient.post(
                     zipkinUrl,
                     request -> {
