@@ -6,6 +6,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
+import reactor.core.publisher.UnicastProcessor;
 import zipkin2.Annotation;
 import zipkin2.Component;
 import zipkin2.Endpoint;
@@ -25,16 +26,10 @@ class ProteusReporter extends Component implements Reporter<Span> {
     this.sink = DirectProcessor.<Span>create().serialize();
     this.group = group;
     this.destination = destination;
-
-    Flux<zipkin2.proto3.Span> map =
-        sink.onBackpressureDrop().map(this::mapSpan);
-    
     this.disposable =
-        Flux.defer(() -> service.streamSpans(map))
+        Flux.defer(() -> service.streamSpans(sink.onBackpressureLatest().map(this::mapSpan)))
             .doOnError(throwable -> logger.error("error sending tracing data", throwable))
-            .doFinally(s -> System.out.println("FINALLY"))
             .retry()
-            .repeat()
             .subscribe();
   }
 

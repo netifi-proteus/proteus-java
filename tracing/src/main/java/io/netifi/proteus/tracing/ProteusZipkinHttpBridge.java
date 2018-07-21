@@ -3,6 +3,7 @@ package io.netifi.proteus.tracing;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netifi.proteus.Proteus;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelOption;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,9 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
                     builder
                         .compression(true)
                         .poolResources(PoolResources.fixed("proteusZipkinBridge"))
+                        .option(ChannelOption.SO_KEEPALIVE, true)
+                        .option(ChannelOption.SO_TIMEOUT, 60_000)
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000)
                         .host(host)
                         .port(port))
             .build();
@@ -79,7 +83,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   @Override
   public Mono<Ack> streamSpans(Publisher<Span> messages, ByteBuf metadata) {
     return Flux.from(messages)
-        .limitRate(256, 32)
         .map(
             span -> {
               try {
@@ -93,6 +96,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
               }
             })
         .windowTimeout(128, Duration.ofMillis(1000))
+        .onBackpressureDrop(stringFlux -> System.out.println("DROPPING LIKE ITS HOT"))
         .map(
             strings ->
                 strings
@@ -109,6 +113,9 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
                         })
                     .timeout(Duration.ofSeconds(30)),
             8)
+        .doOnError(
+            throwable ->
+                logger.error("error sending data to tracing data to url " + zipkinUrl, throwable))
         .onErrorResume(t -> Mono.empty())
         .then(Mono.just(Ack.getDefaultInstance()));
   }
