@@ -353,9 +353,11 @@ static void PrintClient(const ServiceDescriptor* service,
   (*vars)["file_name"] = service->file()->name();
   (*vars)["client_class_name"] = ClientClassName(service);
   (*vars)["proteus_version"] = "";
+  (*vars)["version"] = "";
   #ifdef PROTEUS_VERSION
   if (!disable_version) {
     (*vars)["proteus_version"] = " (version " XSTR(PROTEUS_VERSION) ")";
+    (*vars)["version"] = XSTR(PROTEUS_VERSION);
   }
   #endif
   p->Print(
@@ -403,6 +405,37 @@ static void PrintClient(const ServiceDescriptor* service,
     }
   }
 
+  // Tracing
+  for (int i = 0; i < service->method_count(); ++i) {
+      const MethodDescriptor* method = service->method(i);
+      (*vars)["output_type"] = MessageFullJavaName(method->output_type());
+      (*vars)["lower_method_name"] = LowerMethodName(method);
+      bool client_streaming = method->client_streaming();
+      bool server_streaming = method->server_streaming();
+
+      if (server_streaming) {
+        p->Print(
+            *vars,
+            "private final $Function$<$Map$<String, String>, $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>>> $lower_method_name$Trace;\n");
+      } else if (client_streaming) {
+        p->Print(
+            *vars,
+            "private final $Function$<$Map$<String, String>, $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>>> $lower_method_name$Trace;\n");
+      } else {
+        const Descriptor* output_type = method->output_type();
+        if (output_type->full_name() != "google.protobuf.Empty") {
+          p->Print(
+              *vars,
+              "private final $Function$<$Map$<String, String>, $Function$<? super $Publisher$<$output_type$>, ? extends $Publisher$<$output_type$>>> $lower_method_name$Trace;\n");
+        } else {
+          p->Print(
+              *vars,
+              "private final $Function$<$Map$<String, String>, $Function$<? super $Publisher$<Void>, ? extends $Publisher$<Void>>> $lower_method_name$Trace;\n");
+        }
+      }
+    }
+
+  // RSocket only
   p->Print(
       *vars,
       "\n"
@@ -422,9 +455,20 @@ static void PrintClient(const ServiceDescriptor* service,
         "this.$lower_method_name$ = $Function$.identity();\n");
   }
 
+  // Tracing metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace();\n");
+  }
+
   p->Outdent();
   p->Print("}\n\n");
 
+  // RSocket and Metrics
   p->Print(
       *vars,
       "public $client_class_name$($RSocket$ rSocket, $MeterRegistry$ registry) {\n");
@@ -444,8 +488,91 @@ static void PrintClient(const ServiceDescriptor* service,
         "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.client\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
   }
 
+  // Tracing metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace();\n");
+  }
+
   p->Outdent();
   p->Print("}\n\n");
+
+  // RSocket and Tracing
+  p->Print(
+      *vars,
+      "\n"
+      "public $client_class_name$($RSocket$ rSocket, $Tracer$ tracer) {\n");
+  p->Indent();
+  p->Print(
+      *vars,
+      "this.rSocket = rSocket;\n");
+
+  // RPC metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$ = $Function$.identity();\n");
+  }
+
+  // Tracing metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
+  }
+
+  p->Outdent();
+  p->Print("}\n\n");
+
+
+  // RSocket, Metrics, and Tracing
+  p->Print(
+      *vars,
+      "\n"
+      "public $client_class_name$($RSocket$ rSocket, $MeterRegistry$ registry, $Tracer$ tracer) {\n");
+  p->Indent();
+  p->Print(
+      *vars,
+      "this.rSocket = rSocket;\n");
+
+  // RPC metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$ = $ProteusMetrics$.timed(registry, \"proteus.client\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
+  }
+
+  // Tracing metrics
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    (*vars)["method_field_name"] = MethodFieldName(method);
+
+    p->Print(
+        *vars,
+        "this.$lower_method_name$Trace = $ProteusTracing$.trace(tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"client\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
+  }
+
+  p->Outdent();
+  p->Print("}\n\n");
+
 
   // RPC methods
   for (int i = 0; i < service->method_count(); ++i) {
@@ -539,7 +666,9 @@ static void PrintClient(const ServiceDescriptor* service,
       // Bidirectional streaming or client streaming
       p->Print(
           *vars,
-          "($Publisher$<$input_type$> messages, $ByteBuf$ metadata) {\n");
+          "($Publisher$<$input_type$> messages, $ByteBuf$ metadata) {\n"
+          "$Map$<String, String> map = new $HashMap$<>();\n"
+          );
       p->Indent();
       p->Print(
           *vars,
@@ -578,11 +707,11 @@ static void PrintClient(const ServiceDescriptor* service,
       if (server_streaming) {
         p->Print(
             *vars,
-            "})).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
+            "})).map(deserializer($output_type$.parser())).transform($lower_method_name$).transform($lower_method_name$Trace.apply(map));\n");
       } else {
         p->Print(
             *vars,
-            "})).map(deserializer($output_type$.parser())).single().transform($lower_method_name$);\n");
+            "})).map(deserializer($output_type$.parser())).single().transform($lower_method_name$).transform($lower_method_name$Trace.apply(map));\n");
       }
       p->Outdent();
       p->Outdent();
@@ -591,7 +720,9 @@ static void PrintClient(const ServiceDescriptor* service,
       // Server streaming or simple RPC
       p->Print(
           *vars,
-          "($input_type$ message, $ByteBuf$ metadata) {\n");
+          "($input_type$ message, $ByteBuf$ metadata) {\n"
+          "$Map$<String, String> map = new $HashMap$<>();\n"
+          );
       p->Indent();
 
       if (server_streaming) {
@@ -606,15 +737,17 @@ static void PrintClient(const ServiceDescriptor* service,
         p->Indent();
         p->Print(
             *vars,
-            "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, metadata);\n"
+            "final $ByteBuf$ tracingMetadata = $ProteusTracing$.mapToByteBuf($ByteBufAllocator$.DEFAULT, map);\n"
+            "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, tracingMetadata, metadata);\n"
             "$ByteBuf$ data = serialize(message);\n"
+            "tracingMetadata.release();\n"
             "return rSocket.requestStream($ByteBufPayload$.create(data, metadataBuf));\n");
         p->Outdent();
         p->Print("}\n");
         p->Outdent();
         p->Print(
             *vars,
-            "}).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
+            "}).map(deserializer($output_type$.parser())).transform($lower_method_name$).transform($lower_method_name$Trace.apply(map));\n");
       } else {
         const Descriptor* output_type = method->output_type();
         if (output_type->full_name() != "google.protobuf.Empty") {
@@ -629,15 +762,17 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, metadata);\n"
+              "final $ByteBuf$ tracingMetadata = $ProteusTracing$.mapToByteBuf($ByteBufAllocator$.DEFAULT, map);\n"
+              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, tracingMetadata, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"
+              "tracingMetadata.release();\n"
               "return rSocket.requestResponse($ByteBufPayload$.create(data, metadataBuf));\n");
           p->Outdent();
           p->Print("}\n");
           p->Outdent();
           p->Print(
               *vars,
-              "}).map(deserializer($output_type$.parser())).transform($lower_method_name$);\n");
+              "}).map(deserializer($output_type$.parser())).transform($lower_method_name$).transform($lower_method_name$Trace.apply(map));\n");
         } else {
           p->Print(
               *vars,
@@ -650,15 +785,17 @@ static void PrintClient(const ServiceDescriptor* service,
           p->Indent();
           p->Print(
               *vars,
-              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, metadata);\n"
+              "final $ByteBuf$ tracingMetadata = $ProteusTracing$.mapToByteBuf($ByteBufAllocator$.DEFAULT, map);\n"
+              "final $ByteBuf$ metadataBuf = $ProteusMetadata$.encode($ByteBufAllocator$.DEFAULT, $service_name$.$service_field_name$, $service_name$.$method_field_name$, tracingMetadata, metadata);\n"
               "$ByteBuf$ data = serialize(message);\n"
+              "tracingMetadata.release();\n"
               "return rSocket.fireAndForget($ByteBufPayload$.create(data, metadataBuf));\n");
           p->Outdent();
           p->Print("}\n");
           p->Outdent();
           p->Print(
               *vars,
-              "}).transform($lower_method_name$);\n");
+              "}).transform($lower_method_name$).transform($lower_method_name$Trace.apply(map));\n");
         }
       }
 
@@ -749,9 +886,11 @@ static void PrintServer(const ServiceDescriptor* service,
   (*vars)["file_name"] = service->file()->name();
   (*vars)["server_class_name"] = ServerClassName(service);
   (*vars)["proteus_version"] = "";
+  (*vars)["version"] = "";
   #ifdef PROTEUS_VERSION
   if (!disable_version) {
     (*vars)["proteus_version"] = " (version " XSTR(PROTEUS_VERSION) ")";
+    (*vars)["version"] = XSTR(PROTEUS_VERSION);
   }
   #endif
   p->Print(
@@ -769,7 +908,8 @@ static void PrintServer(const ServiceDescriptor* service,
 
   p->Print(
       *vars,
-      "private final $service_name$ service;\n");
+      "private final $service_name$ service;\n"
+      "private final $Tracer$ tracer;\n");
 
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
@@ -800,21 +940,50 @@ static void PrintServer(const ServiceDescriptor* service,
     }
   }
 
+  // Tracing
+  for (int i = 0; i < service->method_count(); ++i) {
+    const MethodDescriptor* method = service->method(i);
+    (*vars)["lower_method_name"] = LowerMethodName(method);
+    bool client_streaming = method->client_streaming();
+    bool server_streaming = method->server_streaming();
+
+    if (server_streaming) {
+      p->Print(
+          *vars,
+          "private final $Function$<$SpanContext$, $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>>> $lower_method_name$Trace;\n");
+    } else if (client_streaming) {
+      p->Print(
+          *vars,
+          "private final $Function$<$SpanContext$, $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>>> $lower_method_name$Trace;\n");
+    } else {
+      const Descriptor* output_type = method->output_type();
+      if (output_type->full_name() != "google.protobuf.Empty") {
+        p->Print(
+            *vars,
+            "private final $Function$<$SpanContext$, $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>>> $lower_method_name$Trace;\n");
+      } else {
+        p->Print(
+            *vars,
+            "private final $Function$<$SpanContext$, $Function$<? super $Publisher$<Void>, ? extends $Publisher$<Void>>> $lower_method_name$Trace;\n");
+      }
+    }
+  }
+
   p->Print(
       *vars,
       "@$Inject$\n"
-      "public $server_class_name$($service_name$ service, $Optional$<$MeterRegistry$> registry) {\n");
+      "public $server_class_name$($service_name$ service, $Optional$<$MeterRegistry$> registry, $Optional$<$Tracer$> tracer) {\n");
   p->Indent();
   p->Print(
       *vars,
       "this.service = service;\n");
 
+  // if metrics present {
   p->Print(
       *vars,
       "if (!registry.isPresent()) {\n"
   );
   p->Indent();
-   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
@@ -824,13 +993,13 @@ static void PrintServer(const ServiceDescriptor* service,
        "this.$lower_method_name$ = $Function$.identity();\n");
   }
 
+  // } else metrics not present {
   p->Outdent();
   p->Print(
       *vars,
       "} else {\n"
   );
   p->Indent();
-  // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
     (*vars)["lower_method_name"] = LowerMethodName(method);
@@ -843,6 +1012,51 @@ static void PrintServer(const ServiceDescriptor* service,
 
   p->Outdent();
   p->Print("}\n\n");
+  // }
+
+  // if tracing present {
+    p->Print(
+        *vars,
+        "if (!tracer.isPresent()) {\n"
+    );
+    p->Indent();
+    p->Print(
+        *vars,
+        "this.tracer = null;\n"
+    );
+    for (int i = 0; i < service->method_count(); ++i) {
+      const MethodDescriptor* method = service->method(i);
+      (*vars)["lower_method_name"] = LowerMethodName(method);
+
+      p->Print(
+         *vars,
+         "this.$lower_method_name$Trace = $ProteusTracing$.traceAsChild();\n");
+    }
+
+    // } else tracing not present {
+    p->Outdent();
+    p->Print(
+        *vars,
+        "} else {\n"
+    );
+    p->Indent();
+    p->Print(
+        *vars,
+        "this.tracer = tracer.get();\n"
+    );
+    for (int i = 0; i < service->method_count(); ++i) {
+      const MethodDescriptor* method = service->method(i);
+      (*vars)["lower_method_name"] = LowerMethodName(method);
+      (*vars)["method_field_name"] = MethodFieldName(method);
+
+      p->Print(
+          *vars,
+          "this.$lower_method_name$Trace = $ProteusTracing$.traceAsChild(this.tracer, $service_name$.$method_field_name$, $Tag$.of(\"proteus.service\", $service_name$.$service_field_name$), $Tag$.of(\"proteus.type\", \"server\"), $Tag$.of(\"proteus.version\", \"$version$\"));\n");
+    }
+    //\"proteus.server\", \"service\", $service_name$.$service_field_name$, \"method\", $service_name$.$method_field_name$);\n");
+    p->Outdent();
+    p->Print("}\n\n");
+    // }
 
   p->Outdent();
   p->Print("}\n\n");
@@ -911,6 +1125,7 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
+        "$SpanContext$ spanContext = $ProteusTracing$.deserializeTracingMetadata(tracer, metadata);\n"
         "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = fire_and_forget.begin(); it != fire_and_forget.end(); ++it) {
@@ -925,7 +1140,7 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata);\n");
+          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).transform($lower_method_name$).transform($lower_method_name$Trace.apply(spanContext));\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -974,6 +1189,7 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
+        "$SpanContext$ spanContext = $ProteusTracing$.deserializeTracingMetadata(tracer, metadata);\n"
         "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_response.begin(); it != request_response.end(); ++it) {
@@ -989,7 +1205,7 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$);\n");
+          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$).transform($lower_method_name$Trace.apply(spanContext));\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -1038,6 +1254,7 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
+        "$SpanContext$ spanContext = $ProteusTracing$.deserializeTracingMetadata(tracer, metadata);\n"
         "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_stream.begin(); it != request_stream.end(); ++it) {
@@ -1053,7 +1270,7 @@ static void PrintServer(const ServiceDescriptor* service,
       p->Print(
           *vars,
           "$CodedInputStream$ is = $CodedInputStream$.newInstance(payload.getData());\n"
-          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$);\n");
+          "return service.$lower_method_name$($input_type$.parseFrom(is), metadata).map(serializer).transform($lower_method_name$).transform($lower_method_name$Trace.apply(spanContext));\n");
       p->Outdent();
       p->Print("}\n");
     }
@@ -1102,6 +1319,7 @@ static void PrintServer(const ServiceDescriptor* service,
     p->Print(
         *vars,
         "$ByteBuf$ metadata = payload.sliceMetadata();\n"
+        "$SpanContext$ spanContext = $ProteusTracing$.deserializeTracingMetadata(tracer, metadata);\n"
         "switch($ProteusMetadata$.getMethod(metadata)) {\n");
     p->Indent();
     for (vector<const MethodDescriptor*>::iterator it = request_channel.begin(); it != request_channel.end(); ++it) {
@@ -1125,11 +1343,11 @@ static void PrintServer(const ServiceDescriptor* service,
       if (method->server_streaming()) {
         p->Print(
             *vars,
-            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$);\n");
+            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$).transform($lower_method_name$Trace.apply(spanContext));\n");
       } else {
         p->Print(
             *vars,
-            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$).$flux$();\n");
+            "return service.$lower_method_name$(messages, metadata).map(serializer).transform($lower_method_name$).transform($lower_method_name$Trace.apply(spanContext)).$flux$();\n");
       }
 
       p->Outdent();
@@ -1334,6 +1552,12 @@ void GenerateClient(const ServiceDescriptor* service,
   vars["MessageLite"] = "com.google.protobuf.MessageLite";
   vars["Parser"] = "com.google.protobuf.Parser";
   vars["ProteusGeneratedMethod"] = "io.netifi.proteus.annotations.internal.ProteusGeneratedMethod";
+  vars["ProteusTracing"] = "io.netifi.proteus.tracing.ProteusTracing";
+  vars["Tag"] = "io.netifi.proteus.tracing.Tag";
+  vars["Tracer"] = "io.opentracing.Tracer";
+  vars["Map"] = "java.util.Map";
+  vars["HashMap"] = "java.util.HashMap";
+  vars["Supplier"] = "java.util.function.Supplier";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());
@@ -1389,6 +1613,10 @@ void GenerateServer(const ServiceDescriptor* service,
   vars["Inject"] = "javax.inject.Inject";
   vars["Named"] = "javax.inject.Named";
   vars["ProteusResourceType"] = "io.netifi.proteus.annotations.internal.ProteusResourceType";
+  vars["ProteusTracing"] = "io.netifi.proteus.tracing.ProteusTracing";
+  vars["Tag"] = "io.netifi.proteus.tracing.Tag";
+  vars["SpanContext"] = "io.opentracing.SpanContext";
+  vars["Tracer"] = "io.opentracing.Tracer";
 
   Printer printer(out, '$');
   string package_name = ServiceJavaPackage(service->file());

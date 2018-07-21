@@ -6,16 +6,18 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    protobuf project (':metrics-idl')
-    compile project (':frames')
+    protobuf project (':tracing-idl')
+    compile project (':client')
+
+    compile 'io.projectreactor.addons:reactor-adapter:3.1.6.RELEASE'
+    compile 'com.google.protobuf:protobuf-java-util:3.6.0'
+
     compile 'io.opentracing:opentracing-api:0.31.0'
-    compile 'javax.inject:javax.inject:1'
-    compile 'com.google.protobuf:protobuf-java:3.6.0'
-    compile 'io.rsocket:rsocket-core:0.11.3'
-    compile 'io.rsocket:rsocket-transport-netty:0.11.3'
-    compile 'io.micrometer:micrometer-core:1.0.3'
-    testCompile 'io.opentracing.brave:brave-opentracing:0.31.2'
-    testCompile 'io.zipkin.reporter2:zipkin-sender-okhttp3:2.7.6'
+    compile 'io.opentracing.brave:brave-opentracing:0.31.2'
+
+    testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
+    testCompile 'org.apache.logging.log4j:log4j-core:2.9.0'
+    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.9.0'
 }
 
 def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"

@@ -1,20 +1,23 @@
 package io.netifi.proteus.rpc;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
+import io.netifi.proteus.tracing.ProteusTracerSupplier;
 import io.netty.buffer.ByteBuf;
+import io.opentracing.Tracer;
 import io.rsocket.Frame;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.server.TcpServerTransport;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,11 +29,31 @@ public class SimpleServiceTest {
 
   private static SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private static RSocket rSocket;
+  private static Tracer tracer;
 
   @BeforeClass
   public static void setup() {
+  
+    String host = System.getProperty("netifi.proteus.host", "localhost");
+    int port = Integer.getInteger("netifi.proteus.port", 8001);
+    long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
+    String accessToken =
+        System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
+  
+    Proteus proteus =
+        Proteus.builder()
+            .accessKey(accessKey)
+            .accessToken(accessToken)
+            .group("simpleServiceTest")
+            .host(host)
+            .port(port)
+            .build();
+    
+    tracer = new ProteusTracerSupplier(proteus, Optional.empty()).get();
+
     SimpleServiceServer serviceServer =
-        new SimpleServiceServer(new DefaultSimpleService(), Optional.of(registry));
+        new SimpleServiceServer(
+            new DefaultSimpleService(), Optional.of(registry), Optional.of(tracer));
 
     RSocketFactory.receive()
         .frameDecoder(Frame::retain)
@@ -45,11 +68,22 @@ public class SimpleServiceTest {
             .transport(TcpClientTransport.create(8801))
             .start()
             .block();
+  
+  }
+
+  @AfterClass
+  public static void teardown() {
+    try {
+      System.out.println("WAITING FOR ZIPKIN.....");
+      Thread.sleep(100);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
 
   @Test
   public void testRequestReply() {
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
     SimpleResponse response =
         client
             .requestReply(SimpleRequest.newBuilder().setRequestMessage("sending a message").build())
@@ -61,10 +95,33 @@ public class SimpleServiceTest {
 
     Assert.assertEquals("sending a message", responseMessage);
   }
+
+  @Test
+  @Ignore(value = "integration testing")
+  public void testMultipleRequestReply() throws Exception {
+    for (int j= 0; j < 1_00000; j++) {
+      SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
+      SimpleResponse response =
+          Flux.range(1, 20)
+              .flatMap(
+                  i ->
+                      client.requestReply(
+                          SimpleRequest.newBuilder().setRequestMessage("sending a message").build()), 8)
+              .blockLast();
   
+      String responseMessage = response.getResponseMessage();
+
+      System.out.println("sending...");
+
+      Assert.assertEquals("sending a message", responseMessage);
+      
+      Thread.sleep(1000);
+    }
+  }
+
   @Test(timeout = 50_000)
   public void testStreaming() {
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
     SimpleResponse response =
         client
             .requestStream(
@@ -78,7 +135,7 @@ public class SimpleServiceTest {
 
   @Test(timeout = 50_000)
   public void testStreamingPrintEach() {
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
     client
         .requestStream(SimpleRequest.newBuilder().setRequestMessage("sending a message").build())
         .take(5)
@@ -88,7 +145,7 @@ public class SimpleServiceTest {
 
   @Test(timeout = 30_000)
   public void testClientStreamingRpc() {
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
 
     Flux<SimpleRequest> requests =
         Flux.range(1, 11)
@@ -102,14 +159,15 @@ public class SimpleServiceTest {
 
   @Test(timeout = 150_000)
   public void testBidiStreamingRpc() {
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
 
     Flux<SimpleRequest> requests =
         Flux.range(1, 500_000)
             .map(i -> "sending -> " + i)
             .map(s -> SimpleRequest.newBuilder().setRequestMessage(s).build());
 
-    SimpleResponse response = client.streamingRequestAndResponse(requests).take(500_000).blockLast();
+    SimpleResponse response =
+        client.streamingRequestAndResponse(requests).take(500_000).blockLast();
 
     System.out.println(response.getResponseMessage());
   }
@@ -118,7 +176,7 @@ public class SimpleServiceTest {
   public void testFireAndForget() throws Exception {
     int count = 1000;
     CountDownLatch latch = new CountDownLatch(count);
-    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry);
+    SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
     Flux.range(1, count)
         .flatMap(
             i ->
@@ -145,7 +203,8 @@ public class SimpleServiceTest {
     }
 
     @Override
-    public Mono<SimpleResponse> streamingRequestSingleResponse(Publisher<SimpleRequest> messages, ByteBuf metadata) {
+    public Mono<SimpleResponse> streamingRequestSingleResponse(
+        Publisher<SimpleRequest> messages, ByteBuf metadata) {
       return Flux.from(messages)
           .windowTimeout(10, Duration.ofSeconds(500))
           .take(1)
@@ -190,7 +249,8 @@ public class SimpleServiceTest {
     }
 
     @Override
-    public Flux<SimpleResponse> streamingRequestAndResponse(Publisher<SimpleRequest> messages, ByteBuf metadata) {
+    public Flux<SimpleResponse> streamingRequestAndResponse(
+        Publisher<SimpleRequest> messages, ByteBuf metadata) {
       return Flux.from(messages).flatMap(message -> requestReply(message, metadata));
     }
   }
