@@ -6,12 +6,16 @@ import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.opentracing.Tracer;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+@Named("ProteusTracerSupplier")
 public class ProteusTracerSupplier implements Supplier<Tracer> {
   private final Tracer tracer;
 
+  @Inject
   public ProteusTracerSupplier(Proteus proteus, Optional<String> tracingGroup) {
     ProteusSocket proteusSocket = proteus.group(tracingGroup.orElse("com.netifi.proteus.tracing"));
 

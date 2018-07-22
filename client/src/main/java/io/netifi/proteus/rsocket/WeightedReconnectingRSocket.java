@@ -255,9 +255,10 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                       .transport(weighedClientTransportSupplier.apply(statsProcessor))
                       .start()
                       .doOnNext(
-                          rSocket -> {
+                          _rSocket -> {
                             availability = 1.0;
-                            rSocket
+                            ErrorOnDisconnectRSocket rSocket = new ErrorOnDisconnectRSocket(_rSocket);
+                            _rSocket
                                 .onClose()
                                 .doFinally(
                                     s -> {
@@ -276,6 +277,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                       synchronized (WeightedReconnectingRSocket.this) {
                                         connecting = false;
                                       }
+                                      
+                                      rSocket.dispose();
                                       
                                       connect();
                                     })

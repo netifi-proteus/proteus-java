@@ -6,7 +6,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
-import reactor.core.publisher.UnicastProcessor;
 import zipkin2.Annotation;
 import zipkin2.Component;
 import zipkin2.Endpoint;
@@ -95,7 +94,7 @@ class ProteusReporter extends Component implements Reporter<Span> {
   @Override
   public void report(Span span) {
     if (!sink.isDisposed()) {
-      logger.trace("report span - {}", span);
+      logger.trace("reporting tracing data - {}", span);
       sink.onNext(span);
     }
   }

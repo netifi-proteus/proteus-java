@@ -83,8 +83,8 @@ project(':protobuf-rpc') {
 }
 
 
-project(':tracing') {
-    description = 'Netifi Tracing'
+project(':tracing-openzipkin') {
+    description = 'Netifi Openzipkin Integration'
     ext.artifactName = 'tracing'
 
     apply from: file('../gradle/release.gradle')
