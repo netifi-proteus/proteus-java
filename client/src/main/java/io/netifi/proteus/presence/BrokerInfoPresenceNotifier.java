@@ -12,8 +12,7 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -42,6 +41,15 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
             client
                 .streamGroupEvents(
                     Group.newBuilder().setGroup(group).build(), Unpooled.EMPTY_BUFFER)
+                .doFinally(
+                    s -> {
+                      synchronized (BrokerInfoPresenceNotifier.class) {
+                        List<String> strings = new ArrayList<>(groups.row(group).keySet());
+                        for (String d : strings) {
+                          remove(group, d);
+                        }
+                      }
+                    })
                 .retry()
                 .subscribe(this::joinEvent));
   }
@@ -65,6 +73,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
                 .streamDestinationEvents(
                     Destination.newBuilder().setDestination(destination).setGroup(group).build(),
                     Unpooled.EMPTY_BUFFER)
+                .doFinally(s -> remove(group, destination))
                 .retry()
                 .subscribe(BrokerInfoPresenceNotifier.this::joinEvent));
   }
@@ -84,6 +93,19 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     }
   }
 
+  private synchronized void remove(String group, String destination) {
+    logger.info("removing group {} and destination {}", group, destination);
+    groups.remove(group, destination);
+  }
+
+  private synchronized boolean contains(String group) {
+    return !groups.row(group).isEmpty();
+  }
+
+  private synchronized boolean contains(String group, String destination) {
+    return groups.row(group).containsKey(destination);
+  }
+
   private void joinEvent(Event event) {
     Destination destination = event.getDestination();
     logger.info("presence notifier received event {}", event.toString());
@@ -95,7 +117,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         }
         break;
       case LEAVE:
-        groups.remove(destination.getGroup  (), destination.getDestination());
+        remove(destination.getGroup(), destination.getDestination());
         break;
       default:
         throw new IllegalStateException("unknown event type " + event.getType());
@@ -106,7 +128,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   public Mono<Void> notify(String group) {
     Objects.requireNonNull(group);
 
-    if (groups.containsRow(group)) {
+    if (contains(group)) {
       return Mono.empty();
     } else {
       watch(group);
@@ -120,7 +142,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     Objects.requireNonNull(destination);
     Objects.requireNonNull(group);
 
-    if (groups.contains(group, destination)) {
+    if (contains(group, destination)) {
       return Mono.empty();
     } else {
       watch(destination, group);

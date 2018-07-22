@@ -21,6 +21,8 @@ import java.util.StringJoiner;
 public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private static final Logger logger = LoggerFactory.getLogger(ProteusZipkinHttpBridge.class);
 
+  private static final String DEFAULT_ZIPKIN_URL = "/api/v2/spans";
+  
   private final String host;
 
   private final int port;
@@ -49,18 +51,30 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   }
 
   public ProteusZipkinHttpBridge(String host, int port) {
-    this(host, port, "/api/v2/spans");
+    this(host, port, DEFAULT_ZIPKIN_URL);
   }
 
   public static void main(String... args) {
+    logger.info("Starting Stand-alone Proteus Zipkin HTTP Bridge");
+    
     String group = System.getProperty("netifi.tracingGroup", "com.netifi.proteus.tracing");
     String brokerHost = System.getProperty("netifi.proteus.host", "localhost");
     int brokerPort = Integer.getInteger("netifi.proteus.port", 8001);
     String zipkinHost = System.getProperty("netifi.proteus.zipkinHost", "localhost");
     int zipkinPort = Integer.getInteger("netifi.proteus.zipkinPort", 9411);
+    String zipkinUrl = System.getProperty("netifi.proteus.zipkinUrl", DEFAULT_ZIPKIN_URL);
     long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
     String accessToken =
         System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
+    
+    
+    logger.info("group - {}", group);
+    logger.info("broker host - {}", brokerHost);
+    logger.info("broker port - {}", brokerPort);
+    logger.info("zipkin host - {}", zipkinHost);
+    logger.info("zipkin port - {}", zipkinPort);
+    logger.info("zipkin url - {}", zipkinUrl);
+    logger.info("access key - {}", accessKey);
 
     Proteus proteus =
         Proteus.builder()
@@ -69,11 +83,12 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
             .group(group)
             .host(brokerHost)
             .port(brokerPort)
+            .destination("standaloneZipkinBridge")
             .build();
 
     proteus.addService(
         new ProteusTracingServiceServer(
-            new ProteusZipkinHttpBridge(zipkinHost, zipkinPort),
+            new ProteusZipkinHttpBridge(zipkinHost, zipkinPort, zipkinUrl),
             Optional.empty(),
             Optional.empty()));
 
@@ -88,7 +103,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
               try {
                 String json = JsonFormat.printer().print(span);
                 if (logger.isTraceEnabled()) {
-                  logger.trace(json);
+                  logger.trace("receiving tracing data {}", json);
                 }
                 return json;
               } catch (InvalidProtocolBufferException e) {
@@ -96,7 +111,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
               }
             })
         .windowTimeout(128, Duration.ofMillis(1000))
-        .onBackpressureDrop(stringFlux -> System.out.println("DROPPING LIKE ITS HOT"))
+        .onBackpressureDrop()
         .map(
             strings ->
                 strings
@@ -116,7 +131,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
         .doOnError(
             throwable ->
                 logger.error("error sending data to tracing data to url " + zipkinUrl, throwable))
-        .onErrorResume(t -> Mono.empty())
-        .then(Mono.just(Ack.getDefaultInstance()));
+        .then(Mono.never());
   }
 }

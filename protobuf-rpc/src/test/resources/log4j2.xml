@@ -9,7 +9,7 @@
         <Root level="error" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </Root>
-        <logger name="io.proteus" level="DEBUG" additivity="false">
+        <logger name="io.netifi.proteus.presence.BrokerInfoPresenceNotifier" level="DEBUG" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </logger>
         <logger name="io.rsocket.FrameLogger" level="ERROR" additivity="false">
