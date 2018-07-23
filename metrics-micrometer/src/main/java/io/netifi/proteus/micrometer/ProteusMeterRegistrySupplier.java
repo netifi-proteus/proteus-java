@@ -1,0 +1,73 @@
+package io.netifi.proteus.micrometer;
+
+import com.netflix.spectator.atlas.AtlasConfig;
+import io.micrometer.atlas.AtlasMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.netifi.proteus.Proteus;
+import io.netifi.proteus.metrics.ProteusMetricsExporter;
+import io.netifi.proteus.metrics.om.MetricsSnapshotHandlerClient;
+import io.netifi.proteus.rsocket.ProteusSocket;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+@Named("ProteusMeterRegistrySupplier")
+public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
+  private final MeterRegistry registry;
+
+  @Inject
+  public ProteusMeterRegistrySupplier(
+      Proteus proteus, Optional<String> metricsGroup, Optional<Long> stepInMillis, boolean export) {
+    ProteusSocket proteusSocket = proteus.group(metricsGroup.orElse("com.netifi.proteus.metrics"));
+
+    MetricsSnapshotHandlerClient client = new MetricsSnapshotHandlerClient(proteusSocket);
+
+    long millis = stepInMillis.orElse(10_000L);
+    Duration stepDuration = Duration.ofMillis(millis);
+
+    this.registry =
+        new AtlasMeterRegistry(
+            new AtlasConfig() {
+              @Override
+              public String get(String k) {
+                return null;
+              }
+
+              @Override
+              public boolean enabled() {
+                return false;
+              }
+
+              @Override
+              public Duration step() {
+                return stepDuration;
+              }
+            });
+
+    registry
+        .config()
+        .commonTags(
+            "accessKey",
+            String.valueOf(proteus.getAccesskey()),
+            "group",
+            proteus.getGroupName(),
+            "destination",
+            proteus.getDestination());
+
+    if (export) {
+      ProteusMetricsExporter exporter =
+          new ProteusMetricsExporter(client, registry, stepDuration, 1024);
+      exporter.run();
+
+      proteus.onClose().doFinally(s -> exporter.dispose()).subscribe();
+    }
+  }
+
+  @Override
+  public MeterRegistry get() {
+    return registry;
+  }
+}

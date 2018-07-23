@@ -6,7 +6,6 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    protobuf project (':metrics-idl')
     compile project (':frames')
     compile 'io.opentracing:opentracing-api:0.31.0'
     compile 'javax.inject:javax.inject:1'

@@ -83,6 +83,22 @@ project(':metrics-idl') {
     apply from: file('../gradle/java.gradle')
 }
 
+project(':metrics-micrometer') {
+    description = 'Netifi Proteus Micrometer Support'
+    ext.artifactName = 'metrics-prometheus'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
+project(':metrics-prometheus') {
+    description = 'Netifi Proteus Prometheus Integration'
+    ext.artifactName = 'metrics-prometheus'
+
+    apply from: file('../gradle/release.gradle')
+    apply from: file('../gradle/java.gradle')
+}
+
 project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
     ext.artifactName = 'protobuf-rpc'
@@ -92,7 +108,7 @@ project(':protobuf-rpc') {
 
 
 project(':tracing-openzipkin') {
-    description = 'Netifi Openzipkin Integration'
+    description = 'Netifi Proteus Openzipkin Integration'
     ext.artifactName = 'tracing'
 
     apply from: file('../gradle/release.gradle')
@@ -101,7 +117,7 @@ project(':tracing-openzipkin') {
 
 
 project(':tracing-idl') {
-    description = 'Netifi Tracing IDL'
+    description = 'Netifi Proteus Tracing IDL'
     ext.artifactName = 'tracing-idl'
 
     apply from: file('../gradle/release.gradle')
