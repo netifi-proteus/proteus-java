@@ -23,6 +23,7 @@ dependencies {
     compileOnly 'javax.inject:javax.inject:1'
 
     testCompile project(':tracing-openzipkin')
+    testCompile project(':metrics-micrometer')
     testCompile 'javax.inject:javax.inject:1'
     testCompile 'junit:junit:4.12'
     testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'

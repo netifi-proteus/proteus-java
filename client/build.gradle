@@ -15,8 +15,6 @@ dependencies {
     compile 'com.google.guava:guava:22.0'
 
     testProtobuf project (':protobuf-rpc')
-
-    testCompile 'io.micrometer:micrometer-registry-atlas:1.0.3'
 }
 
 def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"

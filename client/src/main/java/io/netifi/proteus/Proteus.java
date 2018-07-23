@@ -1,10 +1,6 @@
 package io.netifi.proteus;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netifi.proteus.metrics.ProteusMetricsExporter;
-import io.netifi.proteus.metrics.ProteusOperatingSystemMetrics;
-import io.netifi.proteus.metrics.om.MetricsSnapshotHandler;
-import io.netifi.proteus.metrics.om.MetricsSnapshotHandlerClient;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
 import io.netty.buffer.ByteBuf;
@@ -20,7 +16,6 @@ import reactor.core.publisher.MonoProcessor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +32,7 @@ public class Proteus implements Closeable {
     java.security.Security.setProperty("networkaddress.cache.ttl", "60");
   }
 
+  private final long accesskey;
   private final String fromGroup;
   private final DestinationNameFactory destinationNameFactory;
   private final ProteusBrokerService brokerService;
@@ -56,6 +52,7 @@ public class Proteus implements Closeable {
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
       Supplier<Tracer> tracerSupplier) {
+    this.accesskey = accessKey;
     this.onClose = MonoProcessor.create();
     this.fromGroup = group;
     this.requestHandlingRSocket = new RequestHandlingRSocket();
@@ -109,15 +106,19 @@ public class Proteus implements Closeable {
   public ProteusSocket group(String group) {
     return brokerService.group(group);
   }
-  
+
+  public long getAccesskey() {
+    return accesskey;
+  }
+
   public String getGroupName() {
     return fromGroup;
   }
-  
+
   public String getDestination() {
     return destinationNameFactory.rootName();
   }
-  
+
   public static class Builder {
     private String host = DefaultBuilderConfig.getHost();
     private Integer port = DefaultBuilderConfig.getPort();
@@ -134,10 +135,7 @@ public class Proteus implements Closeable {
     private DestinationNameFactory destinationNameFactory;
 
     private MeterRegistry registry = null;
-    private String metricHandlerGroup = DefaultBuilderConfig.getMetricHandlerGroup();
     private int batchSize = DefaultBuilderConfig.getBatchSize();
-    private long exportFrequencySeconds = DefaultBuilderConfig.getExportFrequencySeconds();
-    private boolean exportSystemMetrics = DefaultBuilderConfig.getExportSystemMetrics();
     private Function<SocketAddress, ClientTransport> clientTransportFactory =
         address -> TcpClientTransport.create((InetSocketAddress) address);
     private int poolSize = Runtime.getRuntime().availableProcessors();
@@ -154,28 +152,8 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder meterRegistry(MeterRegistry registry) {
-      this.registry = registry;
-      return this;
-    }
-
-    public Builder metricHandlerGroup(String metricHandlerGroup) {
-      this.metricHandlerGroup = metricHandlerGroup;
-      return this;
-    }
-
     public Builder metricBatchSize(int batchSize) {
       this.batchSize = batchSize;
-      return this;
-    }
-
-    public Builder metricExportFrequencySeconds(long exportFrequencySeconds) {
-      this.exportFrequencySeconds = exportFrequencySeconds;
-      return this;
-    }
-
-    public Builder exportSystemMetrics(boolean exportSystemMetrics) {
-      this.exportSystemMetrics = exportSystemMetrics;
       return this;
     }
 
@@ -208,12 +186,12 @@ public class Proteus implements Closeable {
       this.port = port;
       return this;
     }
-  
+
     public Builder tracerSupplier(Supplier<Tracer> tracerSupplier) {
       this.tracerSupplier = tracerSupplier;
       return this;
     }
-  
+
     public Builder seedAddresses(Collection<SocketAddress> addresses) {
       if (addresses instanceof List) {
         this.seedAddresses = (List<SocketAddress>) addresses;
@@ -308,35 +286,6 @@ public class Proteus implements Closeable {
                     poolSize,
                     tracerSupplier);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
-
-            if (registry != null) {
-              registry
-                  .config()
-                  .commonTags(
-                      "accessKey",
-                      String.valueOf(accessKey),
-                      "group",
-                      group,
-                      "destination",
-                      destination);
-
-              ProteusOperatingSystemMetrics systemMetrics =
-                  new ProteusOperatingSystemMetrics(registry);
-
-              ProteusSocket socket = proteus.group(metricHandlerGroup);
-              MetricsSnapshotHandler handler = new MetricsSnapshotHandlerClient(socket);
-              ProteusMetricsExporter exporter =
-                  new ProteusMetricsExporter(
-                      null, registry, Duration.ofSeconds(exportFrequencySeconds), batchSize);
-              exporter.run();
-              proteus
-                  .onClose
-                  .doFinally(
-                      s -> {
-                        exporter.dispose();
-                      })
-                  .subscribe();
-            }
 
             return proteus;
           });

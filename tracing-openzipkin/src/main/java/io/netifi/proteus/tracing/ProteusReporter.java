@@ -6,6 +6,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
+import reactor.retry.Retry;
 import zipkin2.Annotation;
 import zipkin2.Component;
 import zipkin2.Endpoint;
@@ -13,6 +14,7 @@ import zipkin2.Span;
 import zipkin2.reporter.Reporter;
 
 import java.io.IOException;
+import java.time.Duration;
 
 class ProteusReporter extends Component implements Reporter<Span> {
   private static final Logger logger = LoggerFactory.getLogger(ProteusReporter.class);

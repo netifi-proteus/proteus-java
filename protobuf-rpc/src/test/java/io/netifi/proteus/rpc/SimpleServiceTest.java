@@ -1,7 +1,10 @@
 package io.netifi.proteus.rpc;
 
+import com.google.protobuf.Option;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netifi.proteus.Proteus;
+import io.netifi.proteus.micrometer.ProteusMeterRegistrySupplier;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
 import io.netifi.proteus.tracing.ProteusTracerSupplier;
 import io.netty.buffer.ByteBuf;
@@ -27,10 +30,10 @@ import java.util.function.Function;
 
 public class SimpleServiceTest {
 
-  private static SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private static RSocket rSocket;
   private static Tracer tracer;
-
+  private static MeterRegistry registry;
+  
   @BeforeClass
   public static void setup() {
   
@@ -45,11 +48,14 @@ public class SimpleServiceTest {
             .accessKey(accessKey)
             .accessToken(accessToken)
             .group("simpleServiceTest")
+            .destination("simpleServiceTestDest")
             .host(host)
             .port(port)
             .build();
     
     tracer = new ProteusTracerSupplier(proteus, Optional.empty()).get();
+    
+    registry = new ProteusMeterRegistrySupplier(proteus, Optional.empty(), Optional.empty(), true).get();
 
     SimpleServiceServer serviceServer =
         new SimpleServiceServer(
