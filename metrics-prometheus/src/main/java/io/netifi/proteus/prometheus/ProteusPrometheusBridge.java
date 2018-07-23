@@ -14,6 +14,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -26,7 +27,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.DoubleConsumer;
 import java.util.stream.Collectors;
 
@@ -113,7 +113,8 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
 
   @Override
   public Flux<Skew> streamMetrics(Publisher<MetricsSnapshot> messages, ByteBuf metadata) {
-    AtomicBoolean first = new AtomicBoolean();
+    DirectProcessor<Skew> processor = DirectProcessor.create();
+
     Disposable subscribe =
         Flux.from(messages)
             .log()
@@ -122,81 +123,100 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
             .flatMap(
                 meter ->
                     Flux.fromIterable(meter.getMeasureList())
-                        .doOnNext(meterMeasurement -> record(meter, meterMeasurement, first)))
+                        .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
+            .doOnComplete(processor::onComplete)
+            .doOnError(processor::onError)
             .subscribe();
 
-    return Flux.just(Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build());
+    Flux.interval(Duration.ofSeconds(metricsSkewInterval))
+        .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
+        .onBackpressureDrop()
+        .doFinally(s -> subscribe.dispose())
+        .subscribe(processor);
+
+    return processor;
   }
 
-  private void record(ProteusMeter meter, MeterMeasurement meterMeasurement, AtomicBoolean first) {
-    MeterId id = meter.getId();
-    Iterable<Tag> tags = mapTags(id.getTagList());
-    String name = id.getName();
-    MeterType type = meter.getId().getType();
-    String baseUnit = id.getBaseUnit();
-    String description = id.getDescription();
-    
-    switch (type) {
-      case GAUGE:
-        consumers
-            .computeIfAbsent(
-                new Meter.Id(name, tags, baseUnit, description, Meter.Type.GAUGE),
-                i -> {
-                  AtomicDouble holder = new AtomicDouble();
-                  registry.gauge(name, tags, holder);
-                  return holder::set;
-                })
-            .accept(meterMeasurement.getValue());
-        break;
-      case LONG_TASK_TIMER:
-      case TIMER:
-        consumers
-            .computeIfAbsent(
-                new Meter.Id(name, tags, baseUnit, description, Meter.Type.TIMER),
-                i ->
-                    new DoubleConsumer() {
-                      Timer timer = registry.timer(name, tags);
+  private void record(ProteusMeter meter, MeterMeasurement meterMeasurement) {
+    try {
+      MeterId id = meter.getId();
+      Iterable<Tag> tags = mapTags(id.getTagList());
+      String name = id.getName();
+      MeterType type = meter.getId().getType();
+      String baseUnit = id.getBaseUnit();
+      String description = id.getDescription();
 
-                      @Override
-                      public void accept(double value) {
-                        timer.record(Duration.ofNanos((long) value));
-                      }
-                    })
-            .accept(meterMeasurement.getValue());
-        break;
-      case COUNTER:
-        consumers
-            .computeIfAbsent(
-                new Meter.Id(name, tags, baseUnit, description, Meter.Type.COUNTER),
-                i ->
-                    new DoubleConsumer() {
-                      Counter counter = registry.counter(name, tags);
+      switch (type) {
+        case GAUGE:
+          consumers
+              .computeIfAbsent(
+                  new Meter.Id(name, tags, baseUnit, description, Meter.Type.GAUGE),
+                  i -> {
+                    AtomicDouble holder = new AtomicDouble();
+                    registry.gauge(generatePrometheusFriendlyName(i), tags, holder);
+                    return holder::set;
+                  })
+              .accept(meterMeasurement.getValue());
+          break;
+        case LONG_TASK_TIMER:
+        case TIMER:
+          consumers
+              .computeIfAbsent(
+                  new Meter.Id(name, tags, baseUnit, description, Meter.Type.TIMER),
+                  i ->
+                      new DoubleConsumer() {
+                        Timer timer = registry.timer(generatePrometheusFriendlyName(i), tags);
 
-                      @Override
-                      public void accept(double value) {
-                        counter.increment(value);
-                      }
-                    })
-            .accept(meterMeasurement.getValue());
-        break;
-      case DISTRIBUTION_SUMMARY:
-        consumers
-            .computeIfAbsent(
-                new Meter.Id(name, tags, baseUnit, description, Meter.Type.DISTRIBUTION_SUMMARY),
-                i ->
-                    new DoubleConsumer() {
-                      DistributionSummary counter =
-                          registry.newDistributionSummary(
-                              i, DistributionStatisticConfig.DEFAULT, 1000);
+                        @Override
+                        public void accept(double value) {
+                          timer.record(Duration.ofNanos((long) value));
+                        }
+                      })
+              .accept(meterMeasurement.getValue());
+          break;
+        case COUNTER:
+          consumers
+              .computeIfAbsent(
+                  new Meter.Id(name, tags, baseUnit, description, Meter.Type.COUNTER),
+                  i ->
+                      new DoubleConsumer() {
+                        Counter counter = registry.counter(generatePrometheusFriendlyName(i), tags);
 
-                      @Override
-                      public void accept(double value) {
-                        counter.record(value);
-                      }
-                    })
-            .accept(meterMeasurement.getValue());
-        break;
-      default:
+                        @Override
+                        public void accept(double value) {
+                          counter.increment(value);
+                        }
+                      })
+              .accept(meterMeasurement.getValue());
+          break;
+        case DISTRIBUTION_SUMMARY:
+          consumers
+              .computeIfAbsent(
+                  new Meter.Id(name, tags, baseUnit, description, Meter.Type.DISTRIBUTION_SUMMARY),
+                  i ->
+                      new DoubleConsumer() {
+                        DistributionSummary counter =
+                            registry.newDistributionSummary(
+                                new Meter.Id(
+                                    generatePrometheusFriendlyName(i),
+                                    tags,
+                                    baseUnit,
+                                    description,
+                                    Meter.Type.DISTRIBUTION_SUMMARY),
+                                DistributionStatisticConfig.DEFAULT,
+                                1000);
+
+                        @Override
+                        public void accept(double value) {
+                          counter.record(value);
+                        }
+                      })
+              .accept(meterMeasurement.getValue());
+          break;
+        default:
+      }
+    } catch (Throwable t) {
+      logger.debug("error recording metric for " + meter.getId().getName(), t);
     }
   }
 
@@ -204,5 +224,34 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
     return tags.stream()
         .map(meterTag -> Tag.of(meterTag.getKey(), meterTag.getValue()))
         .collect(Collectors.toList());
+  }
+
+  String generatePrometheusFriendlyName(Meter.Id id) {
+    String name = "";
+    Optional<Tag> group = findTagByKey(id, "group");
+
+    if (group.isPresent()) {
+      name += group.get().getValue();
+    }
+
+    Optional<Tag> service = findTagByKey(id, "service");
+    if (service.isPresent()) {
+      name += "." + service.get().getValue();
+    }
+
+    Optional<Tag> method = findTagByKey(id, "method");
+    if (method.isPresent()) {
+      name += "." + method.get().getValue();
+    }
+
+    if (name.isEmpty()) {
+      return name;
+    } else {
+      return name + "." + id.getName();
+    }
+  }
+
+  private Optional<Tag> findTagByKey(Meter.Id id, String key) {
+    return id.getTags().stream().filter(tag -> tag.getKey().equals(key)).findFirst();
   }
 }
