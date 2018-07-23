@@ -22,6 +22,9 @@ dependencies {
     compileOnly 'com.google.protobuf:protobuf-java:3.6.0'
     compileOnly 'javax.inject:javax.inject:1'
 
+    testProtobuf project(':core-idl')
+
+    testCompile project(':core')
     testCompile project(':tracing-openzipkin')
     testCompile 'javax.inject:javax.inject:1'
     testCompile 'junit:junit:4.12'

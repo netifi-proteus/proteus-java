@@ -1,4 +1,5 @@
 #include "blocking_java_generator.h"
+#include "proteus/core.pb.h"
 
 #include <algorithm>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <vector>
 #include <google/protobuf/compiler/java/java_names.h>
 #include <google/protobuf/descriptor.h>
+#include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 
@@ -31,18 +33,7 @@ using google::protobuf::MethodDescriptor;
 using google::protobuf::Descriptor;
 using google::protobuf::io::Printer;
 using google::protobuf::SourceLocation;
-using std::to_string;
-
-const int32_t Prime = 0x01000193; //   16777619
-const int32_t Seed  = 0x811C9DC5; // 2166136261
-
-// FNV-1a hash
-static inline int32_t Hash(const string& word, int32_t hash = Seed) {
-  const unsigned char* ptr = reinterpret_cast<const unsigned char *>(word.c_str());
-  while (*ptr)
-    hash = (*ptr++ ^ hash) * Prime;
-  return hash;
-}
+using io::netifi::proteus::ProteusOptions;
 
 // Adjust a method name prefix identifier to follow the JavaBean spec:
 //   - decapitalize the first letter
@@ -85,28 +76,13 @@ static inline string MethodFieldName(const MethodDescriptor* method) {
   return "METHOD_" + ToAllUpperCase(method->name());
 }
 
-static inline string MethodId(const MethodDescriptor* method) {
-  int32_t hash = Hash(method->full_name());
-  return to_string(hash);
-}
-
 static inline string MessageFullJavaName(const Descriptor* desc) {
   return google::protobuf::compiler::java::ClassName(desc);
 }
 
 static inline string ServiceFieldName(const ServiceDescriptor* service) { return "SERVICE_ID"; }
 
-static inline string ServiceId(const ServiceDescriptor* service) {
-  int32_t hash = Hash(service->name());
-  return to_string(hash);
-}
-
 static inline string NamespaceIdFieldName(const ServiceDescriptor* service) { return "NAMESPACE_ID"; }
-
-static inline string NamespaceId(const ServiceDescriptor* service) {
-  int32_t hash = Hash(service->file()->package());
-  return to_string(hash);
-}
 
 template <typename ITR>
 static void SplitStringToIteratorUsing(const string& full,
@@ -299,12 +275,6 @@ void WriteMethodDocComment(Printer* printer,
   printer->Print(" */\n");
 }
 
-enum CallType {
-  ASYNC_CALL = 0,
-  BLOCKING_CALL = 1,
-  FUTURE_CALL = 2
-};
-
 static void PrintInterface(const ServiceDescriptor* service,
                            std::map<string, string>* vars,
                            Printer* p,
@@ -342,6 +312,7 @@ static void PrintInterface(const ServiceDescriptor* service,
   // RPC methods
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
+    const ProteusOptions options = method->options().GetExtension(io::netifi::proteus::options);
     (*vars)["input_type"] = MessageFullJavaName(method->input_type());
     (*vars)["output_type"] = MessageFullJavaName(method->output_type());
     (*vars)["lower_method_name"] = LowerMethodName(method);
@@ -357,11 +328,10 @@ static void PrintInterface(const ServiceDescriptor* service,
     } else if (client_streaming) {
       p->Print(*vars, "$output_type$ $lower_method_name$");
     } else {
-      const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-        p->Print(*vars, "$output_type$ $lower_method_name$");
-      } else {
+      if (options.fire_and_forget()) {
         p->Print(*vars, "void $lower_method_name$");
+      } else {
+        p->Print(*vars, "$output_type$ $lower_method_name$");
       }
     }
     if (client_streaming) {
@@ -434,13 +404,13 @@ static void PrintClient(const ServiceDescriptor* service,
   // RPC methods
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
+    const ProteusOptions options = method->options().GetExtension(io::netifi::proteus::options);
     (*vars)["input_type"] = MessageFullJavaName(method->input_type());
     (*vars)["output_type"] = MessageFullJavaName(method->output_type());
     (*vars)["lower_method_name"] = LowerMethodName(method);
     (*vars)["method_id_name"] = MethodFieldName(method);
     bool client_streaming = method->client_streaming();
     bool server_streaming = method->server_streaming();
-    const Descriptor* output_type = method->output_type();
 
     // Method signature
     if (server_streaming) {
@@ -454,16 +424,16 @@ static void PrintClient(const ServiceDescriptor* service,
           "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
           "public $output_type$ $lower_method_name$");
     } else {
-      if (output_type->full_name() != "google.protobuf.Empty") {
-        p->Print(
-            *vars,
-            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
-            "public $output_type$ $lower_method_name$");
-      } else {
+      if (options.fire_and_forget()) {
         p->Print(
             *vars,
             "@$ProteusGeneratedMethod$(returnTypeClass = Void.class)\n"
             "public void $lower_method_name$");
+      } else {
+        p->Print(
+            *vars,
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
+            "public $output_type$ $lower_method_name$");
       }
     }
 
@@ -472,14 +442,14 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($Iterable$<$input_type$> messages) {\n");
       p->Indent();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-          p->Print(
-              *vars,
-              "return $lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
-      } else {
+      if (options.fire_and_forget()) {
           p->Print(
               *vars,
               "$lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
+      } else {
+          p->Print(
+              *vars,
+              "return $lower_method_name$(messages, $Unpooled$.EMPTY_BUFFER);\n");
       }
       p->Outdent();
       p->Print("}\n\n");
@@ -489,14 +459,14 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "($input_type$ message) {\n");
       p->Indent();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-          p->Print(
-              *vars,
-              "return $lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
-      } else {
+      if (options.fire_and_forget()) {
           p->Print(
               *vars,
               "$lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
+      } else {
+          p->Print(
+              *vars,
+              "return $lower_method_name$(message, $Unpooled$.EMPTY_BUFFER);\n");
       }
       p->Outdent();
       p->Print("}\n\n");
@@ -517,18 +487,18 @@ static void PrintClient(const ServiceDescriptor* service,
           "public $output_type$ $lower_method_name$");
     } else {
       const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-        p->Print(
-            *vars,
-            "@$Override$\n"
-            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
-            "public $output_type$ $lower_method_name$");
-      } else {
+      if (options.fire_and_forget()) {
         p->Print(
             *vars,
             "@$Override$\n"
             "@$ProteusGeneratedMethod$(returnTypeClass = Void.class)\n"
             "public void $lower_method_name$");
+      } else {
+        p->Print(
+            *vars,
+            "@$Override$\n"
+            "@$ProteusGeneratedMethod$(returnTypeClass = $output_type$.class)\n"
+            "public $output_type$ $lower_method_name$");
       }
     }
 
@@ -554,44 +524,43 @@ static void PrintClient(const ServiceDescriptor* service,
           *vars,
           "$Flux$ stream = delegate.$lower_method_name$(message, metadata);\n");
       p->Print(
-         *vars,
-         "return new $BlockingIterable$<>(stream, $Queues$.SMALL_BUFFER_SIZE, $Queues$.small());\n");
+          *vars,
+          "return new $BlockingIterable$<>(stream, $Queues$.SMALL_BUFFER_SIZE, $Queues$.small());\n");
       p->Outdent();
       p->Print("}\n\n");
     } else if (client_streaming) {
-        p->Print(
+      p->Print(
           *vars,
           "($Iterable$<$input_type$> messages, $ByteBuf$ metadata) {\n");
-        p->Indent();
-        if (output_type->full_name() != "google.protobuf.Empty") {
-            p->Print(
-             *vars,
-             "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
-        } else {
-            p->Print(
+      p->Indent();
+      if (options.fire_and_forget()) {
+        p->Print(
             *vars,
             "delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
-        }
-        p->Outdent();
-        p->Print("}\n\n");
-    } else  {
+      } else {
         p->Print(
+            *vars,
+            "return delegate.$lower_method_name$($Flux$.defer(() -> $Flux$.fromIterable(messages)), metadata).block();\n");
+      }
+      p->Outdent();
+      p->Print("}\n\n");
+    } else {
+      p->Print(
           *vars,
           "($input_type$ message, $ByteBuf$ metadata) {\n");
-        p->Indent();
-         if (output_type->full_name() != "google.protobuf.Empty") {
-            p->Print(
-                *vars,
-                "return delegate.$lower_method_name$(message, metadata).block();\n");
-         } else {
-            p->Print(
-                *vars,
-                "delegate.$lower_method_name$(message, metadata).block();\n");
-         }
-        p->Outdent();
-        p->Print("}\n\n");
+      p->Indent();
+      if (options.fire_and_forget()) {
+        p->Print(
+            *vars,
+            "delegate.$lower_method_name$(message, metadata).block();\n");
+      } else {
+        p->Print(
+            *vars,
+            "return delegate.$lower_method_name$(message, metadata).block();\n");
+      }
+      p->Outdent();
+      p->Print("}\n\n");
     }
-
   }
 
   p->Outdent();
@@ -638,6 +607,7 @@ static void PrintServer(const ServiceDescriptor* service,
   // RPC metrics
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
+    const ProteusOptions options = method->options().GetExtension(io::netifi::proteus::options);
     (*vars)["lower_method_name"] = LowerMethodName(method);
     bool client_streaming = method->client_streaming();
     bool server_streaming = method->server_streaming();
@@ -651,15 +621,14 @@ static void PrintServer(const ServiceDescriptor* service,
           *vars,
           "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
     } else {
-      const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-        p->Print(
-            *vars,
-            "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
-      } else {
+      if (options.fire_and_forget()) {
         p->Print(
             *vars,
             "private final $Function$<? super $Publisher$<Void>, ? extends $Publisher$<Void>> $lower_method_name$;\n");
+      } else {
+        p->Print(
+            *vars,
+            "private final $Function$<? super $Publisher$<$Payload$>, ? extends $Publisher$<$Payload$>> $lower_method_name$;\n");
       }
     }
   }
@@ -740,6 +709,7 @@ static void PrintServer(const ServiceDescriptor* service,
 
   for (int i = 0; i < service->method_count(); ++i) {
     const MethodDescriptor* method = service->method(i);
+    const ProteusOptions options = method->options().GetExtension(io::netifi::proteus::options);
     bool client_streaming = method->client_streaming();
     bool server_streaming = method->server_streaming();
 
@@ -748,11 +718,10 @@ static void PrintServer(const ServiceDescriptor* service,
     } else if (server_streaming) {
       request_stream.push_back(method);
     } else {
-      const Descriptor* output_type = method->output_type();
-      if (output_type->full_name() != "google.protobuf.Empty") {
-        request_response.push_back(method);
-      } else {
+      if (options.fire_and_forget()) {
         fire_and_forget.push_back(method);
+      } else {
+        request_response.push_back(method);
       }
     }
   }
