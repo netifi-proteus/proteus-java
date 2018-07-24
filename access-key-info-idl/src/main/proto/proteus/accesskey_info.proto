@@ -1,34 +1,37 @@
 syntax = "proto3";
 
-package io.netifi.proteus.controlcenter.accesskey.service;
+package io.netifi.proteus.broker.access;
 
-option java_package = "io.netifi.proteus.controlcenter.accesskey.service";
-option java_outer_classname = "AccessKeyServiceProto";
+import "google/protobuf/empty.proto";
+
+option java_package = "io.netifi.proteus.broker.access";
+option java_outer_classname = "AccessKeyInfo";
 option java_multiple_files = true;
 
-// Service that returns AuthInfo used by the router to login
-service AccessKeyInfoService {
-  rpc AccessKeyInfoEvents (Empty) returns (stream AccessKeyInfo) {}
+message AccessKey {
+  int64 key = 1;
 }
 
-message Empty {}
+message AccessToken {
+  int64 key = 1;
+  bytes accessToken = 2;
+  string description = 3;
+}
 
 message AccessKeyInfo {
   int64 key = 1;
-
   bytes accessTokenHash = 2;
-
   bytes accessTokenSalt = 3;
-
   string accessKeyAlgo = 4;
+  string description = 5;
+  bool disabled = 6;
+}
 
-  int64 account = 5;
-
-  enum Type {
-      SEED_NEXT = 0;
-      SEED_COMPLETE = 1;
-      ADD = 2;
-      REMOVE = 3;
-  }
-  Type type = 6;
+service AccessKeyInfoService {
+  rpc AddAccessKey (AccessToken) returns (AccessKeyInfo) {}
+  rpc RemoveAccessKey (AccessKey) returns (AccessKeyInfo) {}
+  rpc DisableAccessKey (AccessKey) returns (AccessKeyInfo) {}
+  rpc EnableAccessKey (AccessKey) returns (AccessKeyInfo) {}
+  rpc GetAccessKey (AccessKey) returns (AccessKeyInfo) {}
+  rpc GetAccessKeys (google.protobuf.Empty) returns (stream AccessKeyInfo) {}
 }
