@@ -11,6 +11,8 @@ import io.netifi.proteus.rsocket.ProteusSocket;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -20,7 +22,11 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
 
   @Inject
   public ProteusMeterRegistrySupplier(
-      Proteus proteus, Optional<String> metricsGroup, Optional<Long> stepInMillis, boolean export) {
+      Proteus proteus,
+      Optional<String> metricsGroup,
+      Optional<Long> stepInMillis,
+      Optional<Boolean> export) {
+    Objects.requireNonNull(proteus, "must provide a Proteus instance");
     ProteusSocket proteusSocket = proteus.group(metricsGroup.orElse("com.netifi.proteus.metrics"));
 
     MetricsSnapshotHandlerClient client = new MetricsSnapshotHandlerClient(proteusSocket);
@@ -57,7 +63,9 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
             "destination",
             proteus.getDestination());
 
-    if (export) {
+    new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
+
+    if (export.orElse(true)) {
       ProteusMetricsExporter exporter =
           new ProteusMetricsExporter(client, registry, stepDuration, 1024);
       exporter.run();
