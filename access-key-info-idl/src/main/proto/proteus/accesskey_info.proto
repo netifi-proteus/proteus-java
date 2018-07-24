@@ -18,7 +18,7 @@ message AccessToken {
   string description = 3;
 }
 
-message AccessKeyInfo {
+message AccessTokenInfo {
   int64 key = 1;
   bytes accessTokenHash = 2;
   bytes accessTokenSalt = 3;
@@ -28,10 +28,10 @@ message AccessKeyInfo {
 }
 
 service AccessKeyInfoService {
-  rpc AddAccessKey (AccessToken) returns (AccessKeyInfo) {}
-  rpc RemoveAccessKey (AccessKey) returns (AccessKeyInfo) {}
-  rpc DisableAccessKey (AccessKey) returns (AccessKeyInfo) {}
-  rpc EnableAccessKey (AccessKey) returns (AccessKeyInfo) {}
-  rpc GetAccessKey (AccessKey) returns (AccessKeyInfo) {}
-  rpc GetAccessKeys (google.protobuf.Empty) returns (stream AccessKeyInfo) {}
+  rpc AddAccessKey (AccessToken) returns (AccessTokenInfo) {}
+  rpc RemoveAccessKey (AccessKey) returns (AccessTokenInfo) {}
+  rpc DisableAccessKey (AccessKey) returns (AccessTokenInfo) {}
+  rpc EnableAccessKey (AccessKey) returns (AccessTokenInfo) {}
+  rpc GetAccessKey (AccessKey) returns (AccessTokenInfo) {}
+  rpc GetAccessKeys (google.protobuf.Empty) returns (stream AccessTokenInfo) {}
 }
