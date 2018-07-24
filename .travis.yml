@@ -5,9 +5,9 @@ matrix:
     jdk: oraclejdk8
     language: generic
     before_install:
-    - sudo add-apt-repository ppa:maarten-fonville/protobuf -y
-    - sudo apt-get update -y
-    - sudo apt-get install libprotobuf-dev libprotoc-dev protobuf-compiler -y
+    - wget https://github.com/google/protobuf/releases/download/v3.6.0/protobuf-cpp-3.6.0.tar.gz
+    - tar -xzvf protobuf-cpp-3.6.0.tar.gz
+    - pushd protobuf-3.6.0 && ./configure --disable-shared && make && sudo make install && popd
     script: gradle/buildViaTravis-linux.sh
   - os: osx
     osx_image: xcode9.4
