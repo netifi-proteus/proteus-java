@@ -11,12 +11,14 @@ option java_multiple_files = true;
 message Group {
     string group  = 1;
     Broker broker = 2;
+    repeated string services = 3;
 }
 
 message Destination {
     string group       = 1;
     string destination = 2;
     Broker broker      = 3;
+    repeated string services = 4;
 }
 
 message Broker {
@@ -31,10 +33,29 @@ message Event {
     enum Type {
         JOIN  = 0;
         LEAVE = 1;
+        SERVICE_ADD = 2;
+        SERVICE_REMOVE = 3;
     }
     Type type               = 1;
     Broker broker           = 2;
     Destination destination = 3;
+}
+
+message ServiceRegistrationRequest {
+   string service = 1;
+   string group = 2;
+   string destination = 3;
+}
+
+message ServiceRegistrationResponse {}
+
+message ServiceEventRequest {
+   string service = 1;
+}
+
+message ServiceEventResponse {
+   string service     = 1;
+   string group       = 2;
 }
 
 service BrokerInfoService {
@@ -45,7 +66,10 @@ service BrokerInfoService {
     rpc DestinationsByGroup (Group) returns (stream Destination) {}
     rpc BrokersWithGroup (Group) returns (stream Broker) {}
     rpc BrokerWithDestination (Destination) returns (Broker) {}
-    rpc streamGroupEvents (Group) returns (stream Event) {}
-    rpc streamDestinationEvents (Destination) returns (stream Event) {}
-    rpc streamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
+    rpc StreamGroupEvents (Group) returns (stream Event) {}
+    rpc StreamDestinationEvents (Destination) returns (stream Event) {}
+    rpc StreamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
+    rpc StreamServiceEvents (google.protobuf.Empty) returns (stream ServiceEventResponse) {}
+    rpc RegisterService (ServiceRegistrationRequest) returns (ServiceRegistrationResponse) {}
 }
+

@@ -110,6 +110,26 @@ public class Proteus implements Closeable {
   public long getAccesskey() {
     return accesskey;
   }
+  
+  public ProteusSocket service(String service) {
+    return brokerService.service(service);
+  }
+  
+  public ProteusSocket service(String service, String group) {
+    return brokerService.service(service, group);
+  }
+  
+  public ProteusSocket service(String service, String group, String destination) {
+    return brokerService.service(service, group, destination);
+  }
+  
+  public ProteusSocket broadcastService(String service) {
+    return brokerService.broadcastService(service);
+  }
+  
+  public ProteusSocket broadcastService(String service, String group) {
+    return brokerService.broadcastService(service, group);
+  }
 
   public String getGroupName() {
     return fromGroup;

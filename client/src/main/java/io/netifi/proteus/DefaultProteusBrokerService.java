@@ -1,13 +1,11 @@
 package io.netifi.proteus;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.Empty;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
-import io.netifi.proteus.frames.BroadcastFlyweight;
-import io.netifi.proteus.frames.DestinationFlyweight;
-import io.netifi.proteus.frames.DestinationSetupFlyweight;
-import io.netifi.proteus.frames.GroupFlyweight;
+import io.netifi.proteus.frames.*;
 import io.netifi.proteus.presence.BrokerInfoPresenceNotifier;
 import io.netifi.proteus.presence.PresenceNotifier;
 import io.netifi.proteus.rsocket.*;
@@ -328,22 +326,190 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         this::selectRSocket);
   }
 
+  private ProteusSocket unwrappedService(String service) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              ServiceFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  service,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+
+  private ProteusSocket unwrappedService(String service, String group) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              ServiceGroupFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  service,
+                  group,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+
+  private ProteusSocket unwrappedService(String service, String group, String destination) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              ServiceDestinationFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  service,
+                  group,
+                  destination,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+
+  private ProteusSocket unwrappedBroadcastService(String service) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              BroadcastServiceFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  service,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+
+  private ProteusSocket unwrappedBroadcastService(String service, String group) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              BroadcastServiceGroupFlyweight.encode(
+                  ByteBufAllocator.DEFAULT,
+                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
+                  DefaultProteusBrokerService.this.group,
+                  service,
+                  group,
+                  metadataToWrap);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
+  }
+  
+  private void throwOnEmptyString(String s, String label) {
+    if (s.isEmpty()) {
+      throw new IllegalStateException(label + " cannot be empty");
+    }
+  }
+
   @Override
   public ProteusSocket destination(String destination, String group) {
+    Objects.requireNonNull(destination, "destination is null");
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(destination, "destination is empty");
+    throwOnEmptyString(group, "group is empty");
+    
     return PresenceAwareRSocket.wrap(
         unwrappedDestination(destination, group), destination, group, presenceNotifier);
   }
 
   @Override
   public ProteusSocket group(String group) {
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(group, "group is empty");
     return PresenceAwareRSocket.wrap(unwrappedGroup(group), null, group, presenceNotifier);
   }
 
   @Override
   public ProteusSocket broadcast(String group) {
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(group, "group is empty");
+    
     return PresenceAwareRSocket.wrap(unwrappedBroadcast(group), null, group, presenceNotifier);
   }
 
+  @Override
+  public ProteusSocket service(String service) {
+    Objects.requireNonNull(service, "service is null");
+    throwOnEmptyString(service, "service is empty");
+    
+    return PresenceAwareRSocket.wrap(
+        unwrappedService(service), service,null, null, presenceNotifier);
+  }
+  
+  @Override
+  public ProteusSocket service(String service, String group) {
+    Objects.requireNonNull(service, "service is null");
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(service, "service is empty");
+    throwOnEmptyString(group, "group is empty");
+  
+    return PresenceAwareRSocket.wrap(
+        unwrappedService(service, group), service,null, group, presenceNotifier);
+  }
+  
+  @Override
+  public ProteusSocket service(String service, String group, String destination) {
+    Objects.requireNonNull(service, "service is null");
+    Objects.requireNonNull(destination, "destination is null");
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(service, "service is empty");
+    throwOnEmptyString(destination, "destination is empty");
+    throwOnEmptyString(group, "group is empty");
+  
+    return PresenceAwareRSocket.wrap(
+        unwrappedService(service, group, destination),service, destination, group, presenceNotifier);
+  }
+  
+  @Override
+  public ProteusSocket broadcastService(String service) {
+    Objects.requireNonNull(service, "service is null");
+    throwOnEmptyString(service, "service is empty");
+  
+    return PresenceAwareRSocket.wrap(
+        unwrappedBroadcastService(service), service,null, null, presenceNotifier);
+  }
+  
+  @Override
+  public ProteusSocket broadcastService(String service, String group) {
+    Objects.requireNonNull(service, "service is null");
+    Objects.requireNonNull(group, "group is null");
+    throwOnEmptyString(service, "service is empty");
+    throwOnEmptyString(group, "group is empty");
+  
+    return PresenceAwareRSocket.wrap(
+        unwrappedBroadcastService(service, group), service,null, group, presenceNotifier);
+  }
+  
   @Override
   public void dispose() {
     onClose.onComplete();
