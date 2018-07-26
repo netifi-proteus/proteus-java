@@ -1,6 +1,5 @@
 package io.netifi.proteus;
 
-import com.google.common.base.Preconditions;
 import com.google.protobuf.Empty;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
@@ -24,6 +23,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
@@ -31,7 +31,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
@@ -46,7 +47,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final List<SocketAddress> seedAddresses;
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
-  private final RSocket requestHandlingRSocket;
   private final SplittableRandom rnd = new SplittableRandom();
   private final String group;
   private final DestinationNameFactory destinationNameFactory;
@@ -64,6 +64,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
   private final Tracer tracer;
+  private final ConcurrentMap<String, ProteusService> registeredServices;
+  private final RequestHandlingRSocket requestHandlingRSocket;
   private boolean clientTransportMissed = false;
   private boolean rsocketMissed = false;
 
@@ -93,8 +95,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     Objects.requireNonNull(clientTransportFactory);
 
+    this.requestHandlingRSocket = requestHandlingRSocket;
     this.seedAddresses = seedAddresses;
-    this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
     this.group = group;
     this.destinationNameFactory = destinationNameFactory;
     this.members = new ArrayList<>();
@@ -109,6 +111,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.accessToken = accessToken;
     this.onClose = MonoProcessor.create();
     this.tracer = tracer;
+    this.registeredServices = new ConcurrentHashMap<>();
 
     seedClientTransportSupplier();
 
@@ -245,7 +248,17 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
     return WeightedReconnectingRSocket.newInstance(
-        requestHandlingRSocket,
+        (destination) -> {
+          ConcurrentMap<String, ProteusService> registeredServices =
+              requestHandlingRSocket.getRegisteredServices();
+
+          Flux.fromIterable(registeredServices.keySet())
+              .concatMap(s -> presenceNotifier.registerService(s, destination, group))
+              .retry()
+              .subscribe();
+
+          return requestHandlingRSocket;
+        },
         destinationNameFactory,
         this::getSetupPayload,
         this::isDisposed,
@@ -424,7 +437,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         },
         this::selectRSocket);
   }
-  
+
   private void throwOnEmptyString(String s, String label) {
     if (s.isEmpty()) {
       throw new IllegalStateException(label + " cannot be empty");
@@ -437,7 +450,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     Objects.requireNonNull(group, "group is null");
     throwOnEmptyString(destination, "destination is empty");
     throwOnEmptyString(group, "group is empty");
-    
+
     return PresenceAwareRSocket.wrap(
         unwrappedDestination(destination, group), destination, group, presenceNotifier);
   }
@@ -453,7 +466,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public ProteusSocket broadcast(String group) {
     Objects.requireNonNull(group, "group is null");
     throwOnEmptyString(group, "group is empty");
-    
+
     return PresenceAwareRSocket.wrap(unwrappedBroadcast(group), null, group, presenceNotifier);
   }
 
@@ -461,22 +474,22 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public ProteusSocket service(String service) {
     Objects.requireNonNull(service, "service is null");
     throwOnEmptyString(service, "service is empty");
-    
+
     return PresenceAwareRSocket.wrap(
-        unwrappedService(service), service,null, null, presenceNotifier);
+        unwrappedService(service), service, null, null, presenceNotifier);
   }
-  
+
   @Override
   public ProteusSocket service(String service, String group) {
     Objects.requireNonNull(service, "service is null");
     Objects.requireNonNull(group, "group is null");
     throwOnEmptyString(service, "service is empty");
     throwOnEmptyString(group, "group is empty");
-  
+
     return PresenceAwareRSocket.wrap(
-        unwrappedService(service, group), service,null, group, presenceNotifier);
+        unwrappedService(service, group), service, null, group, presenceNotifier);
   }
-  
+
   @Override
   public ProteusSocket service(String service, String group, String destination) {
     Objects.requireNonNull(service, "service is null");
@@ -485,31 +498,44 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     throwOnEmptyString(service, "service is empty");
     throwOnEmptyString(destination, "destination is empty");
     throwOnEmptyString(group, "group is empty");
-  
+
     return PresenceAwareRSocket.wrap(
-        unwrappedService(service, group, destination),service, destination, group, presenceNotifier);
+        unwrappedService(service, group, destination),
+        service,
+        destination,
+        group,
+        presenceNotifier);
   }
-  
+
   @Override
   public ProteusSocket broadcastService(String service) {
     Objects.requireNonNull(service, "service is null");
     throwOnEmptyString(service, "service is empty");
-  
+
     return PresenceAwareRSocket.wrap(
-        unwrappedBroadcastService(service), service,null, null, presenceNotifier);
+        unwrappedBroadcastService(service), service, null, null, presenceNotifier);
   }
-  
+
   @Override
   public ProteusSocket broadcastService(String service, String group) {
     Objects.requireNonNull(service, "service is null");
     Objects.requireNonNull(group, "group is null");
     throwOnEmptyString(service, "service is empty");
     throwOnEmptyString(group, "group is empty");
-  
+
     return PresenceAwareRSocket.wrap(
-        unwrappedBroadcastService(service, group), service,null, group, presenceNotifier);
+        unwrappedBroadcastService(service, group), service, null, group, presenceNotifier);
   }
-  
+
+  @Override
+  public void addService(ProteusService service) {
+    registeredServices.put(service.getService(), service);
+    presenceNotifier
+        .registerService(service.getService(), destinationNameFactory.rootName(), group)
+        .retry()
+        .subscribe();
+  }
+
   @Override
   public void dispose() {
     onClose.onComplete();

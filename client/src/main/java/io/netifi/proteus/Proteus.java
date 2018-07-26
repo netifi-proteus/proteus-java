@@ -95,8 +95,12 @@ public class Proteus implements Closeable {
   }
 
   public Proteus addService(ProteusService service) {
-    requestHandlingRSocket.addService(service);
+    brokerService.addService(service);
     return this;
+  }
+
+  public ProteusBrokerService getBrokerService() {
+    return brokerService;
   }
 
   public ProteusSocket destination(String destination, String group) {
@@ -114,19 +118,19 @@ public class Proteus implements Closeable {
   public ProteusSocket service(String service) {
     return brokerService.service(service);
   }
-  
+
   public ProteusSocket service(String service, String group) {
     return brokerService.service(service, group);
   }
-  
+
   public ProteusSocket service(String service, String group, String destination) {
     return brokerService.service(service, group, destination);
   }
-  
+
   public ProteusSocket broadcastService(String service) {
     return brokerService.broadcastService(service);
   }
-  
+
   public ProteusSocket broadcastService(String service, String group) {
     return brokerService.broadcastService(service, group);
   }

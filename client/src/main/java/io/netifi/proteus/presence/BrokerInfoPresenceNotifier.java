@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
@@ -16,6 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   private static final Logger logger = LoggerFactory.getLogger(BrokerInfoPresenceNotifier.class);
@@ -97,30 +99,37 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     }
   }
 
-  private synchronized void remove(String group, String destination) {
+  private void remove(String group, String destination) {
     logger.info("removing group {} and destination {}", group, destination);
-    ConcurrentHashMap<String, Destination> map = groups.get(group);
-    if (map != null) {
-      Destination removed = map.remove(destination);
-      if (map.isEmpty()) {
-        groups.remove(group);
+    Disposable.Composite composite = Disposables.composite();
+    synchronized (this) {
+      ConcurrentHashMap<String, Destination> map = groups.get(group);
+      if (map != null) {
+        Destination removed = map.remove(destination);
+        if (map.isEmpty()) {
+          groups.remove(group);
 
-        if (removed != null) {
-          for (String service : removed.getServicesList()) {
-            Set<String> set = services.get(service);
-            if (set != null) {
-              set.remove(service);
-              if (set.isEmpty()) {
-                services.remove(service);
+          if (removed != null) {
+            for (String service : removed.getServicesList()) {
+              Set<String> set = services.get(service);
+              if (set != null) {
+                set.remove(service);
+                if (set.isEmpty()) {
+                  logger.info("removing service {}", service);
+                  services.remove(service);
+                  Disposable disposable = serviceWatches.get(service);
+                  if (disposable != null) {
+                    composite.add(disposable);
+                  }
+                }
               }
             }
           }
         }
       }
     }
+    composite.dispose();
   }
-
-  private synchronized void removeService(String service) {}
 
   private synchronized boolean contains(String group) {
     return groups.containsKey(group);
@@ -136,11 +145,11 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   }
 
   private synchronized boolean containsService(String service, String group) {
-    return contains(group) && services.contains(service);
+    return services.contains(service) && contains(group);
   }
 
   private synchronized boolean containsService(String service, String group, String destination) {
-    return containsService(service, group, destination) && services.contains(service);
+    return services.contains(service) && contains(group, destination);
   }
 
   private void serviceEvent(ServiceEventResponse event) {
@@ -169,14 +178,6 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         }
         if (joinEvents.hasDownstreams()) {
           joinEvents.onNext(destination);
-        }
-        break;
-      case SERVICE_ADD:
-        {
-        }
-        break;
-      case SERVICE_REMOVE:
-        {
         }
         break;
       case LEAVE:
@@ -234,14 +235,28 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   @Override
   public Mono<Void> notifyService(String service) {
     Objects.requireNonNull(service);
-    return null;
+    if (containsService(service)) {
+      return Mono.empty();
+    } else {
+      return serviceEventStream(service).next().then();
+    }
   }
 
   @Override
   public Mono<Void> notifyService(String service, String group) {
     Objects.requireNonNull(service);
     Objects.requireNonNull(group);
-    return null;
+    if (containsService(service)) {
+      return Mono.empty();
+    } else {
+      return Flux.first(
+              joinEventsStream(group)
+                  .flatMapIterable(Destination::getServicesList)
+                  .filter(Predicate.isEqual(service)),
+              serviceEventStream(service))
+          .next()
+          .then();
+    }
   }
 
   @Override
@@ -249,7 +264,17 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     Objects.requireNonNull(service);
     Objects.requireNonNull(destination);
     Objects.requireNonNull(group);
-    return null;
+    if (containsService(service)) {
+      return Mono.empty();
+    } else {
+      return Flux.first(
+              joinEventsStream(group, destination)
+                  .flatMapIterable(Destination::getServicesList)
+                  .filter(Predicate.isEqual(service)),
+              serviceEventStream(service))
+          .next()
+          .then();
+    }
   }
 
   @Override
@@ -261,7 +286,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         s ->
             client
                 .streamServiceEvents(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER)
-                .doFinally(f -> removeService(service))
+                .doFinally(f -> serviceWatches.remove(service))
                 .retry()
                 .subscribe(BrokerInfoPresenceNotifier.this::serviceEvent));
   }
@@ -283,30 +308,6 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
     watch(destination, group);
     watchService(service);
-  }
-
-  @Override
-  public void stopWatchingService(String service) {
-    Objects.requireNonNull(service);
-    Disposable remove = serviceWatches.remove(service);
-    if (remove != null && !remove.isDisposed()) {
-      remove.dispose();
-    }
-  }
-
-  @Override
-  public void stopWatchingService(String service, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(group);
-    stopWatchingService(service);
-  }
-
-  @Override
-  public void stopWatchingService(String service, String destination, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-    stopWatchingService(service);
   }
 
   @Override

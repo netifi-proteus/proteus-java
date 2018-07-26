@@ -50,13 +50,12 @@ public class PresenceAwareRSocket extends RSocketProxy implements ProteusSocket 
                   presenceNotifier.stopWatching(group);
                   break;
                 case SERVICE:
-                  presenceNotifier.stopWatchingService(service);
                   break;
                 case SERVICE_GROUP:
-                  presenceNotifier.stopWatchingService(service, group);
+                  presenceNotifier.stopWatching(group);
                   break;
                 case SERVICE_DESTINATION:
-                  presenceNotifier.stopWatchingService(service, destination, group);
+                  presenceNotifier.stopWatching(destination, group);
                   break;
                 default:
                   // should never get here

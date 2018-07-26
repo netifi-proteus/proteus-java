@@ -21,6 +21,7 @@ import reactor.retry.Retry;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -37,6 +38,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private static final double STARTUP_PENALTY = Long.MAX_VALUE >> 12;
   private static final long DEFAULT_INITIAL_INTER_ARRIVAL_TIME =
       Clock.unit().convert(1L, TimeUnit.SECONDS);
+  private static final long CONNECTION_ATTEMPT_RESET_TS = Duration.ofMinutes(1).toMillis();
   private final Quantile lowerQuantile;
   private final Quantile higherQuantile;
   private final long inactivityFactor;
@@ -49,7 +51,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private final long tickPeriodSeconds;
   private final long ackTimeoutSeconds;
   private final int missedAcks;
-  private final RSocket requestHandlingRSocket;
+  private final RequestHandlingSocketFactory requestHandlingRSocket;
   private final long accessKey;
   private final ByteBuf accessToken;
   private final Supplier<WeightedClientTransportSupplier> transportSupplier;
@@ -65,14 +67,13 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private AtomicLong pendingStreams; // number of active streams
   private double availability = 0.0;
   private DirectProcessor<WeightedRSocket> statsProcessor;
-  private long CONNECTION_ATTEMPT_RESET_TS = Duration.ofMinutes(1).toMillis();
   private long lastConnectionAttemptTs = System.currentTimeMillis();
   private long attempts;
 
   private MonoProcessor<RSocket> currentSink;
 
   WeightedReconnectingRSocket(
-      RSocket requestHandlingRSocket,
+      RequestHandlingSocketFactory requestHandlingRSocket,
       DestinationNameFactory destinationNameFactory,
       Function<String, Payload> setupPayloadSupplier,
       BooleanSupplier running,
@@ -115,7 +116,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   }
 
   public static WeightedReconnectingRSocket newInstance(
-      RSocket requestHandlingRSocket,
+      RequestHandlingSocketFactory requestHandlingRSocket,
       DestinationNameFactory destinationNameFactory,
       Function<String, Payload> setupPayloadSupplier,
       BooleanSupplier running,
@@ -249,11 +250,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                           .getSocketAddress()
                                           .toString(),
                                   throwable))
-                      .acceptor(
-                          r ->
-                              requestHandlingRSocket == null
-                                  ? EMPTY_SOCKET
-                                  : requestHandlingRSocket)
+                      .acceptor(r -> requestHandlingRSocket.apply(destination))
                       .transport(weighedClientTransportSupplier.apply(statsProcessor))
                       .start()
                       .doOnNext(
@@ -603,7 +600,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       }
 
       if (old != null && !old.isTerminated()) {
-        old.onError(new InterruptedException("reset will waiting for new connection"));
+        old.onError(new InterruptedException("reset while waiting for new connection"));
       }
     }
   }
@@ -639,6 +636,11 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
               resetMono();
             })
         .subscribe();
+  }
+
+  public Mono<Void> onReconnect() {
+    return currentSink.flatMap(
+        rSocket -> rSocket.onClose().then(Mono.defer(() -> currentSink.then())));
   }
 
   @Override
@@ -687,5 +689,12 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
         + ", availability="
         + availability
         + '}';
+  }
+
+  @FunctionalInterface
+  public interface RequestHandlingSocketFactory
+      extends Function<String, RSocket> {
+    @Override
+    RSocket apply(String destination);
   }
 }

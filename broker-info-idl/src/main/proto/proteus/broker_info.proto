@@ -33,8 +33,6 @@ message Event {
     enum Type {
         JOIN  = 0;
         LEAVE = 1;
-        SERVICE_ADD = 2;
-        SERVICE_REMOVE = 3;
     }
     Type type               = 1;
     Broker broker           = 2;

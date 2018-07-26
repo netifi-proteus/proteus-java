@@ -16,9 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class RequestHandlingRSocket extends AbstractRSocket {
-  private final ConcurrentMap<String, ProteusService> registeredServices = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, ProteusService> registeredServices;
+
+  public RequestHandlingRSocket(ConcurrentMap<String, ProteusService> registeredServices) {
+    this.registeredServices = registeredServices;
+  }
 
   public RequestHandlingRSocket(ProteusService... services) {
+    registeredServices = new ConcurrentHashMap<>();
+
     for (ProteusService proteusService : services) {
       String service = proteusService.getService();
       registeredServices.put(service, proteusService);
@@ -29,8 +35,12 @@ public class RequestHandlingRSocket extends AbstractRSocket {
     String service = proteusService.getService();
     registeredServices.put(service, proteusService);
   }
-
-  @Override
+    
+    public ConcurrentMap<String, ProteusService> getRegisteredServices() {
+        return registeredServices;
+    }
+    
+    @Override
   public Mono<Void> fireAndForget(Payload payload) {
     try {
       ByteBuf metadata = payload.sliceMetadata();

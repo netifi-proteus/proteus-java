@@ -33,12 +33,6 @@ public interface PresenceNotifier {
   void watchService(String service, String group);
 
   void watchService(String service, String destination, String group);
-
-  void stopWatchingService(String service);
-  
-  void stopWatchingService(String service, String group);
-  
-  void stopWatchingService(String service, String destination, String group);
   
   Mono<Void> registerService(String service, String destination, String group);
 }

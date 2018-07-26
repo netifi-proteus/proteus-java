@@ -11,4 +11,5 @@ interface ProteusBrokerService {
     ProteusSocket service(String service, String group, String destination);
     ProteusSocket broadcastService(String service);
     ProteusSocket broadcastService(String service, String group);
+    void addService(ProteusService service);
 }
