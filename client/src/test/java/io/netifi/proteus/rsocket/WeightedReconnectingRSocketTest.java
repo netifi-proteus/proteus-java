@@ -22,7 +22,7 @@ public class WeightedReconnectingRSocketTest {
   public void testShouldWaitForSocketWhenNotPresent() {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
-            Mockito.mock(RSocket.class),
+            d -> Mockito.mock(RSocket.class),
             Mockito.mock(DestinationNameFactory.class),
             Mockito.mock(Function.class),
             () -> true,
@@ -50,7 +50,7 @@ public class WeightedReconnectingRSocketTest {
     WeightedReconnectingRSocket rSocket =
         Mockito.spy(
             new WeightedReconnectingRSocket(
-                Mockito.mock(RSocket.class),
+                d -> Mockito.mock(RSocket.class),
                 Mockito.mock(DestinationNameFactory.class),
                 Mockito.mock(Function.class),
                 () -> true,
@@ -94,7 +94,7 @@ public class WeightedReconnectingRSocketTest {
 
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
-            Mockito.mock(RSocket.class),
+            d -> Mockito.mock(RSocket.class),
             Mockito.mock(DestinationNameFactory.class),
             Mockito.mock(Function.class),
             () -> true,
@@ -126,7 +126,7 @@ public class WeightedReconnectingRSocketTest {
 
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
-            Mockito.mock(RSocket.class),
+            d -> Mockito.mock(RSocket.class),
             Mockito.mock(DestinationNameFactory.class),
             Mockito.mock(Function.class),
             () -> true,

@@ -1,7 +1,10 @@
 package io.netifi.proteus.presence;
 
+import io.netifi.proteus.broker.info.BrokerInfoService;
+import io.netifi.proteus.broker.info.Destination;
+import io.netifi.proteus.broker.info.Event;
+import io.netifi.proteus.broker.info.Group;
 import io.netty.buffer.ByteBuf;
-import io.netifi.proteus.broker.info.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -9,6 +12,7 @@ import org.mockito.Mockito;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 public class BrokerInfoPresenceNotifierTest {
@@ -110,7 +114,9 @@ public class BrokerInfoPresenceNotifierTest {
         .thenReturn(Flux.never());
 
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    notifier.groups.put("testGroup", "testDest", Broker.newBuilder().build());
+    ConcurrentHashMap<String, Destination> map = new ConcurrentHashMap<>();
+    map.put("testDest", Destination.newBuilder().build());
+    notifier.groups.put("testGroup", map);
     notifier.notify("testGroup").block();
   }
 
@@ -123,7 +129,9 @@ public class BrokerInfoPresenceNotifierTest {
         .thenReturn(Flux.never());
 
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    notifier.groups.put("testGroup", "testDest", Broker.newBuilder().build());
+    ConcurrentHashMap<String, Destination> map = new ConcurrentHashMap<>();
+    map.put("testDest", Destination.newBuilder().build());
+    notifier.groups.put("testGroup", map);
     notifier.notify("testDest", "testGroup").block();
   }
 }
