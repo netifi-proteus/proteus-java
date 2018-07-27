@@ -117,7 +117,6 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
 
     Disposable subscribe =
         Flux.from(messages)
-            .log()
             .limitRate(256, 32)
             .flatMapIterable(MetricsSnapshot::getMetersList)
             .flatMap(

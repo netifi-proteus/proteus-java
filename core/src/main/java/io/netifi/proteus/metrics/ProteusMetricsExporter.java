@@ -229,7 +229,6 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
     this.disposable =
         Flux.interval(exportFrequency)
             .onBackpressureDrop()
-            .log()
             .concatMap(
                 l ->
                     handler
