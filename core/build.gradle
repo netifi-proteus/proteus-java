@@ -6,7 +6,6 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    protobuf project (':metrics-idl')
     compile project (':frames')
     compile 'io.opentracing:opentracing-api:0.31.0'
     compile 'javax.inject:javax.inject:1'
@@ -14,6 +13,9 @@ dependencies {
     compile 'io.rsocket:rsocket-core:0.11.3'
     compile 'io.rsocket:rsocket-transport-netty:0.11.3'
     compile 'io.micrometer:micrometer-core:1.0.3'
+
+    protobuf project(':metrics-idl')
+
     testCompile 'io.opentracing.brave:brave-opentracing:0.31.2'
     testCompile 'io.zipkin.reporter2:zipkin-sender-okhttp3:2.7.6'
 }

@@ -15,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.*;
+import reactor.retry.Jitter;
+import reactor.retry.Retry;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -257,7 +259,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                       .doOnNext(
                           _rSocket -> {
                             availability = 1.0;
-                            ErrorOnDisconnectRSocket rSocket = new ErrorOnDisconnectRSocket(_rSocket);
+                            ErrorOnDisconnectRSocket rSocket =
+                                new ErrorOnDisconnectRSocket(_rSocket);
                             _rSocket
                                 .onClose()
                                 .doFinally(
@@ -277,9 +280,9 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                       synchronized (WeightedReconnectingRSocket.this) {
                                         connecting = false;
                                       }
-                                      
+
                                       rSocket.dispose();
-                                      
+
                                       connect();
                                     })
                                 .subscribe();

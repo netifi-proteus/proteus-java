@@ -1,7 +1,8 @@
 package io.netifi.proteus.rpc;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.Proteus;
+import io.netifi.proteus.micrometer.ProteusMeterRegistrySupplier;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
 import io.netifi.proteus.tracing.ProteusTracerSupplier;
 import io.netty.buffer.ByteBuf;
@@ -13,11 +14,9 @@ import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.server.TcpServerTransport;
 import org.junit.*;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,29 +26,35 @@ import java.util.function.Function;
 
 public class SimpleServiceTest {
 
-  private static SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private static RSocket rSocket;
   private static Tracer tracer;
+  private static MeterRegistry registry;
 
   @BeforeClass
   public static void setup() {
-  
+
     String host = System.getProperty("netifi.proteus.host", "localhost");
     int port = Integer.getInteger("netifi.proteus.port", 8001);
     long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
     String accessToken =
         System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
-  
+
     Proteus proteus =
         Proteus.builder()
             .accessKey(accessKey)
             .accessToken(accessToken)
             .group("simpleServiceTest")
+            .destination("simpleServiceTestDest")
             .host(host)
             .port(port)
             .build();
-    
+
     tracer = new ProteusTracerSupplier(proteus, Optional.empty()).get();
+
+    registry =
+        new ProteusMeterRegistrySupplier(
+                proteus, Optional.empty(), Optional.empty(), Optional.of(true))
+            .get();
 
     SimpleServiceServer serviceServer =
         new SimpleServiceServer(
@@ -68,7 +73,6 @@ public class SimpleServiceTest {
             .transport(TcpClientTransport.create(8801))
             .start()
             .block();
-  
   }
 
   @AfterClass
@@ -99,22 +103,25 @@ public class SimpleServiceTest {
   @Test
   @Ignore(value = "integration testing")
   public void testMultipleRequestReply() throws Exception {
-    for (int j= 0; j < 1_00000; j++) {
+    for (int j = 0; j < 1_00000; j++) {
       SimpleServiceClient client = new SimpleServiceClient(rSocket, registry, tracer);
       SimpleResponse response =
           Flux.range(1, 20)
               .flatMap(
                   i ->
                       client.requestReply(
-                          SimpleRequest.newBuilder().setRequestMessage("sending a message").build()), 8)
+                          SimpleRequest.newBuilder()
+                              .setRequestMessage("sending a message")
+                              .build()),
+                  8)
               .blockLast();
-  
+
       String responseMessage = response.getResponseMessage();
 
       System.out.println("sending...");
 
       Assert.assertEquals("sending a message", responseMessage);
-      
+
       Thread.sleep(1000);
     }
   }

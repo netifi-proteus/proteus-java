@@ -1,9 +1,6 @@
 package io.netifi.proteus.metrics;
 
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Statistic;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.distribution.HistogramSnapshot;
 import io.micrometer.core.instrument.distribution.ValueAtPercentile;
 import io.netifi.proteus.metrics.om.*;
@@ -12,13 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -29,10 +24,6 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
   private final Duration exportFrequency;
   private final int batchSize;
   private volatile Disposable disposable;
-
-  public ProteusMetricsExporter(MetricsSnapshotHandler handler, MeterRegistry registry) {
-    this(handler, registry, Duration.ofSeconds(10), 1_000);
-  }
 
   public ProteusMetricsExporter(
       MetricsSnapshotHandler handler,
@@ -51,45 +42,41 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
   }
 
   private Flux<MetricsSnapshot> getMetricsSnapshotStream() {
-    return Flux.interval(exportFrequency)
-        .onBackpressureLatest()
-        .concatMap(
-            l ->
-                Flux.fromIterable(registry.getMeters())
-                    .window(batchSize)
+    return Flux.fromIterable(registry.getMeters())
+        .window(batchSize)
+        .flatMap(
+            meters ->
+                meters
+                    .groupBy(
+                        meter -> {
+                          if (meter instanceof Timer) {
+                            return true;
+                          } else {
+                            return false;
+                          }
+                        })
                     .flatMap(
-                        meters ->
-                            meters
-                                .groupBy(
-                                    meter -> {
-                                      if (meter instanceof Timer) {
-                                        return true;
-                                      } else {
-                                        return false;
-                                      }
-                                    })
-                                .flatMap(
-                                    grouped -> {
-                                      if (grouped.key()) {
-                                        return grouped.reduce(
-                                            MetricsSnapshot.newBuilder(),
-                                            (builder, meter) -> {
-                                              Timer timer = (Timer) meter;
-                                              List<ProteusMeter> convert = convert(timer);
-                                              builder.addAllMeters(convert);
-                                              return builder;
-                                            });
-                                      } else {
-                                        return grouped.reduce(
-                                            MetricsSnapshot.newBuilder(),
-                                            (builder, meter) -> {
-                                              ProteusMeter convert = convert(meter);
-                                              builder.addMeters(convert);
-                                              return builder;
-                                            });
-                                      }
-                                    })
-                                .map(MetricsSnapshot.Builder::build)));
+                        grouped -> {
+                          if (grouped.key()) {
+                            return grouped.reduce(
+                                MetricsSnapshot.newBuilder(),
+                                (builder, meter) -> {
+                                  Timer timer = (Timer) meter;
+                                  List<ProteusMeter> convert = convert(timer);
+                                  builder.addAllMeters(convert);
+                                  return builder;
+                                });
+                          } else {
+                            return grouped.reduce(
+                                MetricsSnapshot.newBuilder(),
+                                (builder, meter) -> {
+                                  ProteusMeter convert = convert(meter);
+                                  builder.addMeters(convert);
+                                  return builder;
+                                });
+                          }
+                        })
+                    .map(MetricsSnapshot.Builder::build));
   }
 
   private List<ProteusMeter> convert(Timer timer) {
@@ -143,13 +130,11 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
     Meter.Id id = meter.getId();
     Meter.Type type = id.getType();
 
-    List<MeterTag> meterTags =
-        StreamSupport.stream(id.getTags().spliterator(), false)
-            .map(tag -> MeterTag.newBuilder().setKey(tag.getKey()).setValue(tag.getValue()).build())
-            .collect(Collectors.toList());
+    for (Tag tag : id.getTags()) {
+      idBuilder.addTag(MeterTag.newBuilder().setKey(tag.getKey()).setValue(tag.getValue()));
+    }
 
     idBuilder.setName(id.getName());
-    idBuilder.addAllTag(meterTags);
     idBuilder.setType(convert(type));
     if (id.getDescription() != null) {
       idBuilder.setDescription(id.getDescription());
@@ -160,17 +145,12 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
 
     meterBuilder.setId(idBuilder);
 
-    List<MeterMeasurement> meterMeasurements =
-        StreamSupport.stream(meter.measure().spliterator(), false)
-            .map(
-                measurement ->
-                    MeterMeasurement.newBuilder()
-                        .setValue(measurement.getValue())
-                        .setStatistic(convert(measurement.getStatistic()))
-                        .build())
-            .collect(Collectors.toList());
-
-    meterBuilder.addAllMeasure(meterMeasurements);
+    for (Measurement measurement : meter.measure()) {
+      meterBuilder.addMeasure(
+          MeterMeasurement.newBuilder()
+              .setValue(measurement.getValue())
+              .setStatistic(convert(measurement.getStatistic())));
+    }
 
     return meterBuilder.build();
   }
@@ -217,7 +197,7 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
     }
   }
 
-  private void recordClockSkew(long timestamp) {}
+  private void recordClockSkew(Skew skew) {}
 
   @Override
   public void dispose() {
@@ -247,16 +227,15 @@ public class ProteusMetricsExporter implements Disposable, Runnable {
     }
 
     this.disposable =
-        Flux.defer(() -> handler.streamMetrics(getMetricsSnapshotStream(), Unpooled.EMPTY_BUFFER))
-            .timeout(
-                Duration.ofSeconds(45),
-                Mono.error(new TimeoutException("timeout getting clock skew")))
-            .doOnNext(skew -> recordClockSkew(skew.getTimestamp()))
-            .onErrorResume(
-                throwable -> {
-                  logger.debug("error streaming data, retrying in 30 seconds", throwable);
-                  return Mono.delay(Duration.ofSeconds(30)).then(Mono.error(throwable));
-                })
+        Flux.interval(exportFrequency)
+            .onBackpressureDrop()
+            .log()
+            .concatMap(
+                l ->
+                    handler
+                        .streamMetrics(getMetricsSnapshotStream(), Unpooled.EMPTY_BUFFER)
+                        .doOnNext(this::recordClockSkew))
+            .doOnError(throwable -> logger.debug("error streaming metrics", throwable))
             .retry()
             .subscribe();
   }
