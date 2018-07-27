@@ -66,8 +66,8 @@ dependencies {
     testCompile 'org.apache.logging.log4j:log4j-api:2.8.2'
     testCompile 'org.apache.logging.log4j:log4j-core:2.8.2'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.8.2'
-    testCompile 'io.rsocket:rsocket-transport-netty:0.11.3'
-    testCompile 'io.rsocket:rsocket-transport-local:0.11.3'
+    testCompile 'io.rsocket:rsocket-transport-netty:0.11.4'
+    testCompile 'io.rsocket:rsocket-transport-local:0.11.4'
     testCompile 'org.mockito:mockito-all:1.10.19'
 }
 

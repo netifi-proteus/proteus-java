@@ -85,7 +85,7 @@ project(':metrics-idl') {
 
 project(':metrics-micrometer') {
     description = 'Netifi Proteus Micrometer Support'
-    ext.artifactName = 'metrics-prometheus'
+    ext.artifactName = 'metrics-micrometer'
 
     apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
