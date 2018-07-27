@@ -22,18 +22,19 @@ import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.retry.Retry;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -117,14 +118,43 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     this.client = new BrokerInfoServiceClient(unwrappedGroup("com.netifi.proteus.brokerServices"));
     this.presenceNotifier = new BrokerInfoPresenceNotifier(client);
-
+  
     Disposable disposable =
         client
             .streamBrokerEvents(Empty.getDefaultInstance())
             .doOnNext(this::handleBrokerEvent)
             .filter(event -> event.getType() == Event.Type.JOIN)
             .doOnNext(event -> createConnection())
-            .doOnError(t -> logger.error("error streaming broker events", t))
+            .doOnError(
+                t -> {
+                  logger.warn(
+                      "error streaming broker events - make sure access key {} has a valid access token",
+                      accessKey);
+                  logger.trace("error streaming broker events", t);
+                })
+            .onErrorResume(
+                new Function<Throwable, Publisher<? extends Event>>() {
+                  long attempts = 0;
+                  long lastAttempt = System.currentTimeMillis();
+
+                  @Override
+                  public synchronized Publisher<? extends Event> apply(Throwable throwable) {
+                    if (Duration.ofMillis(System.currentTimeMillis() - lastAttempt).getSeconds()
+                        > 30) {
+                      attempts = 0;
+                    }
+
+                    Mono<Event> then =
+                        Mono.delay(Duration.ofMillis(attempts * 500)).then(Mono.error(throwable));
+                    if (attempts < 30) {
+                      attempts++;
+                    }
+                    
+                    lastAttempt = System.currentTimeMillis();
+                    
+                    return then;
+                  }
+                })
             .retry()
             .subscribe();
 
@@ -278,7 +308,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         },
         this::selectRSocket);
   }
-  
+
   private ProteusSocket unwrappedBroadcast(String group) {
     return new DefaultProteusSocket(
         payload -> {
@@ -308,12 +338,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public ProteusSocket group(String group) {
     return PresenceAwareRSocket.wrap(unwrappedGroup(group), null, group, presenceNotifier);
   }
-  
+
   @Override
   public ProteusSocket broadcast(String group) {
     return PresenceAwareRSocket.wrap(unwrappedBroadcast(group), null, group, presenceNotifier);
   }
-  
+
   @Override
   public void dispose() {
     onClose.onComplete();
@@ -445,7 +475,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         }
       }
     }
-    
+
     logger.info("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
     if (logger.isDebugEnabled()) {
       logger.debug("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
