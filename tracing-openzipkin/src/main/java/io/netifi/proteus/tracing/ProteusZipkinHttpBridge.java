@@ -22,7 +22,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private static final Logger logger = LoggerFactory.getLogger(ProteusZipkinHttpBridge.class);
 
   private static final String DEFAULT_ZIPKIN_URL = "/api/v2/spans";
-  
+
   private final String host;
 
   private final int port;
@@ -56,7 +56,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
 
   public static void main(String... args) {
     logger.info("Starting Stand-alone Proteus Zipkin HTTP Bridge");
-    
+
     String group = System.getProperty("netifi.tracingGroup", "com.netifi.proteus.tracing");
     String brokerHost = System.getProperty("netifi.proteus.host", "localhost");
     int brokerPort = Integer.getInteger("netifi.proteus.port", 8001);
@@ -66,8 +66,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
     String accessToken =
         System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
-    
-    
+
     logger.info("group - {}", group);
     logger.info("broker host - {}", brokerHost);
     logger.info("broker port - {}", brokerPort);
@@ -111,26 +110,31 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
               }
             })
         .windowTimeout(128, Duration.ofMillis(1000))
-        .onBackpressureDrop()
         .map(
             strings ->
                 strings
                     .reduce(new StringJoiner(","), StringJoiner::add)
                     .map(stringJoiner -> "[" + stringJoiner.toString() + "]"))
-        .flatMap(
+        .onBackpressureBuffer(1 << 16)
+               .flatMap(stringMono -> stringMono)
+        .concatMap(
             spans ->
                 httpClient
                     .post(
                         zipkinUrl,
                         request -> {
                           request.addHeader("Content-Type", "application/json");
-                          return request.sendString(spans);
+                          return request.sendString(Mono.just(spans));
                         })
+                    .doOnError(
+                        throwable ->
+                            logger.error(
+                                "error sending data to tracing data to url "
+                                    + zipkinUrl
+                                    + " and payload [\n" + spans +"\n]",
+                                throwable))
                     .timeout(Duration.ofSeconds(30)),
-            8)
-        .doOnError(
-            throwable ->
-                logger.error("error sending data to tracing data to url " + zipkinUrl, throwable))
+            256)
         .then(Mono.never());
   }
 }

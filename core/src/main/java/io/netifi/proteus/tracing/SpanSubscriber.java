@@ -31,6 +31,7 @@ import reactor.util.context.Context;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A trace representation of the {@link Subscriber}
@@ -70,7 +71,7 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
     }
 
     this.span = spanBuilder.start();
-  
+
     if (tracingMetadata != null) {
       TextMapInjectAdapter adapter = new TextMapInjectAdapter(tracingMetadata);
       tracer.inject(span.context(), Format.Builtin.TEXT_MAP, adapter);
@@ -177,10 +178,7 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
 
   @Override
   public void onNext(T o) {
-    try (Scope scope = this.tracer.scopeManager().activate(span, false)) {
-      scope.span().log(TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis()), "onNext");
-      this.subscriber.onNext(o);
-    }
+    this.subscriber.onNext(o);
   }
 
   @Override
