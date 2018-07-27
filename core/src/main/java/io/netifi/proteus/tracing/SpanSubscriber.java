@@ -31,7 +31,6 @@ import reactor.util.context.Context;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A trace representation of the {@link Subscriber}
@@ -150,16 +149,13 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
     if (log.isTraceEnabled()) {
       log.trace("Request");
     }
-    try (Scope scope = this.tracer.scopeManager().activate(span, false)) {
-      scope.span().log(TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis()), "request");
-      if (log.isTraceEnabled()) {
-        log.trace("Request - continued");
-      }
-      this.s.request(n);
-      // no additional cleaning is required cause we operate on scopes
-      if (log.isTraceEnabled()) {
-        log.trace("Request after cleaning. Current span [{}]", this.tracer.activeSpan());
-      }
+    if (log.isTraceEnabled()) {
+      log.trace("Request - continued");
+    }
+    this.s.request(n);
+    // no additional cleaning is required cause we operate on scopes
+    if (log.isTraceEnabled()) {
+      log.trace("Request after cleaning. Current span [{}]", this.tracer.activeSpan());
     }
   }
 
