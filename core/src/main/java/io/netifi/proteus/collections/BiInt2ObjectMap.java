@@ -58,6 +58,10 @@ public class BiInt2ObjectMap<V> implements Serializable {
     keys = new long[capacity];
     values = new Object[capacity];
   }
+  
+  public Object[] getValues() {
+    return values;
+  }
 
   /**
    * Get the total capacity for the map to which the load factor with be a fraction of.

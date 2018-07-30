@@ -20,6 +20,27 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
     this.queryCache = new Object2ObjectHashMap<>();
   }
 
+  public void clear() {
+    synchronized (LOCK) {
+      queryCache.clear();
+      entries.clear();
+      indexes.clear();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public Iterable<Entry<V>> entries() {
+    synchronized (LOCK) {
+      Object[] values = entries.getValues();
+      if (values.length > 0) {
+        Entry<V>[] v = (Entry<V>[]) values;
+        return Arrays.asList(v);
+      } else {
+        return Collections.EMPTY_LIST;
+      }
+    }
+  }
+
   public Entry<V> put(V entry, K... keys) {
     synchronized (LOCK) {
       long hash = hasher.hash(keys);
@@ -85,12 +106,12 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
     }
   }
 
-  public void remove(K... keys) {
+  public Entry<V> remove(K... keys) {
     synchronized (LOCK) {
       long hash = hasher.hash(keys);
       Entry<V> entry = entries.remove(hash);
       if (entry == null) {
-        return;
+        return null;
       }
 
       List<String> tags = new ArrayList<>(entry.tags.keySet());
@@ -102,12 +123,15 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
       for (QueryKey key : entry.cachedQueries.keySet()) {
         queryCache.remove(key);
       }
+
+      return entry;
     }
   }
 
-  public void removeByQuery(String... parameters) {
+  public List<Entry<V>> removeByQuery(String... parameters) {
+    List<Entry<V>> query;
     synchronized (LOCK) {
-      List<Entry<V>> query = query(parameters);
+      query = query(parameters);
       for (Entry<V> entry : query) {
         long hash = entry.hash;
         entries.remove(hash);
@@ -122,6 +146,8 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
         }
       }
     }
+
+    return query;
   }
 
   private List<Entry<V>> checkQueryCache(QueryKey of) {
@@ -129,6 +155,33 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
       List<Entry<V>> cached = queryCache.get(of);
 
       return cached == null ? Collections.emptyList() : cached;
+    }
+  }
+
+  public List<Entry<V>> fromIndex(String name) {
+    synchronized (LOCK) {
+      Index index = indexes.get(name);
+      if (index != null) {
+        Roaring64NavigableMap result = new Roaring64NavigableMap();
+        for (Roaring64NavigableMap map : index.bitmaps.values()) {
+          result.and(map);
+        }
+
+        if (result.isEmpty()) {
+          return Collections.EMPTY_LIST;
+        } else {
+          List<Entry<V>> found = new ArrayList<>();
+          Iterator<Long> iterator = result.iterator();
+          while (iterator.hasNext()) {
+            Entry<V> entry = entries.get(iterator.next());
+            found.add(entry);
+          }
+
+          return found;
+        }
+      } else {
+        return Collections.EMPTY_LIST;
+      }
     }
   }
 
@@ -240,15 +293,12 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
 
   public static class Entry<V> {
     private final long hash;
-    private final V entry;
     private final Object2IntHashMap<QueryKey> cachedQueries;
-
     // tag -> value
-    private final Object2ObjectHashMap<String, String> tags;
-
+    private final Object2ObjectHashMap<String, Set<String>> tags;
     // tag -> index (value -> bitmap)
     private final Object2ObjectHashMap<String, Index> indexes;
-
+    private V entry;
     private Object LOCK;
 
     private Entry(long hash, V entry, Object2ObjectHashMap<String, Index> indexes, Object LOCK) {
@@ -267,7 +317,7 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
 
     public Entry<V> add(String tag, String value) {
       synchronized (LOCK) {
-        tags.put(tag, value);
+        tags.computeIfAbsent(tag, t -> new HashSet<>()).add(value);
         Index index = indexes.computeIfAbsent(tag, Index::new);
         Roaring64NavigableMap map =
             index.bitmaps.computeIfAbsent(value, v -> new Roaring64NavigableMap());
@@ -281,9 +331,20 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
       }
     }
 
-    public Entry<V> remove(String tag) {
+    public List<Entry<V>> remove(String tag) {
+      List<Entry<V>> values = new ArrayList<>();
       synchronized (LOCK) {
-        String value = tags.remove(tag);
+        for (String value : tags.get(tag)) {
+          Entry<V> remove = remove(tag, value);
+          values.add(remove);
+        }
+      }
+
+      return values;
+    }
+
+    public Entry<V> remove(String tag, String value) {
+      synchronized (LOCK) {
         Index index = indexes.get(tag);
         if (index != null) {
           index.bitmaps.remove(value);
@@ -310,6 +371,12 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
     public V get() {
       synchronized (LOCK) {
         return entry;
+      }
+    }
+
+    public void set(V v) {
+      synchronized (LOCK) {
+        entry = v;
       }
     }
   }
