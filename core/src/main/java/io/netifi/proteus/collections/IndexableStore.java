@@ -347,8 +347,16 @@ public class IndexableStore<K, H extends IndexableStore.KeyHasher<K>, V> {
       synchronized (LOCK) {
         Index index = indexes.get(tag);
         if (index != null) {
-          index.bitmaps.remove(value);
-
+          Roaring64NavigableMap map = index.bitmaps.get(value);
+          
+          if (map != null) {
+            map.removeLong(hash);
+  
+            if (map.isEmpty()) {
+              index.bitmaps.remove(value);
+            }
+          }
+          
           if (index.bitmaps.isEmpty()) {
             indexes.remove(tag);
           }

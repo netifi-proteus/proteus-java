@@ -1,5 +1,6 @@
 package io.netifi.proteus.presence;
 
+import com.google.protobuf.StringValue;
 import io.netifi.proteus.broker.info.BrokerInfoService;
 import io.netifi.proteus.broker.info.Destination;
 import io.netifi.proteus.broker.info.Event;
@@ -66,7 +67,66 @@ public class BrokerInfoPresenceNotifierTest {
 
     latch.await();
   }
-
+  
+  @Test
+  public void testWatchService() throws Exception {
+    BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
+    Destination destination =
+        Destination
+            .newBuilder()
+            .setGroup("testGroup")
+            .setDestination("testDest")
+            .addServices("testWatchService")
+            .build();
+    
+    Event event = Event
+                      .newBuilder()
+                      .setDestination(destination)
+                      .build();
+    
+    Mockito.when(client.streamServiceEvents(Mockito.any(StringValue.class), Mockito.any(ByteBuf.class)))
+        .thenReturn(Flux.just(event));
+    
+    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
+    
+    CountDownLatch latch = new CountDownLatch(1);
+    notifier.joinEvents.subscribe(d -> latch.countDown());
+    
+    notifier.watchService("testWatchService");
+    
+    latch.await();
+  }
+  
+  @Test
+  public void testWatchServiceAndGroup() throws Exception {
+    BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
+    Destination destination =
+        Destination
+            .newBuilder()
+            .setGroup("testGroup")
+            .setDestination("testDest")
+            .addServices("testWatchService")
+            .build();
+    
+    Event event = Event
+                      .newBuilder()
+                      .setDestination(destination)
+                      .build();
+  
+    Mockito.when(client.streamGroupEvents(Mockito.any(Group.class), Mockito.any(ByteBuf.class)))
+        .thenReturn(Flux.just(event));
+    
+    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
+    
+    CountDownLatch latch = new CountDownLatch(1);
+    notifier.joinEvents.subscribe(d -> latch.countDown());
+    
+    notifier.watchService("testWatchService", "testGroup");
+    
+    latch.await();
+  }
+  
+  
   @Test
   public void testNotifyGroup() throws Exception {
     BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
