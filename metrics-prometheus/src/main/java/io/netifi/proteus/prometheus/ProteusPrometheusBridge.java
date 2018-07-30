@@ -1,6 +1,5 @@
 package io.netifi.proteus.prometheus;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.prometheus.PrometheusConfig;
@@ -27,6 +26,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleConsumer;
 import java.util.stream.Collectors;
 
@@ -151,8 +151,8 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
               .computeIfAbsent(
                   new Meter.Id(name, tags, baseUnit, description, Meter.Type.GAUGE),
                   i -> {
-                    AtomicDouble holder = new AtomicDouble();
-                    registry.gauge(generatePrometheusFriendlyName(i), tags, holder);
+                    AtomicReference<Double> holder = new AtomicReference<>();
+                    registry.gauge(generatePrometheusFriendlyName(i), tags, holder, AtomicReference::get);
                     return holder::set;
                   })
               .accept(meterMeasurement.getValue());

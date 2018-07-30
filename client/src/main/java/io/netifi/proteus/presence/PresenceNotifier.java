@@ -11,22 +11,8 @@ import reactor.core.publisher.Mono;
  */
 public interface PresenceNotifier {
   void watch(String group);
-
-  void stopWatching(String group);
-
+  
   void watch(String destination, String group);
-
-  void stopWatching(String destination, String group);
-
-  Mono<Void> notify(String group);
-
-  Mono<Void> notify(String destination, String group);
-
-  Mono<Void> notifyService(String service);
-
-  Mono<Void> notifyService(String service, String group);
-
-  Mono<Void> notifyService(String service, String destination, String group);
 
   void watchService(String service);
 
@@ -34,5 +20,25 @@ public interface PresenceNotifier {
 
   void watchService(String service, String destination, String group);
   
+  void stopWatching(String group);
+  
+  void stopWatching(String destination, String group);
+  
+  void stopWatchingService(String service);
+  
+  void stopWatchingService(String service, String group);
+  
+  void stopWatchingService(String service, String destination, String group);
+  
   Mono<Void> registerService(String service, String destination, String group);
+  
+  Mono<Void> notify(String group);
+  
+  Mono<Void> notify(String destination, String group);
+  
+  Mono<Void> notifyService(String service);
+  
+  Mono<Void> notifyService(String service, String group);
+  
+  Mono<Void> notifyService(String service, String destination, String group);
 }

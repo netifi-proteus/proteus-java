@@ -114,9 +114,9 @@ public class BrokerInfoPresenceNotifierTest {
         .thenReturn(Flux.never());
 
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    ConcurrentHashMap<String, Destination> map = new ConcurrentHashMap<>();
-    map.put("testDest", Destination.newBuilder().build());
-    notifier.groups.put("testGroup", map);
+    notifier
+        .store
+        .put(Destination.newBuilder().build(), "testGroup", "testDest");
     notifier.notify("testGroup").block();
   }
 
@@ -127,11 +127,11 @@ public class BrokerInfoPresenceNotifierTest {
             client.streamDestinationEvents(
                 Mockito.any(Destination.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.never());
-
+  
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    ConcurrentHashMap<String, Destination> map = new ConcurrentHashMap<>();
-    map.put("testDest", Destination.newBuilder().build());
-    notifier.groups.put("testGroup", map);
+    notifier
+        .store
+        .put(Destination.newBuilder().build(), "testGroup", "testDest");
     notifier.notify("testDest", "testGroup").block();
   }
 }

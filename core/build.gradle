@@ -14,8 +14,11 @@ dependencies {
     compile 'io.rsocket:rsocket-transport-netty:0.11.4'
     compile 'io.micrometer:micrometer-core:1.0.3'
 
+    compile 'org.roaringbitmap:RoaringBitmap:[0.6,)'
+    
     protobuf project(':metrics-idl')
 
+    testProtobuf project (':broker-info-idl')
     testCompile 'io.opentracing.brave:brave-opentracing:0.31.2'
     testCompile 'io.zipkin.reporter2:zipkin-sender-okhttp3:2.7.6'
 }

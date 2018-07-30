@@ -3,6 +3,7 @@ syntax = "proto3";
 package io.netifi.proteus.broker.info;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 option java_package = "io.netifi.proteus.broker.info";
 option java_outer_classname = "BrokerInfo";
@@ -45,17 +46,6 @@ message ServiceRegistrationRequest {
    string destination = 3;
 }
 
-message ServiceRegistrationResponse {}
-
-message ServiceEventRequest {
-   string service = 1;
-}
-
-message ServiceEventResponse {
-   string service     = 1;
-   string group       = 2;
-}
-
 service BrokerInfoService {
     rpc Brokers (google.protobuf.Empty) returns (stream Broker) {}
     rpc Groups (Broker) returns (stream Group) {}
@@ -67,7 +57,7 @@ service BrokerInfoService {
     rpc StreamGroupEvents (Group) returns (stream Event) {}
     rpc StreamDestinationEvents (Destination) returns (stream Event) {}
     rpc StreamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
-    rpc StreamServiceEvents (google.protobuf.Empty) returns (stream ServiceEventResponse) {}
-    rpc RegisterService (ServiceRegistrationRequest) returns (ServiceRegistrationResponse) {}
+    rpc StreamServiceEvents (google.protobuf.StringValue) returns (stream Event) {}
+    rpc RegisterService (ServiceRegistrationRequest) returns (google.protobuf.Empty) {}
 }
 

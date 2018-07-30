@@ -11,9 +11,6 @@ dependencies {
     compile project (':core')
     compile project (':auth')
 
-    compile 'com.typesafe:config:1.3.2'
-    compile 'com.google.guava:guava:22.0'
-
     testProtobuf project (':core-idl')
     testProtobuf project (':protobuf-rpc')
     testCompile 'io.micrometer:micrometer-registry-atlas:1.0.3'

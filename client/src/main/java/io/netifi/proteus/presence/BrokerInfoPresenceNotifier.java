@@ -1,163 +1,281 @@
 package io.netifi.proteus.presence;
 
-import com.google.protobuf.Empty;
+import com.google.protobuf.StringValue;
 import io.netifi.proteus.broker.info.*;
+import io.netifi.proteus.collections.IndexableStore;
+import io.netifi.proteus.collections.Object2ObjectHashMap;
 import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.Disposables;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   private static final Logger logger = LoggerFactory.getLogger(BrokerInfoPresenceNotifier.class);
+  private static final IndexableStore.KeyHasher<String> DESTINATION_HASHER =
+      new IndexableStore.KeyHasher<String>() {
+        @Override
+        public long hash(String... t) {
+          String group = t[0];
+          String destination = t[1];
+          return pack(group.hashCode(), destination.hashCode());
+        }
+
+        private long pack(int group, int destination) {
+          return (((long) group) << 32) | (destination & 0xffffffffL);
+        }
+      };
   FluxProcessor<Destination, Destination> joinEvents;
-  FluxProcessor<ServiceEventResponse, ServiceEventResponse> serviceEvents;
-  ConcurrentHashMap<String, ConcurrentHashMap<String, Destination>> groups;
-  ConcurrentHashMap<String, Set<String>> services;
+  private Object2ObjectHashMap<WatchKey, Disposable> watches = new Object2ObjectHashMap<>();
+
   private BrokerInfoService client;
-  private ConcurrentMap<String, Disposable> groupWatches;
-  private ConcurrentMap<String, ConcurrentMap<String, Disposable>> destinationWatches;
-  private ConcurrentHashMap<String, Disposable> serviceWatches;
+
+  IndexableStore<String, IndexableStore.KeyHasher<String>, Destination> store =
+      new IndexableStore<>(DESTINATION_HASHER);
 
   public BrokerInfoPresenceNotifier(BrokerInfoService client) {
     this.client = client;
-    this.groups = new ConcurrentHashMap<>();
-    this.groupWatches = new ConcurrentHashMap<>();
-    this.destinationWatches = new ConcurrentHashMap<>();
-    this.services = new ConcurrentHashMap<>();
-    this.joinEvents = DirectProcessor.create();
-    this.serviceEvents = DirectProcessor.create();
   }
 
   @Override
   public void watch(String group) {
     Objects.requireNonNull(group);
-    groupWatches.computeIfAbsent(
-        group,
-        g ->
+    watches.computeIfAbsent(
+        WatchKey.of(null, null, group),
+        k ->
             client
                 .streamGroupEvents(
                     Group.newBuilder().setGroup(group).build(), Unpooled.EMPTY_BUFFER)
-                .doFinally(
-                    s -> {
-                      synchronized (BrokerInfoPresenceNotifier.class) {
-                        groups.clear();
-                        services.clear();
-                      }
-                    })
+                .doFinally(s -> store.removeByQuery("group", group))
+                .retry()
+                .subscribe(this::joinEvent));
+  }
+
+  @Override
+  public void watch(String destination, String group) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(destination);
+    watches.computeIfAbsent(
+        WatchKey.of(null, destination, group),
+        k ->
+            client
+                .streamDestinationEvents(
+                    Destination.newBuilder().setDestination(destination).setGroup(group).build(),
+                    Unpooled.EMPTY_BUFFER)
+                .doFinally(s -> store.remove(group, destination))
+                .subscribe(this::joinEvent));
+  }
+
+  @Override
+  public void watchService(String service) {
+    Objects.requireNonNull(service);
+    watches.computeIfAbsent(
+        WatchKey.of(service, null, null),
+        k ->
+            client
+                .streamServiceEvents(
+                    StringValue.newBuilder().setValue(service).build(), Unpooled.EMPTY_BUFFER)
+                .doFinally(s -> store.removeByQuery("service", service))
+                .retry()
+                .subscribe(this::joinEvent));
+  }
+
+  @Override
+  public void watchService(String service, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(group);
+    watches.computeIfAbsent(
+        WatchKey.of(service, null, group),
+        k ->
+            client
+                .streamGroupEvents(
+                    Group.newBuilder().setGroup(group).build(), Unpooled.EMPTY_BUFFER)
+                .filter(
+                    event ->
+                        event
+                            .getDestination()
+                            .getServicesList()
+                            .stream()
+                            .filter(Predicate.isEqual(service))
+                            .findFirst()
+                            .isPresent())
+                .doFinally(s -> store.removeByQuery("service", service))
+                .retry()
+                .subscribe(this::joinEvent));
+  }
+
+  @Override
+  public void watchService(String service, String destination, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+    watches.computeIfAbsent(
+        WatchKey.of(service, destination, group),
+        k ->
+            client
+                .streamDestinationEvents(
+                    Destination.newBuilder().setDestination(destination).setGroup(group).build(),
+                    Unpooled.EMPTY_BUFFER)
+                .filter(
+                    event ->
+                        event
+                            .getDestination()
+                            .getServicesList()
+                            .stream()
+                            .filter(Predicate.isEqual(service))
+                            .findFirst()
+                            .isPresent())
+                .doFinally(s -> store.remove(group, destination))
                 .retry()
                 .subscribe(this::joinEvent));
   }
 
   @Override
   public void stopWatching(String group) {
-    Disposable disposable = groupWatches.remove(group);
-    if (disposable != null && !disposable.isDisposed()) {
-      disposable.dispose();
-    }
-  }
+    Objects.requireNonNull(group);
+    Disposable remove = watches.remove(WatchKey.of(null, null, group));
 
-  @Override
-  public void watch(String destination, String group) {
-    Map<String, Disposable> disposables =
-        destinationWatches.computeIfAbsent(group, g -> new ConcurrentHashMap<>());
-    disposables.computeIfAbsent(
-        group,
-        g ->
-            client
-                .streamDestinationEvents(
-                    Destination.newBuilder().setDestination(destination).setGroup(group).build(),
-                    Unpooled.EMPTY_BUFFER)
-                .doFinally(s -> remove(group, destination))
-                .retry()
-                .subscribe(BrokerInfoPresenceNotifier.this::joinEvent));
+    if (remove != null) {
+      remove.dispose();
+    }
   }
 
   @Override
   public void stopWatching(String destination, String group) {
-    Map<String, Disposable> disposables = destinationWatches.get(group);
-    if (disposables != null) {
-      Disposable disposable = disposables.remove(destination);
-      if (disposable != null && !disposable.isDisposed()) {
-        disposable.dispose();
-      }
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+    Disposable remove = watches.remove(WatchKey.of(null, destination, group));
 
-      if (disposables.isEmpty()) {
-        destinationWatches.remove(group);
-      }
+    if (remove != null) {
+      remove.dispose();
     }
   }
 
-  private void remove(String group, String destination) {
-    logger.info("removing group {} and destination {}", group, destination);
-    Disposable.Composite composite = Disposables.composite();
-    synchronized (this) {
-      ConcurrentHashMap<String, Destination> map = groups.get(group);
-      if (map != null) {
-        Destination removed = map.remove(destination);
-        if (map.isEmpty()) {
-          groups.remove(group);
+  @Override
+  public void stopWatchingService(String service) {
+    Objects.requireNonNull(service);
+    Disposable remove = watches.remove(WatchKey.of(service, null, null));
 
-          if (removed != null) {
-            for (String service : removed.getServicesList()) {
-              Set<String> set = services.get(service);
-              if (set != null) {
-                set.remove(service);
-                if (set.isEmpty()) {
-                  logger.info("removing service {}", service);
-                  services.remove(service);
-                  Disposable disposable = serviceWatches.get(service);
-                  if (disposable != null) {
-                    composite.add(disposable);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+    if (remove != null) {
+      remove.dispose();
     }
-    composite.dispose();
   }
 
-  private synchronized boolean contains(String group) {
-    return groups.containsKey(group);
+  @Override
+  public void stopWatchingService(String service, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(group);
+    Disposable remove = watches.remove(WatchKey.of(service, null, group));
+
+    if (remove != null) {
+      remove.dispose();
+    }
   }
 
-  private synchronized boolean contains(String group, String destination) {
-    ConcurrentHashMap<String, Destination> destinations = groups.get(group);
-    return destinations != null && destinations.containsKey(destination);
+  @Override
+  public void stopWatchingService(String service, String destination, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+    Disposable remove = watches.remove(WatchKey.of(service, destination, group));
+
+    if (remove != null) {
+      remove.dispose();
+    }
   }
 
-  private synchronized boolean containsService(String service) {
-    return services.contains(service);
+  @Override
+  public Mono<Void> registerService(String service, String destination, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+    return client
+        .registerService(
+            ServiceRegistrationRequest.newBuilder()
+                .setService(service)
+                .setDestination(destination)
+                .setGroup(group)
+                .build(),
+            Unpooled.EMPTY_BUFFER)
+        .then();
   }
 
-  private synchronized boolean containsService(String service, String group) {
-    return services.contains(service) && contains(group);
+  @Override
+  public Mono<Void> notify(String group) {
+    Objects.requireNonNull(group);
+
+    if (store.containsTag("group", group)) {
+      return Mono.empty();
+    } else {
+      watch(group);
+      return joinEventsStream(group).next().then();
+    }
   }
 
-  private synchronized boolean containsService(String service, String group, String destination) {
-    return services.contains(service) && contains(group, destination);
+  @Override
+  public Mono<Void> notify(String destination, String group) {
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+    if (store.containsKey(group, destination)) {
+      return Mono.empty();
+    } else {
+      watch(destination, group);
+      return joinEventsStream(destination, group).next().then();
+    }
   }
 
-  private void serviceEvent(ServiceEventResponse event) {
-    logger.info("presence notifier received service event {}", event.toString());
-    synchronized (this) {
-      services
-          .computeIfAbsent(event.getService(), s -> ConcurrentHashMap.newKeySet())
-          .add(event.getGroup());
+  @Override
+  public Mono<Void> notifyService(String service) {
+    Objects.requireNonNull(service);
+    if (store.containsTag("service", service)) {
+      return Mono.empty();
+    } else {
+      watch(service);
+      return joinEvents
+          .flatMapIterable(destination -> destination.getServicesList())
+          .filter(Predicate.isEqual(service))
+          .next()
+          .then();
+    }
+  }
+
+  @Override
+  public Mono<Void> notifyService(String service, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(group);
+
+    if (store.containsTags("service", service, "group", group)) {
+      return Mono.empty();
+    } else {
+      watchService(service, group);
+      return joinEventsStream(group)
+          .flatMapIterable(destination -> destination.getServicesList())
+          .filter(Predicate.isEqual(service))
+          .next()
+          .then();
+    }
+  }
+
+  @Override
+  public Mono<Void> notifyService(String service, String destination, String group) {
+    Objects.requireNonNull(service);
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
+
+    if (store.containsTags("service", service, "destination", destination, "group", group)) {
+      return Mono.empty();
+    } else {
+      watchService(service, destination, group);
+      return joinEventsStream(group, destination)
+          .flatMapIterable(Destination::getServicesList)
+          .filter(Predicate.isEqual(service))
+          .next()
+          .then();
     }
   }
 
@@ -167,22 +285,24 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
     switch (event.getType()) {
       case JOIN:
         synchronized (this) {
-          String group = destination.getGroup();
-          groups
-              .computeIfAbsent(group, g -> new ConcurrentHashMap<>())
-              .put(destination.getDestination(), destination);
+          IndexableStore.Entry<Destination> entry =
+              store.put(destination, destination.getGroup(), destination.getDestination());
+          entry.add("group", destination.getGroup());
 
-          for (String serivce : destination.getServicesList()) {
-            services.computeIfAbsent(serivce, s -> ConcurrentHashMap.newKeySet()).add(group);
+          for (String service : destination.getServicesList()) {
+            entry.add("service", service);
           }
         }
+
         if (joinEvents.hasDownstreams()) {
           joinEvents.onNext(destination);
         }
         break;
       case LEAVE:
-        remove(destination.getGroup(), destination.getDestination());
-        break;
+        {
+          store.remove(destination.getGroup(), destination.getDestination());
+          break;
+        }
       default:
         throw new IllegalStateException("unknown event type " + event.getType());
     }
@@ -201,128 +321,34 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
         info -> info.getGroup().equals(group) && info.getDestination().equals(destination));
   }
 
-  private Flux<ServiceEventResponse> serviceEventStream(String service) {
-    watchService(service);
+  private static class WatchKey {
+    String group;
+    String service;
+    String destination;
 
-    return serviceEvents.filter(event -> event.equals(service));
-  }
-
-  @Override
-  public Mono<Void> notify(String group) {
-    Objects.requireNonNull(group);
-
-    if (contains(group)) {
-      return Mono.empty();
-    } else {
-      watch(group);
-
-      return joinEventsStream(group).next().then();
+    private WatchKey(String service, String destination, String group) {
+      this.group = group;
+      this.service = service;
+      this.destination = destination;
     }
-  }
 
-  @Override
-  public Mono<Void> notify(String destination, String group) {
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-
-    if (contains(destination, group)) {
-      return Mono.empty();
-    } else {
-      return joinEventsStream(destination, group).next().then();
+    static WatchKey of(String service, String destination, String group) {
+      return new WatchKey(service, destination, group);
     }
-  }
 
-  @Override
-  public Mono<Void> notifyService(String service) {
-    Objects.requireNonNull(service);
-    if (containsService(service)) {
-      return Mono.empty();
-    } else {
-      return serviceEventStream(service).next().then();
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      WatchKey watchKey = (WatchKey) o;
+      return Objects.equals(group, watchKey.group)
+          && Objects.equals(service, watchKey.service)
+          && Objects.equals(destination, watchKey.destination);
     }
-  }
 
-  @Override
-  public Mono<Void> notifyService(String service, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(group);
-    if (containsService(service)) {
-      return Mono.empty();
-    } else {
-      return Flux.first(
-              joinEventsStream(group)
-                  .flatMapIterable(Destination::getServicesList)
-                  .filter(Predicate.isEqual(service)),
-              serviceEventStream(service))
-          .next()
-          .then();
+    @Override
+    public int hashCode() {
+      return Objects.hash(group, service, destination);
     }
-  }
-
-  @Override
-  public Mono<Void> notifyService(String service, String destination, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-    if (containsService(service)) {
-      return Mono.empty();
-    } else {
-      return Flux.first(
-              joinEventsStream(group, destination)
-                  .flatMapIterable(Destination::getServicesList)
-                  .filter(Predicate.isEqual(service)),
-              serviceEventStream(service))
-          .next()
-          .then();
-    }
-  }
-
-  @Override
-  public void watchService(String service) {
-    Objects.requireNonNull(service);
-
-    serviceWatches.computeIfAbsent(
-        service,
-        s ->
-            client
-                .streamServiceEvents(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER)
-                .doFinally(f -> serviceWatches.remove(service))
-                .retry()
-                .subscribe(BrokerInfoPresenceNotifier.this::serviceEvent));
-  }
-
-  @Override
-  public void watchService(String service, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(group);
-
-    watch(group);
-    watchService(service);
-  }
-
-  @Override
-  public void watchService(String service, String destination, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-
-    watch(destination, group);
-    watchService(service);
-  }
-
-  @Override
-  public Mono<Void> registerService(String service, String destination, String group) {
-    Objects.requireNonNull(service);
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-    return client
-        .registerService(
-            ServiceRegistrationRequest.newBuilder()
-                .setService(service)
-                .setDestination(destination)
-                .setGroup(group)
-                .build(),
-            Unpooled.EMPTY_BUFFER)
-        .then();
   }
 }

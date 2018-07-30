@@ -1,6 +1,5 @@
 package io.netifi.proteus;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
 import io.netty.buffer.ByteBuf;
@@ -114,7 +113,7 @@ public class Proteus implements Closeable {
   public long getAccesskey() {
     return accesskey;
   }
-  
+
   public ProteusSocket service(String service) {
     return brokerService.service(service);
   }
@@ -158,11 +157,9 @@ public class Proteus implements Closeable {
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
     private DestinationNameFactory destinationNameFactory;
 
-    private MeterRegistry registry = null;
-    private int batchSize = DefaultBuilderConfig.getBatchSize();
     private Function<SocketAddress, ClientTransport> clientTransportFactory =
         address -> TcpClientTransport.create((InetSocketAddress) address);
-    private int poolSize = Runtime.getRuntime().availableProcessors();
+    private int poolSize = DefaultBuilderConfig.getPoolSize();
     private Supplier<Tracer> tracerSupplier = () -> null;
 
     private Builder clientTransportFactory(
@@ -173,11 +170,6 @@ public class Proteus implements Closeable {
 
     public Builder poolSize(int poolSize) {
       this.poolSize = poolSize;
-      return this;
-    }
-
-    public Builder metricBatchSize(int batchSize) {
-      this.batchSize = batchSize;
       return this;
     }
 
