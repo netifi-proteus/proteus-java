@@ -8,6 +8,7 @@ import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
@@ -30,7 +31,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
           return (((long) group) << 32) | (destination & 0xffffffffL);
         }
       };
-  FluxProcessor<Destination, Destination> joinEvents;
+  final FluxProcessor<Destination, Destination> joinEvents;
   private Object2ObjectHashMap<WatchKey, Disposable> watches = new Object2ObjectHashMap<>();
 
   private BrokerInfoService client;
@@ -40,6 +41,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
   public BrokerInfoPresenceNotifier(BrokerInfoService client) {
     this.client = client;
+    joinEvents = DirectProcessor.create();
   }
 
   @Override

@@ -22,8 +22,17 @@ public class BrokerInfoPresenceNotifierTest {
   public void testWatchGroup() throws Exception {
     BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
     Destination destination =
-        Destination.newBuilder().setGroup("testGroup").setDestination("testDest").build();
-    Event event = Event.newBuilder().setDestination(destination).build();
+        Destination
+            .newBuilder()
+            .setGroup("testGroup")
+            .setDestination("testDest")
+            .build();
+    
+    Event event = Event
+                      .newBuilder()
+                      .setDestination(destination)
+                      .build();
+    
     Mockito.when(client.streamGroupEvents(Mockito.any(Group.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.just(event));
 
@@ -116,7 +125,8 @@ public class BrokerInfoPresenceNotifierTest {
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
     notifier
         .store
-        .put(Destination.newBuilder().build(), "testGroup", "testDest");
+        .put(Destination.newBuilder().build(), "testGroup", "testDest")
+        .add("group", "testGroup");
     notifier.notify("testGroup").block();
   }
 
