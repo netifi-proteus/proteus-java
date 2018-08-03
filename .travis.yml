@@ -7,7 +7,8 @@ matrix:
     before_install:
     - wget https://github.com/google/protobuf/releases/download/v3.6.0/protobuf-cpp-3.6.0.tar.gz
     - tar -xzvf protobuf-cpp-3.6.0.tar.gz
-    - pushd protobuf-3.6.0 && ./configure --disable-shared && make && sudo make install && popd
+    - pushd protobuf-3.6.0 && ./configure --disable-shared && make && sudo make install
+      && popd
     script: gradle/buildViaTravis-linux.sh
   - os: osx
     osx_image: xcode9.4
@@ -17,10 +18,10 @@ matrix:
     - LDFLAGS="/usr/local/lib/libprotobuf.a /usr/local/lib/libprotoc.a"
     before_install:
     - brew update
-    - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'" brew edit protobuf
+    - EDITOR="sed -i '' 's/system \".\/configure\",/system \".\/configure\", \"--disable-shared\",/g'"
+      brew edit protobuf
     - brew install protobuf
     script: gradle/buildViaTravis.sh
-
 before_cache:
 - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
 notifications:
@@ -30,8 +31,9 @@ cache:
   - "$HOME/.gradle/caches/"
   - "$HOME/.gradle/wrapper/"
   - "$HOME/.m2"
-
 env:
   global:
   - secure: fG6x4/LuQuYDO6B3hw9YnxTKBepOS/zcSqDbyl3fJkYSDYuRS6yvI0CsQCQGTLtD3MKED+0o43rUiuPgNzz3qENKQukrFgmXQl24fwuUxtFhz4Lbb3OCMnWMAU3SgWZmpbUoOhCEGr0LzvYnb+MImiRU2v7gxr4Nc9hy8gRZjQQ4R7V+UlhOhZVjN5JfsEnKMpZejEkFlNADCdAhSDdHLVZN7lOsFjDC7XQ/GKLKGrRyIzREto9hm58QIsolghMyIEL2Jj1+ePTM/3wCYLUaRpdUjmHQawJi9vfwFO4g4yyKdUVXHpITQwQ7JE/SoJsje8ZUhOJZ3TvaBDlVjvXP41P3JNDbSesrBYcR0k70TYr7wliHKsdGurHvDQ/2Rxas/FITFGvLchYczbUPLJ7h0fJha+cpwsmmNvLmg0RIaaHa4RXPknWuetipbJFSqYtBN01iCtdSzHwwhZGZ6zV3kPBa0QWsDLWa/Ih2STDY6DVIA6YgaqaM6aN9U/UR8XeCnjPot+StaNuU2nSgGcwX5BIZRMuca9OF6FryG+t527njU86mp2QSj1HOTs/c31v9sSg2krCl7jChm3ZtpXyiEp+IdKaa5uZHLyx0fcm489375PLjhE6gRp/zvYf58uSvoMLOl1xwfOkNiPP8YXIDtVodzgGxCnxD49WE5B9CCbk=
   - secure: NvHtXfxiqBwkmj5l7Wr9EuBi9X0dMVL5CCeKFVqzIOmXCIdjwvknQ3rfZZ46fjwOQC/FuCcoM/8dHkBIkGzqIVo9Qx1+AGnq4AO7rr+iLYPvmz2wB8QKrD81bVAhtoKnuYe1wyu1XvURBgrietjoAgxrhgW3iReBVW4dj0YaTdRZXAD70M3i63tfV9GyB2pv6NfRyaq50IGkaJPdiyUPpDWcSmtnrkxQvUvIzNm50AGKEq3IuLp+wgVouAI81m1a+B0TuEfo4VnqOKlJx1dq9VT76GN4Ni+u2Rnnli2kFAXGtGfuPrZF1WPE2APJQ4W9H7YeGzya38JCUkkwD2Buxoe7CsW7ZEVnGbFE4xsuc+vejvDkeGF4LLABzuGwcDxG70MPHoXpyd1ayY3Iek1zPn4/3nFTO40YreeaHDT3MG3BSZx6WkMfmqfnFsKJeX9g7zzZLGmOuniwGLOIwFpePtyhn/wQvfPG+UalnSk+pXyGWuhnurcgDlk7ASlHj4TZnDiZvCCZy1xdzytttwf/i71Ts+6Db+TZfggnymeYFRo19UpLTr15Rdkwk0CNrJlvruKkGkR5G2els14M37PhHaeIdGol3ZqARs9+7o9gnRW2cPaQ26IRgNSGQwRhGaJcAyoLNZejc97OHEga9r6B8cIJK6NGD+4m8GA7Sh4O3EM=
+  - secure: crwXv5Q/iCtIIC81QWgWYNfuGJxSQQjVn83vvRoRMXmfSZ02NnQfDos+p1GxxbIXLUQ8NsaLc8cg0o2PQgsK/l0d7nDExix5Rt+AwzU4UOrUcZh46MgEeZDow4q6ySToOHaeKsaRnbTIpAwU28o9fnZ9ViaQ7s2uZWQZXYigGf0PN1ca9E8MJ6VEMvp34e2wJok6woaWG9ALCL2b5viofTv0zdHXWfGV4rdz9Rq0fThmFn4BlmHdcTwGt2ZLdWcEbzv0qNYNAiVvNJd4uWHOnjRceslAZ/JZxgIzSHK0ctNiZdc9rRNo8BHGQqKvmZqmbzUAU07uS0+iLBnm89KKJyQCXKulDv7NM0ShiFexMQ17TUOdlJtH65ypzUIJ+sbSOj2M+NhThUD8OQlebvjKF6t8M9f1NIXkkH/Xw2XJ146ANBcGyjALVFDIqlKIyCtIoY3/teQWccfbAzBglC24QBizpfgmdBEGOJXs2qR0NxzcIRNc1o9XPyT9BJxa+9JnHyHbF+LG07j1LfaaJSQBIYL7xjDBwEEIOEmP3UrISwjvs1fOQA3oYINguXtl7qi3wNylv35e5xw5acijcTTYHRSY6A5rPdokbK0fCQHCrHldBYDc8Bvy+GnjnYQHynjdWGbTnkvMgvYe2aHD+mH5pO5V7DRYHhnJsuMuscRIELc=
+  - secure: ZMu9rhzTT1F6pyqqrd0TGhAeUGigAvGZT5rJv2ifZJEB8+FOQ+/ylJ/Q3Gq9Wx8quWVR/ocTWF8yEuA1BlZF1Z+tfOcCXOaYPrgMFNhgmETK9X1AQN1gahkTzLNWEZUzKwte5IwaDYDwMe54VcJpY9/f7R6ZyjKVEJOLCjnJ+YLR2rjttsug9ZurH3iLzdgRGMHyI55+dz83MkdumkkATFAeLnQepdL2n4ijD0NvuzvlvaU+Knz9AZCX2kSNDM+hn+K0fFDM4CBFduBi8gEYmRlnSXslHtfwuZRViZQaS4voRMAFmWPNCH67ya3f1voi41BWXgaGTW5He8XDjQtFcIphvykmMOsS4ka9u4K0LEbReoSBRwBUAhigGMFXB1lMup66+WvjvSvwS9rMVVGaXpVGjgpM5shWpiIEoWICWU+Pu5ihk9BWv61/tYNNw6u3QlXt1ZfjM50F7eoJ1ctfYqClrlD3iwrBJ47aIu4kH1HdCp9uxkxq+Cz75n2UdV6Py7eEW1N141fnZ/Iax8nzbNu4SxccsJn1yUv22LJCteW3//GqvRVa7hets587PFpfkyaraBLNBvh90/wouXK/yvYBZN4WK7VwnuCUmxTjTglT9mQGUgPOYNMDU/m7rDp2zDc+8aMEfQjWGktH93M0g1l9yhidc8AMQbyAaxkk73M=
