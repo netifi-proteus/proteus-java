@@ -118,7 +118,7 @@ if ("$version".contains('SNAPSHOT')) {
 } else {
     bintray {
         user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
-        key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('BINTRAY_KEY')
+        key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('f')
         publications = ['maven']
 
         publish = (osdetector.os == 'osx')
