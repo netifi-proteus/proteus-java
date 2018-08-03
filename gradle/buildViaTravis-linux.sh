@@ -24,11 +24,15 @@ elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; 
     # Master Branch
     echo -e 'Build Master for Release => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=release
-    ./gradlew clean build publish --stacktrace
+    ./gradlew clean build --stacktrace
+elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_TAG" != "" ]; then
+    # Tag
+    echo -e 'Build Tag for Release => Tag ['$TRAVIS_TAG']'
+    export ORG_GRADLE_PROJECT_releaseType=release
+    ./gradlew clean build bintrayUpload --stacktrace
 else
     # Feature Branch
     echo -e 'Build Branch => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=snapshot
-    export ORG_GRADLE_PROJECT_commitHash=${TRAVIS_COMMIT::7}
     ./gradlew clean build publish --stacktrace
 fi
