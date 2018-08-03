@@ -14,7 +14,6 @@ elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "develop" ] 
     # Develop Branch
     echo -e 'Build Branch with Snapshot => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=snapshot
-    export ORG_GRADLE_PROJECT_commitHash=${TRAVIS_COMMIT::7}
     ./gradlew clean build publish --stacktrace
 elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [[ "$TRAVIS_BRANCH" == release/* ]] && [ "$TRAVIS_TAG" == "" ]; then
     # Release Branch
@@ -29,5 +28,7 @@ elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; 
 else
     # Feature Branch
     echo -e 'Build Branch => Branch ['$TRAVIS_BRANCH']'
-    ./gradlew clean build --stacktrace
+    export ORG_GRADLE_PROJECT_releaseType=snapshot
+    export ORG_GRADLE_PROJECT_commitHash=${TRAVIS_COMMIT::7}
+    ./gradlew clean build publish --stacktrace
 fi
