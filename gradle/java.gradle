@@ -124,6 +124,8 @@ if ("$version".contains('SNAPSHOT')) {
         publish = (osdetector.os == 'osx')
 
         pkg {
+            println "Configuring Bintray Plugin for: ${artifactName}:${version}"
+
             repo = 'netifi-oss'
             name = "${artifactName}"
             userOrg = 'netifi'
