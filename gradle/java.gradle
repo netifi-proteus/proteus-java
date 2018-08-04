@@ -1,3 +1,4 @@
+apply plugin: 'com.jfrog.bintray'
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'com.github.sherter.google-java-format'
@@ -14,19 +15,19 @@ task ciVersion {
     if (releaseType == 'release' || releaseType == 'r') {
         project.version = project.version
     } else if (releaseType == 'releaseCandidate' || releaseType == 'rc') {
-        project.version = "${project.version}-RC"
+        project.version = "${project.version}-RC".toString()
     } else if (releaseType == 'snapshot' || releaseType == 's') {
         if (commitHash) {
-            project.version = "${project.version}-SNAPSHOT-${commitHash}"
+            project.version = "${project.version}-SNAPSHOT-${commitHash}".toString()
         } else {
-            project.version = "${project.version}-SNAPSHOT"
+            project.version = "${project.version}-SNAPSHOT".toString()
         }
     } else {
         logger.info("Property 'releaseType' was not specified. Defaulting to 'snapshot'")
         if (commitHash) {
-            project.version = "${project.version}-SNAPSHOT-${commitHash}"
+            project.version = "${project.version}-SNAPSHOT-${commitHash}".toString()
         } else {
-            project.version = "${project.version}-SNAPSHOT"
+            project.version = "${project.version}-SNAPSHOT".toString()
         }
     }
 
@@ -116,18 +117,28 @@ if ("$version".contains('SNAPSHOT')) {
         }
     }
 } else {
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifact sourcesJar
+                artifact javadocJar
+            }
+        }
+    }
+
     bintray {
         user = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
         key = project.hasProperty('bintrayKey') ? project.property('bintrayKey') : System.getenv('f')
-        publications = ['maven']
 
+        publications = ['mavenJava']
+
+        //dryRun = true
         publish = (osdetector.os == 'osx')
+        override = true
 
         pkg {
-            println "Configuring Bintray Plugin for: ${artifactName}:${version}"
-
             repo = 'netifi-oss'
-            name = "${artifactName}"
+            name = "${artifactName}".toString()
             userOrg = 'netifi'
             desc = "${project.description}"
             websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
@@ -138,7 +149,7 @@ if ("$version".contains('SNAPSHOT')) {
             githubReleaseNotesFile = 'CHANGELOG.md'
 
             version {
-                name = "${version}"
+                name = "$project.version".toString()
             }
         }
     }
