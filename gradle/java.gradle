@@ -4,7 +4,6 @@ apply plugin: 'idea'
 apply plugin: 'com.github.sherter.google-java-format'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
 task ciVersion {
     description = "Creates a continuous-delivery friendly version number for the service"
@@ -102,6 +101,7 @@ if ("$version".contains('SNAPSHOT')) {
     publishing {
         publications {
             mavenJava(MavenPublication) {
+                from components.java
                 artifact sourcesJar
                 artifact javadocJar
             }
@@ -120,6 +120,7 @@ if ("$version".contains('SNAPSHOT')) {
     publishing {
         publications {
             mavenJava(MavenPublication) {
+                from components.java
                 artifact sourcesJar
                 artifact javadocJar
             }
