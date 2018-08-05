@@ -1,6 +1,14 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+    }
+}
+
 plugins {
     id 'com.gradle.build-scan' version '1.15.1' // declare before any other plugin
-    id 'com.jfrog.bintray' version '1.8.0'
     id 'com.google.osdetector' version '1.4.0'
     id 'com.github.sherter.google-java-format' version '0.6' apply false
     id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
@@ -19,7 +27,7 @@ project(':auth') {
 
 project(':access-key-info-idl') {
     description = 'Netifi Access Key IDL'
-    ext.artifactName = 'access-key-idl'
+    ext.artifactName = 'access-key-info-idl'
 
     apply from: file('../gradle/java.gradle')
 }
@@ -91,13 +99,12 @@ project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
     ext.artifactName = 'protobuf-rpc'
 
-    apply from: file('../gradle/java.gradle')
+    //apply from: file('../gradle/java.gradle')
 }
-
 
 project(':tracing-openzipkin') {
     description = 'Netifi Proteus Openzipkin Integration'
-    ext.artifactName = 'tracing'
+    ext.artifactName = 'tracing-openzipkin'
 
     apply from: file('../gradle/java.gradle')
 }
