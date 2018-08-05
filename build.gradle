@@ -1,6 +1,14 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+    }
+}
+
 plugins {
-    id 'com.gradle.build-scan' version '1.9' // declare before any other plugin
-    id 'com.jfrog.bintray' version '1.8.0'
+    id 'com.gradle.build-scan' version '1.15.1' // declare before any other plugin
     id 'com.google.osdetector' version '1.4.0'
     id 'com.github.sherter.google-java-format' version '0.6' apply false
     id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
@@ -14,15 +22,13 @@ project(':auth') {
     description = 'Netifi Proteus Authentication Utilities'
     ext.artifactName = 'auth'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
 project(':access-key-info-idl') {
     description = 'Netifi Access Key IDL'
-    ext.artifactName = 'access-key-idl'
+    ext.artifactName = 'access-key-info-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -30,16 +36,13 @@ project(':broker-info-idl') {
     description = 'Netifi Broker Info IDL'
     ext.artifactName = 'broker-info-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
 project(':broker-mgmt-idl') {
-
     description = 'Netifi Broker Management IDL'
     ext.artifactName = 'broker-mgmt-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -47,7 +50,6 @@ project(':client') {
     description = 'Netifi Proteus Client'
     ext.artifactName = 'client'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -55,7 +57,6 @@ project(':core') {
     description = 'Netifi Core Library'
     ext.artifactName = 'core'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -63,7 +64,6 @@ project(':core-idl') {
     description = 'Netifi Core IDL'
     ext.artifactName = 'core-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -71,7 +71,6 @@ project(':frames') {
     description = 'Netifi Proteus Frames'
     ext.artifactName = 'frames'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -79,7 +78,6 @@ project(':metrics-idl') {
     description = 'Netifi Proteus Metrics IDL'
     ext.artifactName = 'metrics-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -87,7 +85,6 @@ project(':metrics-micrometer') {
     description = 'Netifi Proteus Micrometer Support'
     ext.artifactName = 'metrics-micrometer'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -95,7 +92,6 @@ project(':metrics-prometheus') {
     description = 'Netifi Proteus Prometheus Integration'
     ext.artifactName = 'metrics-prometheus'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -103,15 +99,13 @@ project(':protobuf-rpc') {
     description = 'Netifi Proteus RPC'
     ext.artifactName = 'protobuf-rpc'
 
-    apply from: file('../gradle/release.gradle')
+    //apply from: file('../gradle/java.gradle')
 }
-
 
 project(':tracing-openzipkin') {
     description = 'Netifi Proteus Openzipkin Integration'
-    ext.artifactName = 'tracing'
+    ext.artifactName = 'tracing-openzipkin'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }
 
@@ -120,6 +114,5 @@ project(':tracing-idl') {
     description = 'Netifi Proteus Tracing IDL'
     ext.artifactName = 'tracing-idl'
 
-    apply from: file('../gradle/release.gradle')
     apply from: file('../gradle/java.gradle')
 }

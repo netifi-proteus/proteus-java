@@ -13,6 +13,10 @@ message AccessKey {
   int64 key = 1;
 }
 
+message AccessKeyParameters {
+  string description = 1;
+}
+
 message AccessToken {
   int64 key = 1;
   bytes accessToken = 2;
@@ -30,7 +34,7 @@ message AccessTokenInfo {
 }
 
 service AccessKeyInfoService {
-  rpc AddAccessKey (AccessToken) returns (AccessTokenInfo) {}
+  rpc CreateAccessKey (AccessKeyParameters) returns (AccessToken) {}
   rpc RemoveAccessKey (AccessKey) returns (AccessTokenInfo) {}
   rpc DisableAccessKey (AccessKey) returns (AccessTokenInfo) {}
   rpc EnableAccessKey (AccessKey) returns (AccessTokenInfo) {}
