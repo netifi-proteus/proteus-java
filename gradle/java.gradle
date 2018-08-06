@@ -97,7 +97,7 @@ test {
     }
 }
 
-if ("$version".contains('SNAPSHOT')) {
+if ("$version".contains('SNAPSHOT') || "$version".contains('RC')) {
     publishing {
         publications {
             mavenJava(MavenPublication) {
