@@ -18,7 +18,7 @@
         <logger name="io.rsocket.FrameLogger" level="ERROR" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </logger>
-        <logger name="io.netifi.proteus.tracing" level="ERROR" additivity="false">
+        <logger name="io.netifi.proteus.tracing" level="INFO" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </logger>
     </Loggers>

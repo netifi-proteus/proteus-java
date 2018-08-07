@@ -6,7 +6,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
-import reactor.retry.Retry;
+import reactor.core.publisher.Mono;
 import zipkin2.Annotation;
 import zipkin2.Component;
 import zipkin2.Endpoint;
@@ -15,6 +15,8 @@ import zipkin2.reporter.Reporter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 class ProteusReporter extends Component implements Reporter<Span> {
   private static final Logger logger = LoggerFactory.getLogger(ProteusReporter.class);
@@ -27,9 +29,20 @@ class ProteusReporter extends Component implements Reporter<Span> {
     this.sink = DirectProcessor.<Span>create().serialize();
     this.group = group;
     this.destination = destination;
+    AtomicInteger count = new AtomicInteger();
+    AtomicLong lastRetry = new AtomicLong(System.currentTimeMillis());
     this.disposable =
         Flux.defer(() -> service.streamSpans(sink.onBackpressureLatest().map(this::mapSpan)))
-            .doOnError(throwable -> logger.error("error sending tracing data", throwable))
+            .onErrorResume(
+                throwable -> {
+                  if (System.currentTimeMillis() - lastRetry.getAndSet(System.currentTimeMillis()) > 30_000) {
+                    count.set(0);
+                  }
+                  
+                  int i = Math.min(30, count.incrementAndGet());
+                  logger.error("error sending tracing data", throwable);
+                  return Mono.delay(Duration.ofSeconds(i)).then(Mono.error(throwable));
+                })
             .retry()
             .subscribe();
   }
