@@ -118,20 +118,21 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
               }
             })
         .windowTimeout(128, Duration.ofMillis(1000))
-        .onBackpressureDrop()
         .map(
             strings ->
                 strings
                     .reduce(new StringJoiner(","), StringJoiner::add)
                     .map(stringJoiner -> "[" + stringJoiner.toString() + "]"))
-        .flatMap(
+        .onBackpressureBuffer(1 << 16)
+               .flatMap(stringMono -> stringMono)
+        .concatMap(
             spans ->
                 getClient()
                     .post(
                         zipkinUrl,
                         request -> {
                           request.addHeader("Content-Type", "application/json");
-                          return request.sendString(spans);
+                          return request.sendString(Mono.just(spans));
                         })
                     .timeout(Duration.ofSeconds(30))
                     .doOnError(throwable -> resetHttpClient()),

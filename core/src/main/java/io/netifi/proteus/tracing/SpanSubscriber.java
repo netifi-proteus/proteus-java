@@ -70,7 +70,7 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
     }
 
     this.span = spanBuilder.start();
-  
+
     if (tracingMetadata != null) {
       TextMapInjectAdapter adapter = new TextMapInjectAdapter(tracingMetadata);
       tracer.inject(span.context(), Format.Builtin.TEXT_MAP, adapter);
@@ -149,16 +149,13 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
     if (log.isTraceEnabled()) {
       log.trace("Request");
     }
-    try (Scope scope = this.tracer.scopeManager().activate(span, false)) {
-      scope.span().log(TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis()), "request");
-      if (log.isTraceEnabled()) {
-        log.trace("Request - continued");
-      }
-      this.s.request(n);
-      // no additional cleaning is required cause we operate on scopes
-      if (log.isTraceEnabled()) {
-        log.trace("Request after cleaning. Current span [{}]", this.tracer.activeSpan());
-      }
+    if (log.isTraceEnabled()) {
+      log.trace("Request - continued");
+    }
+    this.s.request(n);
+    // no additional cleaning is required cause we operate on scopes
+    if (log.isTraceEnabled()) {
+      log.trace("Request after cleaning. Current span [{}]", this.tracer.activeSpan());
     }
   }
 
@@ -177,10 +174,7 @@ final class SpanSubscriber<T> extends AtomicBoolean implements SpanSubscription<
 
   @Override
   public void onNext(T o) {
-    try (Scope scope = this.tracer.scopeManager().activate(span, false)) {
-      scope.span().log(TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis()), "onNext");
-      this.subscriber.onNext(o);
-    }
+    this.subscriber.onNext(o);
   }
 
   @Override
