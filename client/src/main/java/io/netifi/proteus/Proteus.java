@@ -1,18 +1,24 @@
 package io.netifi.proteus;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.RequestHandlingRSocket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.opentracing.Tracer;
 import io.rsocket.Closeable;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.ipc.netty.tcp.TcpClient;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -134,10 +140,7 @@ public class Proteus implements Closeable {
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
     private DestinationNameFactory destinationNameFactory;
 
-    private MeterRegistry registry = null;
-    private int batchSize = DefaultBuilderConfig.getBatchSize();
-    private Function<SocketAddress, ClientTransport> clientTransportFactory =
-        address -> TcpClientTransport.create((InetSocketAddress) address);
+    private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
     private int poolSize = Runtime.getRuntime().availableProcessors();
     private Supplier<Tracer> tracerSupplier = () -> null;
 
@@ -152,13 +155,8 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder metricBatchSize(int batchSize) {
-      this.batchSize = batchSize;
-      return this;
-    }
-
     public Builder keepalive(boolean useKeepAlive) {
-      this.keepalive = keepalive;
+      this.keepalive = useKeepAlive;
       return this;
     }
 
@@ -196,9 +194,7 @@ public class Proteus implements Closeable {
       if (addresses instanceof List) {
         this.seedAddresses = (List<SocketAddress>) addresses;
       } else {
-        List<SocketAddress> list = new ArrayList<>();
-        list.addAll(addresses);
-        this.seedAddresses = list;
+        this.seedAddresses = new ArrayList<>(addresses);
       }
 
       return this;
@@ -245,6 +241,35 @@ public class Proteus implements Closeable {
       Objects.requireNonNull(accessToken, "account token is required");
       Objects.requireNonNull(group, "group is required");
 
+      if (clientTransportFactory == null) {
+        logger.info("Client transport factory not provided; using TCP transport.");
+        try {
+          final SslProvider sslProvider;
+          if (OpenSsl.isAvailable()) {
+            logger.info("Native SSL provider is available; will use native provider.");
+            sslProvider = SslProvider.OPENSSL_REFCNT;
+          } else {
+            logger.info("Native SSL provider not available; will use JDK SSL provider.");
+            sslProvider = SslProvider.JDK;
+          }
+          final SslContext sslContext =
+              SslContextBuilder.forClient()
+                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                  .sslProvider(sslProvider)
+                  .build();
+          clientTransportFactory = address -> {
+            TcpClient client =
+                TcpClient.create(
+                    opts ->
+                        opts.connectAddress(() -> address)
+                            .sslContext(sslContext));
+            return TcpClientTransport.create(client);
+          };
+        } catch (Exception sslException) {
+          throw Exceptions.bubble(sslException);
+        }
+      }
+
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
       if (destinationNameFactory == null) {
@@ -259,7 +284,7 @@ public class Proteus implements Closeable {
       if (seedAddresses == null) {
         Objects.requireNonNull(host, "host is required");
         Objects.requireNonNull(port, "port is required");
-        socketAddresses = Arrays.asList(InetSocketAddress.createUnresolved(host, port));
+        socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
       } else {
         socketAddresses = seedAddresses;
       }
