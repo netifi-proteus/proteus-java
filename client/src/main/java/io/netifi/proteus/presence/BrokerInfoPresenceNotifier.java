@@ -55,6 +55,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
                         }
                       }
                     })
+                .onErrorResume(err -> Mono.delay(Duration.ofMillis(500)).then(Mono.error(err)))
                 .retry()
                 .subscribe(this::joinEvent));
   }
