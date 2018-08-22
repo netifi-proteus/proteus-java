@@ -8,19 +8,25 @@ targetCompatibility = 1.8
 dependencies {
     protobuf project (':broker-info-idl')
 
-    compile project (':core')
+    compile 'io.rsocket.rpc:core:0.1.2'
+    compile 'io.rsocket.rpc:frames:0.1.2'
     compile project (':auth')
+    compile project (':frames')
 
     compile 'com.typesafe:config:1.3.2'
     compile 'com.google.guava:guava:22.0'
 
-    testProtobuf project (':core-idl')
-    testProtobuf project (':protobuf-rpc')
     testCompile 'io.micrometer:micrometer-registry-atlas:1.0.3'
+    testProtobuf 'io.rsocket.rpc:core-idl:0.1.2'
+    testCompile 'io.rsocket.rpc:core:0.1.2'
+    testCompile project(':tracing-openzipkin')
+    testCompile project(':metrics-micrometer')
+    testCompile 'javax.inject:javax.inject:1'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
+    testCompile 'org.apache.logging.log4j:log4j-core:2.9.0'
+    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.9.0'
 }
-
-def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
-def javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginBaseName"
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
@@ -29,20 +35,17 @@ protobuf {
         artifact = 'com.google.protobuf:protoc:3.6.0'
     }
     plugins {
-        proteus {
-            path = javaPluginPath
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:protobuf-rpc:0.1.2'
         }
     }
     generateProtoTasks {
         all().each { task ->
-            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
-            // Recompile protos when the codegen has been changed
-            task.inputs.file javaPluginPath
             // Recompile protos when build.gradle has been changed, because
             // it's possible the version of protoc has been changed.
             task.inputs.file "${rootProject.projectDir}/build.gradle"
             task.plugins {
-                proteus {}
+                rsocketRpc {}
             }
         }
     }

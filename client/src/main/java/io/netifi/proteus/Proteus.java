@@ -2,7 +2,8 @@ package io.netifi.proteus;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.rsocket.ProteusSocket;
-import io.netifi.proteus.rsocket.RequestHandlingRSocket;
+import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
+import io.rsocket.rpc.RSocketRpcService;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.opentracing.Tracer;
@@ -94,7 +95,7 @@ public class Proteus implements Closeable {
     return onClose;
   }
 
-  public Proteus addService(ProteusService service) {
+  public Proteus addService(RSocketRpcService service) {
     requestHandlingRSocket.addService(service);
     return this;
   }
