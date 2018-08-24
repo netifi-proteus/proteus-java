@@ -56,7 +56,7 @@ public class ProteusMeterRegistryTest {
               }
             });
 
-    ProteusMetricsExporter exporter = new ProteusMetricsExporter(client, registry);
+    MetricsExporter exporter = new MetricsExporter(client, registry);
     exporter.run();
 
     Counter test = registry.counter("test");

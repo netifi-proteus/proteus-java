@@ -1,11 +1,11 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.DestinationNameFactory;
-import io.netifi.proteus.exception.TimeoutException;
+import io.rsocket.rpc.exception.TimeoutException;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
-import io.netifi.proteus.stats.Ewma;
-import io.netifi.proteus.stats.Median;
-import io.netifi.proteus.stats.Quantile;
+import io.rsocket.rpc.stats.Ewma;
+import io.rsocket.rpc.stats.Median;
+import io.rsocket.rpc.stats.Quantile;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.rsocket.*;

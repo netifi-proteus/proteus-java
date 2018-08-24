@@ -4,8 +4,8 @@ import com.netflix.spectator.atlas.AtlasConfig;
 import io.micrometer.atlas.AtlasMeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netifi.proteus.Proteus;
-import io.netifi.proteus.metrics.ProteusMetricsExporter;
-import io.netifi.proteus.metrics.om.MetricsSnapshotHandlerClient;
+import io.rsocket.rpc.metrics.MetricsExporter;
+import io.rsocket.rpc.metrics.om.MetricsSnapshotHandlerClient;
 import io.netifi.proteus.rsocket.ProteusSocket;
 
 import javax.inject.Inject;
@@ -66,8 +66,8 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
     new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
 
     if (export.orElse(true)) {
-      ProteusMetricsExporter exporter =
-          new ProteusMetricsExporter(client, registry, stepDuration, 1024);
+      MetricsExporter exporter =
+          new MetricsExporter(client, registry, stepDuration, 1024);
       exporter.run();
 
       proteus.onClose().doFinally(s -> exporter.dispose()).subscribe();
