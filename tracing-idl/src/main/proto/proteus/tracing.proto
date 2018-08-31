@@ -3,6 +3,7 @@ syntax = "proto3";
 package io.netifi.proteus.tracing;
 
 import "zipkin/proto3/zipkin.proto";
+import "google/protobuf/empty.proto";
 
 option java_package = "io.netifi.proteus.tracing";
 option java_outer_classname = "ProteusTracingServices";
@@ -10,6 +11,17 @@ option java_multiple_files = true;
 
 message Ack {}
 
+message Trace {
+    repeated zipkin.proto3.Span spans = 1;
+}
+
+message Traces {
+    repeated Trace traces = 1;
+}
+
 service ProteusTracingService {
+
     rpc StreamSpans (stream zipkin.proto3.Span) returns (Ack) {}
+
+    rpc StreamTraces (google.protobuf.Empty) returns (stream Trace) {}
 }

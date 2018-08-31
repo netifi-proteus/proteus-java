@@ -1,0 +1,56 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.5'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    protobuf project (':viz-idl')
+    compile project (':client')
+    compile project (':tracing-openzipkin')
+}
+
+def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
+def javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginBaseName"
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
+    plugins {
+        proteus {
+            path = javaPluginPath
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
+            // Recompile protos when the codegen has been changed
+            task.inputs.file javaPluginPath
+            // Recompile protos when build.gradle has been changed, because
+            // it's possible the version of protoc has been changed.
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                proteus {}
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("src/main/proto")
+        sourceDirs += file("src/generated/main/java")
+        sourceDirs += file("src/generated/main/proteus")
+
+        generatedSourceDirs += file('src/generated/main/java')
+        generatedSourceDirs += file('src/generated/main/proteus')
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
