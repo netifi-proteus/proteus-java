@@ -87,13 +87,13 @@ Protobuf {
         artifact = 'com.google.Protobuf:protoc:3.6.0'
     }
     plugins {
-        proteus {
+        rsocketRpc {
             artifact = 'io.netifi.proteus:proteus-java:0.7.x'
         }
     }
     generateProtoTasks {
         all()*.plugins {
-            proteus {}
+            rsocketRpc {}
         }
     }
 }
