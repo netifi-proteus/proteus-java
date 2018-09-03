@@ -21,7 +21,7 @@ public class ZipkinTracesStreamerTest {
   @Test
   public void zipkinServerTracesStreaming() {
     List<Trace> traces = tracesStreamer
-        .streamTraces()
+        .streamTraces(42)
         .collectList()
         .block(Duration.ofSeconds(10));
     Assert.assertFalse(traces.isEmpty());

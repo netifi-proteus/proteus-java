@@ -1,14 +1,13 @@
 package io.netifi.proteus.tracing;
 
-import com.google.protobuf.Empty;
 import io.netifi.proteus.Proteus;
 import reactor.core.publisher.Flux;
 
 import javax.inject.Inject;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
-public class ProteusTraceStreamsSupplier implements Supplier<Flux<Trace>> {
+public class ProteusTraceStreamsSupplier implements Function<TracesRequest, Flux<Trace>> {
 
   private final ProteusTracingServiceClient client;
 
@@ -18,7 +17,7 @@ public class ProteusTraceStreamsSupplier implements Supplier<Flux<Trace>> {
   }
 
   @Override
-  public Flux<Trace> get() {
-    return client.streamTraces(Empty.getDefaultInstance());
+  public Flux<Trace> apply(TracesRequest message) {
+    return client.streamTraces(message);
   }
 }

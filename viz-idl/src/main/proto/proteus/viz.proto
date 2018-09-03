@@ -41,7 +41,12 @@ message Node {
     repeated string metadata = 10;
 }
 
+message VisualisationRequest {
+    int32 dataLookbackSeconds = 1;
+    string rootNode = 2;
+}
+
 service VizceralService {
 
-    rpc Visualisations (google.protobuf.Empty) returns (stream Node) {}
+    rpc Visualisations (VisualisationRequest) returns (stream Node) {}
 }

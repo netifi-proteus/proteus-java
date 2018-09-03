@@ -174,7 +174,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   }
 
   @Override
-  public Flux<Trace> streamTraces(Empty message, ByteBuf metadata) {
-    return tracesStreamer.streamTraces();
+  public Flux<Trace> streamTraces(TracesRequest message, ByteBuf metadata) {
+    return tracesStreamer.streamTraces(message.getLookbackSeconds());
   }
 }

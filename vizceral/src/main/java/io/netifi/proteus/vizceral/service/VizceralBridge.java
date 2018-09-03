@@ -1,13 +1,10 @@
 package io.netifi.proteus.vizceral.service;
 
-import com.google.protobuf.Empty;
 import io.netifi.proteus.Proteus;
 import io.netifi.proteus.tracing.ProteusTraceStreamsSupplier;
 import io.netifi.proteus.tracing.Trace;
-import io.netifi.proteus.viz.Connection;
-import io.netifi.proteus.viz.Metrics;
-import io.netifi.proteus.viz.Node;
-import io.netifi.proteus.viz.VizceralService;
+import io.netifi.proteus.tracing.TracesRequest;
+import io.netifi.proteus.viz.*;
 import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.GroupedFlux;
@@ -25,22 +22,23 @@ import java.util.stream.Collectors;
 
 public class VizceralBridge implements VizceralService {
 
-  private final Flux<Trace> traceStreams;
+  private final Function<TracesRequest, Flux<Trace>> traceStreams;
 
   public VizceralBridge(Proteus proteus, Optional<String> tracingGroup) {
-    this(new ProteusTraceStreamsSupplier(proteus, tracingGroup).get());
+    this(new ProteusTraceStreamsSupplier(proteus, tracingGroup));
   }
 
-  VizceralBridge(Flux<Trace> traceStreams) {
+  VizceralBridge(Function<TracesRequest, Flux<Trace>> traceStreams) {
     this.traceStreams = traceStreams;
   }
 
   @Override
-  public Flux<Node> visualisations(Empty message, ByteBuf metadata) {
+  public Flux<Node> visualisations(VisualisationRequest message, ByteBuf metadata) {
     return Flux.defer(() -> {
-      Flux<GroupedFlux<Edge, Edge>> edgesPerDestSvc = traceStreams
-          .flatMap(this::edges)
-          .groupBy(Function.identity());
+      Flux<GroupedFlux<Edge, Edge>> edgesPerDestSvc =
+          traceStreams.apply(tracesFor(message))
+              .flatMap(this::edges)
+              .groupBy(Function.identity());
 
       Map<String, Vertex> vertices = new ConcurrentHashMap<>();
 
@@ -107,13 +105,21 @@ public class VizceralBridge implements VizceralService {
 
             return Node.newBuilder()
                 .setRenderer("region")
-                .setName("edge")
+                .setName(message.getRootNode())
                 .setEntryNode(entryNode(nodesCollection))
                 .addAllConnections(conns)
-                .addAllNodes(nodesCollection).build();
+                .addAllNodes(nodesCollection)
+                .build();
           });
       return rootNode;
     });
+  }
+
+  private TracesRequest tracesFor(VisualisationRequest message) {
+    return TracesRequest
+        .newBuilder()
+        .setLookbackSeconds(message.getDataLookbackSeconds())
+        .build();
   }
 
   private Mono<Long> count(Flux<GroupedFlux<Boolean, Edge>> f) {

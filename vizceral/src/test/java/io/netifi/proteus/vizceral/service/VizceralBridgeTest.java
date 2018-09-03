@@ -5,6 +5,7 @@ import io.netifi.proteus.tracing.TracesStreamer;
 import io.netifi.proteus.viz.Connection;
 import io.netifi.proteus.viz.Metrics;
 import io.netifi.proteus.viz.Node;
+import io.netifi.proteus.viz.VisualisationRequest;
 import io.netty.buffer.Unpooled;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,18 +20,26 @@ import static org.junit.Assert.assertNotNull;
 
 public class VizceralBridgeTest {
 
-  private TracesStreamer tracesStreamer;
+  private VizceralBridge vizceralBridge;
 
   @Before
   public void setUp() {
-    tracesStreamer = new TracesStreamer(zipkinSource());
+    vizceralBridge = new VizceralBridge(
+        req -> new TracesStreamer(zipkinMockSource())
+            .streamTraces(req.getLookbackSeconds()));
   }
 
   @Test
   public void vizSource() {
-    VizceralBridge vizceralBridge = new VizceralBridge(tracesStreamer.streamTraces());
+
+    VisualisationRequest vizRequest =
+        VisualisationRequest
+            .newBuilder()
+            .setDataLookbackSeconds(42)
+            .build();
+
     Node root = vizceralBridge
-        .visualisations(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER)
+        .visualisations(vizRequest, Unpooled.EMPTY_BUFFER)
         .blockFirst(Duration.ofSeconds(5));
 
     assertNotNull(root);
@@ -56,7 +65,7 @@ public class VizceralBridgeTest {
     assertEquals(2, nodeList.size());
   }
 
-  private Mono<InputStream> zipkinSource() {
+  private Mono<InputStream> zipkinMockSource() {
     return Mono.fromCallable(() ->
         getClass().getClassLoader().getResourceAsStream("zipkin.json"));
   }

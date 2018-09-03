@@ -16,24 +16,25 @@ import zipkin2.proto3.Span;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class TracesStreamer {
 
-  private final ObjectMapper objectMapper;
-  private Mono<InputStream> inputSource;
+  private final ObjectMapper objectMapper = protoMapper();
+  private Function<Integer, Mono<InputStream>> inputSource;
 
   public TracesStreamer(String zipkinUrl,
                         Mono<HttpClient> client) {
-    this(zipkinServerStream(zipkinUrl, client));
+    this.inputSource = zipkinServerStream(zipkinUrl, client);
   }
 
   public TracesStreamer(Mono<InputStream> inputSource) {
-    this.inputSource = inputSource;
-    this.objectMapper = protoMapper();
+    this.inputSource = v -> inputSource;
   }
 
-  public Flux<Trace> streamTraces() {
-    return streamTraces(inputSource);
+  public Flux<Trace> streamTraces(int lookbackSeconds) {
+    return streamTraces(inputSource.apply(lookbackSeconds));
   }
 
   Flux<Trace> streamTraces(Mono<InputStream> input) {
@@ -46,18 +47,24 @@ public class TracesStreamer {
       } catch (IOException e) {
         throw Exceptions.propagate(e);
       }
-    }).flatMapIterable(Traces::getTracesList);
+    }).flatMapIterable(Traces::getTracesList)
+        ;
   }
 
-  private static Mono<InputStream> zipkinServerStream(String zipkinUrl,
-                                                      Mono<HttpClient> client) {
-    return client
+  private static Function<Integer, Mono<InputStream>> zipkinServerStream(String zipkinUrl,
+                                                                         Mono<HttpClient> client) {
+    return lookbackSeconds -> client
         .flatMap(c -> c
-            .get(zipkinUrl + "?lookback=1728000000&limit=10000")
+            .get(zipkinQuery(zipkinUrl, lookbackSeconds))
             .flatMap(resp ->
                 resp.receive()
                     .aggregate()
                     .asInputStream()));
+  }
+
+  private static String zipkinQuery(String zipkinUrl, int lookbackSeconds) {
+    long lookbackMicros = TimeUnit.SECONDS.toMicros(lookbackSeconds);
+    return zipkinUrl + "?lookback=" + lookbackMicros + "&limit=100000";
   }
 
   private ObjectMapper protoMapper() {

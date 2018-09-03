@@ -19,9 +19,13 @@ message Traces {
     repeated Trace traces = 1;
 }
 
+message TracesRequest {
+    int32 lookbackSeconds = 1;
+}
+
 service ProteusTracingService {
 
     rpc StreamSpans (stream zipkin.proto3.Span) returns (Ack) {}
 
-    rpc StreamTraces (google.protobuf.Empty) returns (stream Trace) {}
+    rpc StreamTraces (TracesRequest) returns (stream Trace) {}
 }
