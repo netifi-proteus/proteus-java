@@ -9,10 +9,11 @@ import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class VizceralBridgeTest {
 
@@ -65,6 +66,26 @@ public class VizceralBridgeTest {
     List<Node> nodeList = root.getNodesList();
     assertNotNull(nodeList);
     assertEquals(2, nodeList.size());
+    boolean thereIsRequester = assertOneMatches(nodeList, (node) ->
+        "quickstart.clients-client1".equals(node.getName())
+            &&
+            node.getConnectionsList().isEmpty());
+    assertTrue(thereIsRequester);
+
+    boolean thereIsResponder = assertOneMatches(nodeList, (node) ->
+        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d".equals(node.getName())
+            &&
+            node.getConnectionsList().isEmpty());
+    assertTrue(thereIsResponder);
+  }
+
+  private static <T> boolean assertOneMatches(Collection<T> it, Function<T, Boolean> assertion) {
+    for (T t : it) {
+      if (assertion.apply(t)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private Mono<InputStream> zipkinMockSource() {
