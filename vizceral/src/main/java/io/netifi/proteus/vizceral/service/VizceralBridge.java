@@ -12,10 +12,7 @@ import reactor.core.publisher.Mono;
 import zipkin2.proto3.Annotation;
 import zipkin2.proto3.Span;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,66 +32,56 @@ public class VizceralBridge implements VizceralService {
   @Override
   public Flux<Node> visualisations(VisualisationRequest message, ByteBuf metadata) {
     return Flux.defer(() -> {
-      Flux<GroupedFlux<Edge, Edge>> edgesPerDestSvc =
+      Flux<GroupedFlux<Edge, Edge>> groupedEdgesPerConnection =
           traceStreams.apply(tracesFor(message))
               .flatMap(this::edges)
               .groupBy(Function.identity());
 
       Map<String, Vertex> vertices = new ConcurrentHashMap<>();
-
       Flux<Connection> connections =
-          edgesPerDestSvc
-              .flatMap(edgesPerSvc -> {
+          groupedEdgesPerConnection
+              .flatMap(edges -> {
 
-                Edge edge = edgesPerSvc.key();
+                Edge edge = edges.key();
 
                 String sourceNodeName = vizceralSourceName(edge);
                 String targetNodeName = vizceralTargetName(edge);
 
-                Flux<GroupedFlux<Boolean, Edge>> edgesBySuccess =
-                    edgesPerSvc
-                        .groupBy(e -> e.kind == Edge.Kind.SUCCESS)
-                        .publish()
-                        .autoConnect(2);
+                Mono<EdgeState> reducedEdge = edges
+                    .scan(new EdgeState(), (s, e) -> {
+                      if (edge.kind == Edge.Kind.SUCCESS) {
+                        s.addSuccess();
+                      } else {
+                        s.addError();
+                      }
+                      s.addService(e.getSvc());
+                      s.updateTimeStamp(e.getTimeStamp());
+                      return s;
+                    }).last();
 
-                Mono<Long> successCount = count(edgesBySuccess.filter(e -> e.key()));
-                Mono<Long> errorCount = count(edgesBySuccess.filter(e -> !e.key()));
-
-                Mono<Metrics> metrics = successCount
-                    .zipWith(errorCount, (succ, err) -> {
-
-                      long total = succ + err;
-                      double errRate = err / (double) total;
-                      double succRate = succ / (double) total;
-
-                      long timeStamp = edge.getTimeStamp();
+                Mono<Connection> connection = reducedEdge
+                    .doOnSuccess(s -> {
+                      long timeStamp = s.getTimestamp();
 
                       Vertex source = vertexByName(sourceNodeName, vertices);
                       source.updatedAt(timeStamp);
 
                       Vertex target = vertexByName(targetNodeName, vertices);
-                      target.addMaxVolume(total);
                       target.updatedAt(timeStamp);
-
-                      return Metrics.newBuilder()
-                          .setNormal(succRate)
-                          .setDanger(errRate)
-                          .build();
-                    });
-
-                Mono<Connection> connection = metrics
-                    .map(m -> Connection.newBuilder()
+                      target.addMaxVolume(s.getTotal());
+                    })
+                    .map(s -> Connection.newBuilder()
                         .setSource(sourceNodeName)
                         .setTarget(targetNodeName)
-                        .setMetrics(m)
+                        .setMetrics(s.metrics())
+                        .addAllNotices(s.notices())
                         .build());
 
                 return connection;
               });
 
-      Mono<List<Connection>> connectionsCollection = connections.collectList();
-
-      Mono<Node> rootNode = connectionsCollection
+      return connections
+          .collectList()
           .map(conns -> {
 
             List<Node> nodesCollection = vertices
@@ -103,15 +90,16 @@ public class VizceralBridge implements VizceralService {
                 .map(Vertex::toNode)
                 .collect(Collectors.toList());
 
+            String rootNodeName = message.getRootNode();
+
             return Node.newBuilder()
                 .setRenderer("region")
-                .setName(message.getRootNode())
-                .setEntryNode(entryNode(nodesCollection))
+                .setName(rootNodeName)
+                .setEntryNode(rootNodeName)
                 .addAllConnections(conns)
                 .addAllNodes(nodesCollection)
                 .build();
           });
-      return rootNode;
     });
   }
 
@@ -120,17 +108,6 @@ public class VizceralBridge implements VizceralService {
         .newBuilder()
         .setLookbackSeconds(message.getDataLookbackSeconds())
         .build();
-  }
-
-  private Mono<Long> count(Flux<GroupedFlux<Boolean, Edge>> f) {
-    return f
-        .next()
-        .flatMap(Flux::count)
-        .switchIfEmpty(Mono.just(0L));
-  }
-
-  private String entryNode(List<Node> nodesCollection) {
-    return nodesCollection.iterator().next().getName();
   }
 
   private Vertex vertexByName(String name, Map<String, Vertex> map) {
@@ -142,11 +119,11 @@ public class VizceralBridge implements VizceralService {
   }
 
   private String vizceralSourceName(Edge edge) {
-    return edge.getSourceGroup() + "-" + edge.getSourceDest() + "-" + edge.getSvc();
+    return edge.getSourceGroup() + "-" + edge.getSourceDest();
   }
 
   private String vizceralTargetName(Edge edge) {
-    return edge.getTargetGroup() + "-" + edge.getTargetDest() + "-" + edge.getSvc();
+    return edge.getTargetGroup() + "-" + edge.getTargetDest();
   }
 
   private Flux<Edge> edges(Trace trace) {
@@ -213,6 +190,63 @@ public class VizceralBridge implements VizceralService {
     return tags.get("proteus.service");
   }
 
+  static class EdgeState {
+    private int success;
+    private int error;
+    private Set<String> services = new HashSet<>();
+    private long timestamp;
+
+    public void addSuccess() {
+      success++;
+    }
+
+    public void addError() {
+      error++;
+    }
+
+    public void addService(String svc) {
+      services.add(svc);
+    }
+
+    public void updateTimeStamp(long timestamp) {
+      this.timestamp = Math.max(this.timestamp, timestamp);
+    }
+
+    public Metrics metrics() {
+      return Metrics.newBuilder()
+          .setNormal(successRate())
+          .setDanger(errorRate())
+          .build();
+    }
+
+    public int getTotal() {
+      return success + error;
+    }
+
+    public double successRate() {
+      return success / (double) getTotal();
+    }
+
+    public double errorRate() {
+      return error / (double) getTotal();
+    }
+
+    public Set<String> getServices() {
+      return new HashSet<>(services);
+    }
+
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    public Collection<Notice> notices() {
+      return services
+          .stream()
+          .map(s -> Notice.newBuilder().setTitle(s).build())
+          .collect(Collectors.toList());
+    }
+  }
+
   static class Vertex {
     /*written from single thread*/
     private volatile long maxVolume = 0;
@@ -225,9 +259,7 @@ public class VizceralBridge implements VizceralService {
     }
 
     public void updatedAt(long millis) {
-      if (millis > updated) {
-        updated = millis;
-      }
+      updated = Math.max(millis, updated);
     }
 
     public void addMaxVolume(long maxVolume) {
@@ -310,13 +342,12 @@ public class VizceralBridge implements VizceralService {
       return Objects.equals(sourceGroup, edge.sourceGroup) &&
           Objects.equals(sourceDest, edge.sourceDest) &&
           Objects.equals(targetGroup, edge.targetGroup) &&
-          Objects.equals(targetDest, edge.targetDest) &&
-          Objects.equals(svc, edge.svc);
+          Objects.equals(targetDest, edge.targetDest);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(sourceGroup, sourceDest, targetGroup, targetDest, svc);
+      return Objects.hash(sourceGroup, sourceDest, targetGroup, targetDest);
     }
   }
 }

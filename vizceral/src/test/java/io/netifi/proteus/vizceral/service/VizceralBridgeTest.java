@@ -1,11 +1,7 @@
 package io.netifi.proteus.vizceral.service;
 
-import com.google.protobuf.Empty;
 import io.netifi.proteus.tracing.TracesStreamer;
-import io.netifi.proteus.viz.Connection;
-import io.netifi.proteus.viz.Metrics;
-import io.netifi.proteus.viz.Node;
-import io.netifi.proteus.viz.VisualisationRequest;
+import io.netifi.proteus.viz.*;
 import io.netty.buffer.Unpooled;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,15 +46,21 @@ public class VizceralBridgeTest {
 
     Connection conn = connectionsList.iterator().next();
     assertEquals(
-        "quickstart.clients-client1-io.netifi.proteus.quickstart.service.HelloService",
+        "quickstart.clients-client1",
         conn.getSource());
     assertEquals(
-        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d-io.netifi.proteus.quickstart.service.HelloService",
+        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d",
         conn.getTarget());
 
     Metrics metrics = conn.getMetrics();
     assertEquals(1.0d, metrics.getNormal(), 1e-7);
     assertEquals(0.0d, metrics.getDanger(), 1e-7);
+
+    List<Notice> services = conn.getNoticesList();
+    assertEquals(1, services.size());
+    Notice notice = services.iterator().next();
+    String title = notice.getTitle();
+    assertEquals("io.netifi.proteus.quickstart.service.HelloService", title);
 
     List<Node> nodeList = root.getNodesList();
     assertNotNull(nodeList);
