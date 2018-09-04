@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package io.netifi.proteus.viz;
+
+import "google/protobuf/empty.proto";
+
+option java_package = "io.netifi.proteus.viz";
+option java_outer_classname = "VizProto";
+option java_multiple_files = true;
+
+message Notice {
+    int32 severity = 1;
+    string title  = 2;
+    string link  = 3;
+}
+
+message Metrics {
+    double danger = 1;
+    double normal = 2;
+    double warning = 3;
+}
+
+message Connection {
+    string source = 1;
+    string target = 2;
+    Metrics metrics = 3;
+    repeated Notice notices = 4;
+    int64 updated = 5;
+}
+
+message Node {
+    string renderer = 1;
+    string name = 2;
+    string entryNode = 3;
+    double maxVolume = 4;
+    string class = 5;
+    int64 updated = 6;
+    repeated Node nodes = 7;
+    repeated Connection connections = 8;
+    string displayName = 9;
+    repeated string metadata = 10;
+}
+
+message VisualisationRequest {
+    int32 dataLookbackSeconds = 1;
+    string rootNode = 2;
+}
+
+service VizceralService {
+
+    rpc Visualisations (VisualisationRequest) returns (stream Node) {}
+}

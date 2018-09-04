@@ -88,3 +88,17 @@ project(':tracing-idl') {
 
     apply from: file('../gradle/java.gradle')
 }
+
+project(':viz-idl') {
+    description = 'Netifi Proteus Vizceral IDL'
+    ext.artifactName = 'viz-idl'
+
+    apply from: file('../gradle/java.gradle')
+}
+
+project(':vizceral') {
+    description = 'Netifi Proteus Vizceral Service'
+    ext.artifactName = 'vizceral'
+
+    apply from: file('../gradle/java.gradle')
+}
