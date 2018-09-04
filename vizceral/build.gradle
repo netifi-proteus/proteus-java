@@ -6,10 +6,10 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile 'io.rsocket.rpc:protobuf-rpc:0.1.2'
-    protobuf 'io.rsocket.rpc:metrics-idl:0.1.2'
-    compile 'io.micrometer:micrometer-registry-atlas:1.0.3'
+    protobuf project (':viz-idl')
     compile project (':client')
+    compile project (':tracing-openzipkin')
+    compile 'io.rsocket.rpc:protobuf-rpc:0.1.2'
 }
 
 protobuf {
@@ -32,6 +32,17 @@ protobuf {
                 rsocketRpc {}
             }
         }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("src/main/proto")
+        sourceDirs += file("src/generated/main/java")
+        sourceDirs += file("src/generated/main/rsocketRpc")
+
+        generatedSourceDirs += file('src/generated/main/java')
+        generatedSourceDirs += file('src/generated/main/rsocketRpc')
     }
 }
 

@@ -1,7 +1,7 @@
 package io.netifi.proteus.rsocket.transport;
 
 import io.netifi.proteus.rsocket.WeightedRSocket;
-import io.netifi.proteus.stats.Ewma;
+import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.Closeable;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.Clock;

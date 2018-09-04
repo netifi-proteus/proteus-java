@@ -6,6 +6,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
+    compile 'io.rsocket.rpc:protobuf-rpc:0.1.2'
     protobuf project (':tracing-idl')
     compile project (':client')
 
@@ -14,14 +15,13 @@ dependencies {
 
     compile 'io.opentracing:opentracing-api:0.31.0'
     compile 'io.opentracing.brave:brave-opentracing:0.31.2'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.6'
+    compile group: 'com.hubspot.jackson', name: 'jackson-datatype-protobuf', version: '0.9.10-jackson2.9-proto3'
 
     testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
     testCompile 'org.apache.logging.log4j:log4j-core:2.9.0'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.9.0'
 }
-
-def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
-def javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginBaseName"
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
@@ -30,20 +30,17 @@ protobuf {
         artifact = 'com.google.protobuf:protoc:3.6.0'
     }
     plugins {
-        proteus {
-            path = javaPluginPath
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:protobuf-rpc:0.1.2'
         }
     }
     generateProtoTasks {
         all().each { task ->
-            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
-            // Recompile protos when the codegen has been changed
-            task.inputs.file javaPluginPath
             // Recompile protos when build.gradle has been changed, because
             // it's possible the version of protoc has been changed.
             task.inputs.file "${rootProject.projectDir}/build.gradle"
             task.plugins {
-                proteus {}
+                rsocketRpc {}
             }
         }
     }

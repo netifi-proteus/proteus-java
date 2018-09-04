@@ -2,11 +2,13 @@ package io.netifi.proteus.prometheus;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netifi.proteus.Proteus;
-import io.netifi.proteus.metrics.om.*;
+import io.rsocket.rpc.metrics.om.*;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.prometheus.client.exporter.common.TextFormat;
@@ -136,7 +138,7 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
     return processor;
   }
 
-  private void record(ProteusMeter meter, MeterMeasurement meterMeasurement) {
+  private void record(io.rsocket.rpc.metrics.om.Meter meter, MeterMeasurement meterMeasurement) {
     try {
       MeterId id = meter.getId();
       Iterable<Tag> tags = mapTags(id.getTagList());

@@ -46,27 +46,6 @@ project(':broker-mgmt-idl') {
     apply from: file('../gradle/java.gradle')
 }
 
-project(':client') {
-    description = 'Netifi Proteus Client'
-    ext.artifactName = 'client'
-
-    apply from: file('../gradle/java.gradle')
-}
-
-project(':core') {
-    description = 'Netifi Core Library'
-    ext.artifactName = 'core'
-
-    apply from: file('../gradle/java.gradle')
-}
-
-project(':core-idl') {
-    description = 'Netifi Core IDL'
-    ext.artifactName = 'core-idl'
-
-    apply from: file('../gradle/java.gradle')
-}
-
 project(':frames') {
     description = 'Netifi Proteus Frames'
     ext.artifactName = 'frames'
@@ -74,9 +53,9 @@ project(':frames') {
     apply from: file('../gradle/java.gradle')
 }
 
-project(':metrics-idl') {
-    description = 'Netifi Proteus Metrics IDL'
-    ext.artifactName = 'metrics-idl'
+project(':client') {
+    description = 'Netifi Proteus Client'
+    ext.artifactName = 'client'
 
     apply from: file('../gradle/java.gradle')
 }
@@ -95,13 +74,6 @@ project(':metrics-prometheus') {
     apply from: file('../gradle/java.gradle')
 }
 
-project(':protobuf-rpc') {
-    description = 'Netifi Proteus RPC'
-    ext.artifactName = 'protobuf-rpc'
-
-    //apply from: file('../gradle/java.gradle')
-}
-
 project(':tracing-openzipkin') {
     description = 'Netifi Proteus Openzipkin Integration'
     ext.artifactName = 'tracing-openzipkin'
@@ -113,6 +85,20 @@ project(':tracing-openzipkin') {
 project(':tracing-idl') {
     description = 'Netifi Proteus Tracing IDL'
     ext.artifactName = 'tracing-idl'
+
+    apply from: file('../gradle/java.gradle')
+}
+
+project(':viz-idl') {
+    description = 'Netifi Proteus Vizceral IDL'
+    ext.artifactName = 'viz-idl'
+
+    apply from: file('../gradle/java.gradle')
+}
+
+project(':vizceral') {
+    description = 'Netifi Proteus Vizceral Service'
+    ext.artifactName = 'vizceral'
 
     apply from: file('../gradle/java.gradle')
 }

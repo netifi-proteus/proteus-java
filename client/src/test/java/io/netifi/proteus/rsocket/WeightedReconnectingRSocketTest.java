@@ -1,7 +1,7 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.DestinationNameFactory;
-import io.netifi.proteus.stats.FrugalQuantile;
+import io.rsocket.rpc.stats.FrugalQuantile;
 import io.netty.buffer.Unpooled;
 import io.rsocket.RSocket;
 import org.junit.Test;
