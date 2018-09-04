@@ -63,7 +63,7 @@ public class TracesStreamer {
   }
 
   private static String zipkinQuery(String zipkinUrl, int lookbackSeconds) {
-    long lookbackMicros = TimeUnit.SECONDS.toMicros(lookbackSeconds);
+    long lookbackMicros = TimeUnit.SECONDS.toMillis(lookbackSeconds);
     return zipkinUrl + "?lookback=" + lookbackMicros + "&limit=100000";
   }
 
