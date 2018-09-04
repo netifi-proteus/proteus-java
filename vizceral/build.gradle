@@ -9,10 +9,8 @@ dependencies {
     protobuf project (':viz-idl')
     compile project (':client')
     compile project (':tracing-openzipkin')
+    compile 'io.rsocket.rpc:protobuf-rpc:0.1.2'
 }
-
-def protocPluginBaseName = "proteus-java-${osdetector.os}-${osdetector.arch}"
-def javaPluginPath = "$rootDir/protobuf-rpc/build/exe/java_plugin/$protocPluginBaseName"
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
@@ -21,20 +19,17 @@ protobuf {
         artifact = 'com.google.protobuf:protoc:3.6.0'
     }
     plugins {
-        proteus {
-            path = javaPluginPath
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:protobuf-rpc:0.1.2'
         }
     }
     generateProtoTasks {
         all().each { task ->
-            task.dependsOn ':protobuf-rpc:java_pluginExecutable'
-            // Recompile protos when the codegen has been changed
-            task.inputs.file javaPluginPath
             // Recompile protos when build.gradle has been changed, because
             // it's possible the version of protoc has been changed.
             task.inputs.file "${rootProject.projectDir}/build.gradle"
             task.plugins {
-                proteus {}
+                rsocketRpc {}
             }
         }
     }
@@ -44,10 +39,10 @@ idea {
     module {
         sourceDirs += file("src/main/proto")
         sourceDirs += file("src/generated/main/java")
-        sourceDirs += file("src/generated/main/proteus")
+        sourceDirs += file("src/generated/main/rsocketRpc")
 
         generatedSourceDirs += file('src/generated/main/java')
-        generatedSourceDirs += file('src/generated/main/proteus')
+        generatedSourceDirs += file('src/generated/main/rsocketRpc')
     }
 }
 
