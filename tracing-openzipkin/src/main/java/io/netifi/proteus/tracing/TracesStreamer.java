@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleDeserializers;
 import com.hubspot.jackson.datatype.protobuf.ProtobufModule;
+import io.netty.handler.codec.json.JsonObjectDecoder;
+import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -22,49 +24,57 @@ import java.util.function.Function;
 public class TracesStreamer {
 
   private final ObjectMapper objectMapper = protoMapper();
-  private Function<Integer, Mono<InputStream>> inputSource;
+  private Function<Integer, Publisher<InputStream>> inputSource;
 
   public TracesStreamer(String zipkinUrl,
                         Mono<HttpClient> client) {
-    this.inputSource = zipkinServerStream(zipkinUrl, client);
+    this(zipkinServerStream(zipkinUrl, client));
   }
 
-  public TracesStreamer(Mono<InputStream> inputSource) {
-    this.inputSource = v -> inputSource;
+  public TracesStreamer(Publisher<InputStream> tracesSource) {
+    this(v -> tracesSource);
+  }
+
+  private TracesStreamer(Function<Integer, Publisher<InputStream>> inputSource) {
+    this.inputSource = inputSource;
   }
 
   public Flux<Trace> streamTraces(int lookbackSeconds) {
     return streamTraces(inputSource.apply(lookbackSeconds));
   }
 
-  Flux<Trace> streamTraces(Mono<InputStream> input) {
-    return input.map(is -> {
-      try {
-        return objectMapper.<Traces>readValue(
-            is,
-            new TypeReference<Traces>() {
-            });
-      } catch (IOException e) {
-        throw Exceptions.propagate(e);
-      }
-    }).flatMapIterable(Traces::getTracesList)
-        ;
+  Flux<Trace> streamTraces(Publisher<InputStream> input) {
+    return Flux.from(input)
+        .map(is -> {
+          try {
+            return objectMapper.readValue(
+                is,
+                new TypeReference<Trace>() {
+                });
+          } catch (IOException e) {
+            throw Exceptions.propagate(e);
+          }
+        });
   }
 
-  private static Function<Integer, Mono<InputStream>> zipkinServerStream(String zipkinUrl,
-                                                                         Mono<HttpClient> client) {
+  private static Function<Integer, Publisher<InputStream>> zipkinServerStream(String zipkinUrl,
+                                                                              Mono<HttpClient> client) {
     return lookbackSeconds -> client
-        .flatMap(c -> c
-            .get(zipkinQuery(zipkinUrl, lookbackSeconds))
-            .flatMap(resp ->
+        .flatMapMany(c -> c
+            .get(
+                zipkinQuery(zipkinUrl, lookbackSeconds),
+                req -> {
+                  req.context().addHandler(new JsonObjectDecoder(true));
+                  return Mono.empty();
+                })
+            .flatMapMany(resp ->
                 resp.receive()
-                    .aggregate()
                     .asInputStream()));
   }
 
   private static String zipkinQuery(String zipkinUrl, int lookbackSeconds) {
-    long lookbackMicros = TimeUnit.SECONDS.toMillis(lookbackSeconds);
-    return zipkinUrl + "?lookback=" + lookbackMicros + "&limit=100000";
+    long lookbackMillis = TimeUnit.SECONDS.toMillis(lookbackSeconds);
+    return zipkinUrl + "?lookback=" + lookbackMillis + "&limit=100000";
   }
 
   private ObjectMapper protoMapper() {
@@ -79,12 +89,12 @@ public class TracesStreamer {
     public void setupModule(SetupContext context) {
       super.setupModule(context);
       SimpleDeserializers deser = new SimpleDeserializers();
-      deser.addDeserializer(Traces.class, new TracersDeserializer());
+      deser.addDeserializer(Trace.class, new TracersDeserializer());
       context.addDeserializers(deser);
     }
   }
 
-  public static class TracersDeserializer extends StdDeserializer<Traces> {
+  public static class TracersDeserializer extends StdDeserializer<Trace> {
 
     public TracersDeserializer() {
       this(null);
@@ -95,26 +105,12 @@ public class TracesStreamer {
     }
 
     @Override
-    public Traces deserialize(JsonParser p,
-                              DeserializationContext ctxt) throws IOException {
-      p.nextToken();
-      Traces.Builder tracesBuilder = Traces.newBuilder();
-      while (p.currentToken() != JsonToken.END_ARRAY) {
-        tracesBuilder.addTraces(nextTrace(p, ctxt));
-      }
-      p.nextToken();
-      return tracesBuilder.build();
-    }
-
-    private Trace nextTrace(JsonParser p,
-                            DeserializationContext ctxt) throws IOException {
+    public Trace deserialize(JsonParser p,
+                             DeserializationContext ctx) throws IOException {
       Trace.Builder traceBuilder = Trace.newBuilder();
-      p.nextToken();
-      while (p.currentToken() != JsonToken.END_ARRAY) {
-        traceBuilder.addSpans(ctxt.readValue(p, Span.class));
-        p.nextToken();
+      while (p.nextToken() != JsonToken.END_ARRAY) {
+        traceBuilder.addSpans(ctx.readValue(p, Span.class));
       }
-      p.nextToken();
       return traceBuilder.build();
     }
   }

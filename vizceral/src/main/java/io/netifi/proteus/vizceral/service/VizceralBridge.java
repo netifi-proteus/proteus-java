@@ -34,6 +34,8 @@ public class VizceralBridge implements VizceralService {
     return Flux.defer(() -> {
       Flux<GroupedFlux<Edge, Edge>> groupedEdgesPerConnection =
           traceStreams.apply(tracesFor(message))
+              .onErrorResume(err ->
+                  Flux.error(new IllegalStateException("Error reading traces source stream", err)))
               .flatMap(this::edges)
               .groupBy(Function.identity());
 

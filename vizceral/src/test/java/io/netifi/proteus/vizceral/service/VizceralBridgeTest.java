@@ -1,33 +1,36 @@
 package io.netifi.proteus.vizceral.service;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.MappingJsonFactory;
 import io.netifi.proteus.tracing.TracesStreamer;
 import io.netifi.proteus.viz.*;
 import io.netty.buffer.Unpooled;
-import org.junit.Before;
 import org.junit.Test;
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static org.junit.Assert.*;
 
 public class VizceralBridgeTest {
 
-  private VizceralBridge vizceralBridge;
-
-  @Before
-  public void setUp() {
-    vizceralBridge = new VizceralBridge(
-        req -> new TracesStreamer(zipkinMockSource())
-            .streamTraces(req.getLookbackSeconds()));
-  }
-
   @Test
   public void vizSource() {
+
+    VizceralBridge vizceralBridge = new VizceralBridge(
+        req -> new TracesStreamer(zipkinSource())
+            .streamTraces(req.getLookbackSeconds()));
 
     VisualisationRequest vizRequest =
         VisualisationRequest
@@ -66,30 +69,87 @@ public class VizceralBridgeTest {
     List<Node> nodeList = root.getNodesList();
     assertNotNull(nodeList);
     assertEquals(2, nodeList.size());
-    boolean thereIsRequester = assertOneMatches(nodeList, (node) ->
-        "quickstart.clients-client1".equals(node.getName())
-            &&
-            node.getConnectionsList().isEmpty());
-    assertTrue(thereIsRequester);
 
-    boolean thereIsResponder = assertOneMatches(nodeList, (node) ->
-        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d".equals(node.getName())
+    Predicate<Node> hasRequester = node ->
+        "quickstart.clients-client1"
+            .equals(node.getName())
             &&
-            node.getConnectionsList().isEmpty());
-    assertTrue(thereIsResponder);
+            node.getConnectionsList().isEmpty();
+
+    Predicate<Node> hasResponder = node ->
+        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d"
+            .equals(node.getName())
+            &&
+            node.getConnectionsList().isEmpty();
+
+    assertTrue(allMatch(nodeList, hasRequester, hasResponder));
   }
 
-  private static <T> boolean assertOneMatches(Collection<T> it, Function<T, Boolean> assertion) {
-    for (T t : it) {
-      if (assertion.apply(t)) {
+  @Test
+  public void vizSourceError() {
+
+    VizceralBridge vizceralBridge = new VizceralBridge(
+        req -> new TracesStreamer(errorSource())
+            .streamTraces(req.getLookbackSeconds()));
+
+    VisualisationRequest vizRequest =
+        VisualisationRequest
+            .newBuilder()
+            .setDataLookbackSeconds(42)
+            .build();
+
+    StepVerifier.create(vizceralBridge
+        .visualisations(vizRequest, Unpooled.EMPTY_BUFFER))
+        .expectErrorMatches(err ->
+            err instanceof IllegalStateException &&
+                "Error reading traces source stream".equals(err.getMessage()) &&
+                err.getCause() instanceof RuntimeException)
+        .verify(Duration.ofSeconds(5));
+  }
+
+  private static <T> boolean oneMatches(Collection<T> col,
+                                        Predicate<T> assertion) {
+    for (T t : col) {
+      if (assertion.test(t)) {
         return true;
       }
     }
     return false;
   }
 
-  private Mono<InputStream> zipkinMockSource() {
-    return Mono.fromCallable(() ->
-        getClass().getClassLoader().getResourceAsStream("zipkin.json"));
+  @SafeVarargs
+  private static <T> boolean allMatch(Collection<T> col,
+                                      Predicate<T>... assertions) {
+    for (Predicate<T> assertion : assertions) {
+      if (!oneMatches(col, assertion)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private Flux<InputStream> errorSource() {
+    return Flux.error(new RuntimeException());
+  }
+
+  private Flux<InputStream> zipkinSource() {
+    return Flux.create(sink -> {
+      try (Reader reader = new InputStreamReader(
+          getClass().getClassLoader()
+              .getResourceAsStream("zipkin.json"),
+          "UTF-8") {
+      }) {
+        JsonFactory f = new MappingJsonFactory();
+        JsonParser jp = f.createParser(reader);
+        jp.nextToken();
+        while (jp.nextToken() != JsonToken.END_ARRAY) {
+          String trace = jp.readValueAsTree().toString();
+          sink.next(new ByteArrayInputStream(trace.getBytes(StandardCharsets.UTF_8)));
+        }
+        sink.complete();
+      } catch (Exception e) {
+        sink.error(e);
+      }
+    });
   }
 }
