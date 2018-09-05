@@ -2,7 +2,6 @@ package io.netifi.proteus.tracing;
 
 import io.netty.channel.ChannelOption;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -22,20 +21,25 @@ import java.util.concurrent.TimeUnit;
 public class ZipkinTracesStreamerTest {
 
   private static final int COUNT = 42;
-  private TracesStreamer tracesStreamer;
-
-  @Before
-  public void setUp() {
-    tracesStreamer = new TracesStreamer(zipkinSource(COUNT));
-  }
 
   @Test
   public void zipkinServerTracesStreaming() {
+    TracesStreamer tracesStreamer = new TracesStreamer(zipkinSource(COUNT));
     List<Trace> traces = tracesStreamer
         .streamTraces(42)
         .collectList()
         .block(Duration.ofSeconds(10));
     Assert.assertEquals(COUNT, traces.size());
+  }
+
+  @Test
+  public void emptyResponse() {
+    TracesStreamer tracesStreamer = new TracesStreamer(emptySource());
+    List<Trace> traces = tracesStreamer
+        .streamTraces(42)
+        .collectList()
+        .block(Duration.ofSeconds(10));
+    Assert.assertTrue(traces.isEmpty());
   }
 
   private Flux<InputStream> zipkinSource(int count) {
@@ -52,7 +56,15 @@ public class ZipkinTracesStreamerTest {
     }).flatMapMany(trace ->
         Flux.range(1, count)
             .map(v -> trace)
-            .map(t -> new ByteArrayInputStream(t.getBytes(StandardCharsets.UTF_8))));
+            .map(this::asInputStream));
+  }
+
+  private InputStream asInputStream(String s) {
+    return new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private Flux<InputStream> emptySource() {
+    return Flux.just(asInputStream(""));
   }
 
   @Ignore("requires local zipkin server")
@@ -60,7 +72,7 @@ public class ZipkinTracesStreamerTest {
   public void streamerIntegrationTest() {
     TracesStreamer streamer = new TracesStreamer("/api/v2/traces",
         client());
-    Flux<Trace> traces = streamer.streamTraces((int) TimeUnit.DAYS.toSeconds(10));
+    Flux<Trace> traces = streamer.streamTraces((int) TimeUnit.SECONDS.toSeconds(10));
     List<Trace> tracesList = traces.collectList().block();
     Assert.assertFalse(tracesList.isEmpty());
   }

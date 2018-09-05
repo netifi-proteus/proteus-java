@@ -45,6 +45,13 @@ public class TracesStreamer {
 
   Flux<Trace> streamTraces(Publisher<InputStream> input) {
     return Flux.from(input)
+        .filter(is -> {
+          try {
+            return is.available() > 0;
+          } catch (IOException e) {
+            throw Exceptions.propagate(e);
+          }
+        })
         .map(is -> {
           try {
             return objectMapper.readValue(

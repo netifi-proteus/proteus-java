@@ -53,7 +53,7 @@ public class VizceralBridgeTest {
         "quickstart.clients-client1",
         conn.getSource());
     assertEquals(
-        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d",
+        "quickstart.services.helloservices-helloservice-f0ada6e3-60fa-42b0-b6fd-e5e065bed989",
         conn.getTarget());
 
     Metrics metrics = conn.getMetrics();
@@ -77,7 +77,7 @@ public class VizceralBridgeTest {
             node.getConnectionsList().isEmpty();
 
     Predicate<Node> hasResponder = node ->
-        "quickstart.services.helloservices-helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d"
+        "quickstart.services.helloservices-helloservice-f0ada6e3-60fa-42b0-b6fd-e5e065bed989"
             .equals(node.getName())
             &&
             node.getConnectionsList().isEmpty();

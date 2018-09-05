@@ -1,59 +1,59 @@
 [
   {
-    "traceId": "89b9a85aadbeb401",
-    "id": "89b9a85aadbeb401",
+    "traceId": "f66bbb5affbc4681",
+    "parentId": "f66bbb5affbc4681",
+    "id": "c38820a7e5e4ac2a",
     "name": "sayhello",
-    "timestamp": 1535713609522116,
-    "duration": 5293,
-    "localEndpoint": {
-      "serviceName": "quickstart.clients",
-      "ipv4": "192.168.1.104"
-    },
-    "annotations": [
-      {
-        "timestamp": 1535713609522000,
-        "value": "onSubscribe"
-      },
-      {
-        "timestamp": 1535713609527000,
-        "value": "onComplete"
-      }
-    ],
-    "tags": {
-      "destination": "client1",
-      "group": "quickstart.clients",
-      "proteus.service": "io.netifi.proteus.quickstart.service.HelloService",
-      "proteus.type": "client",
-      "proteus.version": "0.8.9"
-    }
-  },
-  {
-    "traceId": "89b9a85aadbeb401",
-    "parentId": "89b9a85aadbeb401",
-    "id": "39233267124f42bf",
-    "name": "sayhello",
-    "timestamp": 1535713609525053,
-    "duration": 455,
+    "timestamp": 1536152552580050,
+    "duration": 365,
     "localEndpoint": {
       "serviceName": "quickstart.services.helloservices",
       "ipv4": "192.168.1.104"
     },
     "annotations": [
       {
-        "timestamp": 1535713609525000,
+        "timestamp": 1536152552580000,
         "value": "onSubscribe"
       },
       {
-        "timestamp": 1535713609526000,
+        "timestamp": 1536152552581000,
         "value": "onComplete"
       }
     ],
     "tags": {
-      "destination": "helloservice-3fa7b9dc-7afd-4767-a781-b7265a9fa02d",
+      "destination": "helloservice-f0ada6e3-60fa-42b0-b6fd-e5e065bed989",
       "group": "quickstart.services.helloservices",
-      "proteus.service": "io.netifi.proteus.quickstart.service.HelloService",
-      "proteus.type": "server",
-      "proteus.version": "0.8.9"
+      "rsocket.rpc.role": "server",
+      "rsocket.rpc.version": "",
+      "rsocket.service": "io.netifi.proteus.quickstart.service.HelloService"
+    }
+  },
+  {
+    "traceId": "f66bbb5affbc4681",
+    "id": "f66bbb5affbc4681",
+    "name": "sayhello",
+    "timestamp": 1536152552578061,
+    "duration": 5122,
+    "localEndpoint": {
+      "serviceName": "quickstart.clients",
+      "ipv4": "192.168.1.104"
+    },
+    "annotations": [
+      {
+        "timestamp": 1536152552578000,
+        "value": "onSubscribe"
+      },
+      {
+        "timestamp": 1536152552582000,
+        "value": "onComplete"
+      }
+    ],
+    "tags": {
+      "destination": "client1",
+      "group": "quickstart.clients",
+      "rsocket.rpc.role": "client",
+      "rsocket.rpc.version": "",
+      "rsocket.service": "io.netifi.proteus.quickstart.service.HelloService"
     }
   }
 ]
