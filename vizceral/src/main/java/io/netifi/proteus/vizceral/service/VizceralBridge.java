@@ -9,8 +9,6 @@ import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
-import zipkin2.proto3.Annotation;
-import zipkin2.proto3.Span;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,7 +32,10 @@ public class VizceralBridge implements VizceralService {
     return Flux.defer(() -> {
       Flux<GroupedFlux<Edge, Edge>> groupedEdgesPerConnection =
           traceStreams.apply(tracesFor(message))
-              .flatMap(this::edges)
+              .onErrorResume(err ->
+                  Flux.error(
+                      new IllegalStateException("Error reading traces source stream", err)))
+              .flatMap(this::buildEdges)
               .groupBy(Function.identity());
 
       Map<String, Vertex> vertices = new ConcurrentHashMap<>();
@@ -126,68 +127,8 @@ public class VizceralBridge implements VizceralService {
     return edge.getTargetGroup() + "-" + edge.getTargetDest();
   }
 
-  private Flux<Edge> edges(Trace trace) {
-    List<Span> spans = trace.getSpansList();
-    if (spans.size() <= 1) {
-      return Flux.empty();
-    } else {
-      return Flux.create(sink -> {
-        for (int i = 1; i < spans.size(); i++) {
-          Span target = spans.get(i);
-          Map<String, String> targetTags = target.getTags();
-          String side = targetTags.get("proteus.type");
-          if ("server".equals(side)) {
-            Edge.Kind kind = null;
-            long timeStamp = -1;
-            List<Annotation> annos = target.getAnnotationsList();
-            for (Annotation annotation : annos) {
-              String value = annotation.getValue();
-              if ("onComplete".equals(value)) {
-                kind = Edge.Kind.SUCCESS;
-                timeStamp = annotation.getTimestamp();
-                break;
-              } else if ("onError".equals(value)) {
-                kind = Edge.Kind.ERROR;
-                timeStamp = annotation.getTimestamp();
-                break;
-              }
-            }
-            if (kind != null) {
-              Span source = spans.get(i - 1);
-              Map<String, String> sourceTargs = source.getTags();
-              String sourceGroup = group(sourceTargs);
-              String sourceDest = dest(sourceTargs);
-              String svc = svc(sourceTargs);
-
-              String targetGroup = group(targetTags);
-              String targetDest = dest(targetTags);
-
-              Edge edge = new Edge(
-                  sourceGroup, sourceDest,
-                  targetGroup, targetDest,
-                  svc,
-                  kind,
-                  timeStamp);
-
-              sink.next(edge);
-            }
-          }
-        }
-        sink.complete();
-      });
-    }
-  }
-
-  private String group(Map<String, String> tags) {
-    return tags.get("group");
-  }
-
-  private String dest(Map<String, String> tags) {
-    return tags.get("destination");
-  }
-
-  private String svc(Map<String, String> tags) {
-    return tags.get("proteus.service");
+  private Flux<Edge> buildEdges(Trace trace) {
+    return Flux.create(new EdgesBuilder(trace.getSpansList()));
   }
 
   static class EdgeState {

@@ -10,6 +10,7 @@ dependencies {
     compile project (':client')
     compile project (':tracing-openzipkin')
     compile 'io.rsocket.rpc:protobuf-rpc:0.1.2'
+    testCompile 'com.fasterxml.jackson.core:jackson-core:2.9.6'
 }
 
 protobuf {
