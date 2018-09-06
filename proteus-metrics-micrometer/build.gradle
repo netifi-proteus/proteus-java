@@ -1,0 +1,40 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.5'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile project (':proteus-client')
+    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+    protobuf 'io.rsocket.rpc:rsocket-rpc-metrics-idl:0.2.0'
+    compile 'io.micrometer:micrometer-registry-atlas:1.0.3'
+}
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
+    plugins {
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            // Recompile protos when build.gradle has been changed, because
+            // it's possible the version of protoc has been changed.
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                rsocketRpc {}
+            }
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
