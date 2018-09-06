@@ -135,6 +135,7 @@ public class Proteus implements Closeable {
     private String destination = DefaultBuilderConfig.getDestination();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
+    private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
@@ -153,6 +154,11 @@ public class Proteus implements Closeable {
 
     public Builder poolSize(int poolSize) {
       this.poolSize = poolSize;
+      return this;
+    }
+
+    public Builder sslDisabled(boolean sslDisabled) {
+      this.sslDisabled = sslDisabled;
       return this;
     }
 
@@ -244,30 +250,40 @@ public class Proteus implements Closeable {
 
       if (clientTransportFactory == null) {
         logger.info("Client transport factory not provided; using TCP transport.");
-        try {
-          final SslProvider sslProvider;
-          if (OpenSsl.isAvailable()) {
-            logger.info("Native SSL provider is available; will use native provider.");
-            sslProvider = SslProvider.OPENSSL_REFCNT;
-          } else {
-            logger.info("Native SSL provider not available; will use JDK SSL provider.");
-            sslProvider = SslProvider.JDK;
-          }
-          final SslContext sslContext =
-              SslContextBuilder.forClient()
-                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                  .sslProvider(sslProvider)
-                  .build();
+        if (sslDisabled) {
           clientTransportFactory = address -> {
             TcpClient client =
                 TcpClient.create(
                     opts ->
-                        opts.connectAddress(() -> address)
-                            .sslContext(sslContext));
+                        opts.connectAddress(() -> address));
             return TcpClientTransport.create(client);
           };
-        } catch (Exception sslException) {
-          throw Exceptions.bubble(sslException);
+        } else {
+          try {
+            final SslProvider sslProvider;
+            if (OpenSsl.isAvailable()) {
+              logger.info("Native SSL provider is available; will use native provider.");
+              sslProvider = SslProvider.OPENSSL_REFCNT;
+            } else {
+              logger.info("Native SSL provider not available; will use JDK SSL provider.");
+              sslProvider = SslProvider.JDK;
+            }
+            final SslContext sslContext =
+                SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .sslProvider(sslProvider)
+                    .build();
+            clientTransportFactory = address -> {
+              TcpClient client =
+                  TcpClient.create(
+                      opts ->
+                          opts.connectAddress(() -> address)
+                              .sslContext(sslContext));
+              return TcpClientTransport.create(client);
+            };
+          } catch (Exception sslException) {
+            throw Exceptions.bubble(sslException);
+          }
         }
       }
 

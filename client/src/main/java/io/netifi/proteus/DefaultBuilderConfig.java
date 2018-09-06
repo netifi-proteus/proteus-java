@@ -16,13 +16,19 @@ import java.util.List;
  * default.
  */
 final class DefaultBuilderConfig {
+  private static final Config conf = ConfigFactory.load();
 
   private DefaultBuilderConfig() {}
+
+  static boolean isSslDisabled() {
+    return conf.hasPath("proteus.client.ssl.disabled")
+        && conf.getBoolean("proteus.client.ssl.disabled");
+  }
 
   static boolean getKeepAlive() {
     boolean keepalive = false;
     try {
-      keepalive = ConfigHolder.conf.getBoolean("proteus.client.keepalive.enable");
+      keepalive = conf.getBoolean("proteus.client.keepalive.enable");
     } catch (ConfigException.Missing m) {
 
     }
@@ -33,7 +39,7 @@ final class DefaultBuilderConfig {
   static long getTickPeriodSeconds() {
     long tickPeriodSeconds = 60;
     try {
-      tickPeriodSeconds = ConfigHolder.conf.getLong("proteus.client.keepalive.tickPeriodSeconds");
+      tickPeriodSeconds = conf.getLong("proteus.client.keepalive.tickPeriodSeconds");
     } catch (ConfigException.Missing m) {
 
     }
@@ -44,7 +50,7 @@ final class DefaultBuilderConfig {
   static long getAckTimeoutSeconds() {
     long ackTimeoutSeconds = 120;
     try {
-      ackTimeoutSeconds = ConfigHolder.conf.getLong("proteus.client.keepalive.ackTimeoutSeconds");
+      ackTimeoutSeconds = conf.getLong("proteus.client.keepalive.ackTimeoutSeconds");
     } catch (ConfigException.Missing m) {
 
     }
@@ -55,7 +61,7 @@ final class DefaultBuilderConfig {
   static int getMissedAcks() {
     int missedAcks = 3;
     try {
-      missedAcks = ConfigHolder.conf.getInt("proteus.client.keepalive.missedAcks");
+      missedAcks = conf.getInt("proteus.client.keepalive.missedAcks");
     } catch (ConfigException.Missing m) {
     }
 
@@ -65,7 +71,7 @@ final class DefaultBuilderConfig {
   static String getHost() {
     String host = null;
     try {
-      host = ConfigHolder.conf.getString("proteus.client.host");
+      host = conf.getString("proteus.client.host");
     } catch (ConfigException.Missing m) {
 
     }
@@ -76,7 +82,7 @@ final class DefaultBuilderConfig {
   static int getPort() {
     int port = 8001;
     try {
-      port = ConfigHolder.conf.getInt("proteus.client.port");
+      port = conf.getInt("proteus.client.port");
     } catch (ConfigException.Missing m) {
 
     }
@@ -87,7 +93,7 @@ final class DefaultBuilderConfig {
   static String getGroup() {
     String group = null;
     try {
-      group = ConfigHolder.conf.getString("proteus.client.group");
+      group = conf.getString("proteus.client.group");
     } catch (ConfigException.Missing m) {
 
     }
@@ -98,7 +104,7 @@ final class DefaultBuilderConfig {
   static String getDestination() {
     String destination = null;
     try {
-      destination = ConfigHolder.conf.getString("proteus.client.destination");
+      destination = conf.getString("proteus.client.destination");
     } catch (ConfigException.Missing m) {
 
     }
@@ -110,7 +116,7 @@ final class DefaultBuilderConfig {
     Long accountId = null;
 
     try {
-      accountId = ConfigHolder.conf.getLong("proteus.client.accountId");
+      accountId = conf.getLong("proteus.client.accountId");
     } catch (ConfigException.Missing m) {
 
     }
@@ -122,7 +128,7 @@ final class DefaultBuilderConfig {
     Long accessKey = null;
 
     try {
-      accessKey = ConfigHolder.conf.getLong("proteus.client.accessKey");
+      accessKey = conf.getLong("proteus.client.accessKey");
     } catch (ConfigException.Missing m) {
 
     }
@@ -134,7 +140,7 @@ final class DefaultBuilderConfig {
     String accessToken = null;
 
     try {
-      accessToken = ConfigHolder.conf.getString("proteus.client.accessToken");
+      accessToken = conf.getString("proteus.client.accessToken");
     } catch (ConfigException.Missing m) {
 
     }
@@ -145,7 +151,7 @@ final class DefaultBuilderConfig {
   static int getPoolSize() {
     int poolSize = Math.min(4, Runtime.getRuntime().availableProcessors());
     try {
-      poolSize = ConfigHolder.conf.getInt("proteus.client.poolSize");
+      poolSize = conf.getInt("proteus.client.poolSize");
     } catch (ConfigException.Missing m) {
     }
     return poolSize;
@@ -154,7 +160,7 @@ final class DefaultBuilderConfig {
   static int getMinHostsAtStartup() {
     int minHostsAtStartup = 3;
     try {
-      minHostsAtStartup = ConfigHolder.conf.getInt("proteus.client.minHostsAtStartup");
+      minHostsAtStartup = conf.getInt("proteus.client.minHostsAtStartup");
     } catch (ConfigException.Missing m) {
     }
     return minHostsAtStartup;
@@ -165,7 +171,7 @@ final class DefaultBuilderConfig {
 
     try {
       minHostsAtStartupTimeout =
-          ConfigHolder.conf.getLong("proteus.client.minHostsAtStartupTimeout");
+          conf.getLong("proteus.client.minHostsAtStartupTimeout");
     } catch (ConfigException.Missing m) {
     }
     return minHostsAtStartupTimeout;
@@ -175,7 +181,7 @@ final class DefaultBuilderConfig {
     String metricHandlerGroup = "netifi.metrics";
     try {
       metricHandlerGroup =
-          ConfigHolder.conf.getString("proteus.client.metrics.group");
+          conf.getString("proteus.client.metrics.group");
     } catch (ConfigException.Missing m) {
     }
     return metricHandlerGroup;
@@ -186,7 +192,7 @@ final class DefaultBuilderConfig {
   
     try {
       batchSize =
-          ConfigHolder.conf.getInt("proteus.client.metrics.metricBatchSize");
+          conf.getInt("proteus.client.metrics.metricBatchSize");
     } catch (ConfigException.Missing m) {
     }
     return batchSize;
@@ -197,7 +203,7 @@ final class DefaultBuilderConfig {
   
     try {
       exportFrequencySeconds =
-          ConfigHolder.conf.getLong("proteus.client.metrics.frequency");
+          conf.getLong("proteus.client.metrics.frequency");
     } catch (ConfigException.Missing m) {
     }
     return exportFrequencySeconds;
@@ -209,7 +215,7 @@ final class DefaultBuilderConfig {
     
     try {
       exportSystemMetrics =
-          ConfigHolder.conf.getBoolean("proteus.client.metrics.exportSystemMetrics");
+          conf.getBoolean("proteus.client.metrics.exportSystemMetrics");
     } catch (ConfigException.Missing m) {
     }
     return exportSystemMetrics;
@@ -219,7 +225,7 @@ final class DefaultBuilderConfig {
   static List<SocketAddress> getSeedAddress() {
     List<SocketAddress> seedAddresses = null;
     try {
-      String s = ConfigHolder.conf.getString("proteus.client.seedAddresses");
+      String s = conf.getString("proteus.client.seedAddresses");
       if (s != null) {
         seedAddresses = new ArrayList<>();
         String[] split = s.split(",");
@@ -243,13 +249,5 @@ final class DefaultBuilderConfig {
     }
 
     return seedAddresses;
-  }
-
-  private static class ConfigHolder {
-    private static final Config conf;
-
-    static {
-      conf = ConfigFactory.load();
-    }
   }
 }
