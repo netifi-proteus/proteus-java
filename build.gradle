@@ -10,7 +10,7 @@ buildscript {
 plugins {
     id 'com.gradle.build-scan' version '1.15.1' // declare before any other plugin
     id 'com.google.osdetector' version '1.4.0'
-    id 'com.github.sherter.google-java-format' version '0.6' apply false
+    id 'com.github.sherter.google-java-format' version '0.7.1' apply false
     id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
     id 'me.champeau.gradle.jmh' version '0.4.4' apply false
     id 'io.morethan.jmhreport' version '0.6.2.1' apply false
@@ -18,87 +18,87 @@ plugins {
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
-project(':auth') {
+project(':proteus-auth') {
     description = 'Netifi Proteus Authentication Utilities'
-    ext.artifactName = 'auth'
+    ext.artifactName = 'proteus-auth'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':access-key-info-idl') {
-    description = 'Netifi Access Key IDL'
-    ext.artifactName = 'access-key-info-idl'
+project(':proteus-access-key-info-idl') {
+    description = 'Netifi Proteus Access Key IDL'
+    ext.artifactName = 'proteus-access-key-info-idl'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':broker-info-idl') {
-    description = 'Netifi Broker Info IDL'
-    ext.artifactName = 'broker-info-idl'
+project(':proteus-broker-info-idl') {
+    description = 'Netifi Proteus Broker Info IDL'
+    ext.artifactName = 'proteus-broker-info-idl'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':broker-mgmt-idl') {
-    description = 'Netifi Broker Management IDL'
-    ext.artifactName = 'broker-mgmt-idl'
+project(':proteus-broker-mgmt-idl') {
+    description = 'Netifi Proteus Broker Management IDL'
+    ext.artifactName = 'proteus-broker-mgmt-idl'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':frames') {
+project(':proteus-frames') {
     description = 'Netifi Proteus Frames'
-    ext.artifactName = 'frames'
+    ext.artifactName = 'proteus-frames'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':client') {
+project(':proteus-client') {
     description = 'Netifi Proteus Client'
-    ext.artifactName = 'client'
+    ext.artifactName = 'proteus-client'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':metrics-micrometer') {
+project(':proteus-metrics-micrometer') {
     description = 'Netifi Proteus Micrometer Support'
-    ext.artifactName = 'metrics-micrometer'
+    ext.artifactName = 'proteus-metrics-micrometer'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':metrics-prometheus') {
+project(':proteus-metrics-prometheus') {
     description = 'Netifi Proteus Prometheus Integration'
-    ext.artifactName = 'metrics-prometheus'
+    ext.artifactName = 'proteus-metrics-prometheus'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':tracing-openzipkin') {
+project(':proteus-tracing-openzipkin') {
     description = 'Netifi Proteus Openzipkin Integration'
-    ext.artifactName = 'tracing-openzipkin'
+    ext.artifactName = 'proteus-tracing-openzipkin'
 
     apply from: file('../gradle/java.gradle')
 }
 
 
-project(':tracing-idl') {
+project(':proteus-tracing-idl') {
     description = 'Netifi Proteus Tracing IDL'
-    ext.artifactName = 'tracing-idl'
+    ext.artifactName = 'proteus-tracing-idl'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':viz-idl') {
+project(':proteus-vizceral-idl') {
     description = 'Netifi Proteus Vizceral IDL'
-    ext.artifactName = 'viz-idl'
+    ext.artifactName = 'proteus-vizceral-idl'
 
     apply from: file('../gradle/java.gradle')
 }
 
-project(':vizceral') {
+project(':proteus-vizceral') {
     description = 'Netifi Proteus Vizceral Service'
-    ext.artifactName = 'vizceral'
+    ext.artifactName = 'proteus-vizceral'
 
     apply from: file('../gradle/java.gradle')
 }

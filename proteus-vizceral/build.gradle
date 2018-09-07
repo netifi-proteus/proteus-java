@@ -1,0 +1,52 @@
+plugins {
+    id 'com.google.protobuf' version '0.8.5'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    protobuf project (':proteus-vizceral-idl')
+    compile project (':proteus-client')
+    compile project (':proteus-tracing-openzipkin')
+    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+    testCompile 'com.fasterxml.jackson.core:jackson-core:2.9.6'
+}
+
+protobuf {
+    generatedFilesBaseDir = "${projectDir}/src/generated"
+
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.6.0'
+    }
+    plugins {
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            // Recompile protos when build.gradle has been changed, because
+            // it's possible the version of protoc has been changed.
+            task.inputs.file "${rootProject.projectDir}/build.gradle"
+            task.plugins {
+                rsocketRpc {}
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file("src/main/proto")
+        sourceDirs += file("src/generated/main/java")
+        sourceDirs += file("src/generated/main/rsocketRpc")
+
+        generatedSourceDirs += file('src/generated/main/java')
+        generatedSourceDirs += file('src/generated/main/rsocketRpc')
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
