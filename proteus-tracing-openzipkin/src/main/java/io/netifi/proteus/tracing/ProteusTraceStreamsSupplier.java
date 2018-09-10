@@ -1,7 +1,6 @@
 package io.netifi.proteus.tracing;
 
 import io.netifi.proteus.Proteus;
-import io.rsocket.RSocket;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -11,16 +10,11 @@ public class ProteusTraceStreamsSupplier implements Function<TracesRequest, Flux
 
   private final ProteusTracingServiceClient client;
 
-  public ProteusTraceStreamsSupplier(Proteus proteus, Optional<String> tracingGroup) {
-    this(proteus::group, tracingGroup);
-  }
-
   @Inject
-  public ProteusTraceStreamsSupplier(
-      Function<String, RSocket> rSocketFactory, Optional<String> tracingGroup) {
+  public ProteusTraceStreamsSupplier(Proteus proteus, Optional<String> tracingGroup) {
     client =
         new ProteusTracingServiceClient(
-            rSocketFactory.apply(tracingGroup.orElse("com.netifi.proteus.tracing")));
+            proteus.group(tracingGroup.orElse("com.netifi.proteus.tracing")));
   }
 
   @Override
