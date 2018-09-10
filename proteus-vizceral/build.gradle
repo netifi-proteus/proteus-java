@@ -9,7 +9,7 @@ dependencies {
     protobuf project (':proteus-vizceral-idl')
     compile project (':proteus-client')
     compile project (':proteus-tracing-openzipkin')
-    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.1'
+    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
     testCompile 'com.fasterxml.jackson.core:jackson-core:2.9.6'
 }
 
@@ -21,7 +21,7 @@ protobuf {
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.1'
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
         }
     }
     generateProtoTasks {

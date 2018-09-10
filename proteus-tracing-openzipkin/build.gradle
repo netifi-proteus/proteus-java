@@ -6,11 +6,11 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.1'
+    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
     protobuf project (':proteus-tracing-idl')
     compile project (':proteus-client')
 
-    compile 'io.projectreactor.addons:reactor-adapter:3.1.7.RELEASE'
+    compile 'io.projectreactor.addons:reactor-adapter:3.1.6.RELEASE'
     compile 'com.google.protobuf:protobuf-java-util:3.6.0'
 
     compile 'io.opentracing:opentracing-api:0.31.0'
@@ -31,7 +31,7 @@ protobuf {
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.1'
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
         }
     }
     generateProtoTasks {
