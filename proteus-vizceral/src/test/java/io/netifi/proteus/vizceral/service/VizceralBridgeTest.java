@@ -6,8 +6,12 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
+import com.google.protobuf.Empty;
 import io.netifi.proteus.tracing.TracesStreamer;
-import io.netifi.proteus.vizceral.*;
+import io.netifi.proteus.vizceral.Connection;
+import io.netifi.proteus.vizceral.Metrics;
+import io.netifi.proteus.vizceral.Node;
+import io.netifi.proteus.vizceral.Notice;
 import io.netty.buffer.Unpooled;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -18,6 +22,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
+import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -25,21 +30,34 @@ import reactor.test.StepVerifier;
 public class VizceralBridgeTest {
 
   @Test
-  public void vizSource() {
+  public void repeat() {
+
+    Flux<Node> vizceralBridge =
+        new VizceralBridge(
+                req -> new TracesStreamer(zipkinSource()).streamTraces(req.getLookbackSeconds()),
+                1,
+                42)
+            .visualisations(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER);
+    List<Node> nodes = vizceralBridge.take(Duration.ofSeconds(5)).collectList().block();
+    Assert.assertTrue(nodes.size() > 1);
+  }
+
+  @Test
+  public void visualizations() {
 
     VizceralBridge vizceralBridge =
         new VizceralBridge(
-            req -> new TracesStreamer(zipkinSource()).streamTraces(req.getLookbackSeconds()));
-
-    VisualisationRequest vizRequest =
-        VisualisationRequest.newBuilder().setDataLookbackSeconds(42).build();
+            req -> new TracesStreamer(zipkinSource()).streamTraces(req.getLookbackSeconds()),
+            1,
+            42);
 
     Node root =
         vizceralBridge
-            .visualisations(vizRequest, Unpooled.EMPTY_BUFFER)
+            .visualisations(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER)
             .blockFirst(Duration.ofSeconds(5));
 
     assertNotNull(root);
+    assertEquals("quickstart.clients-client1", root.getEntryNode());
 
     List<Connection> connectionsList = root.getConnectionsList();
     assertNotNull(connectionsList);
@@ -80,22 +98,18 @@ public class VizceralBridgeTest {
   }
 
   @Test
-  public void vizSourceError() {
+  public void visualizationsErrorIsRetried() {
 
     VizceralBridge vizceralBridge =
         new VizceralBridge(
-            req -> new TracesStreamer(errorSource()).streamTraces(req.getLookbackSeconds()));
+            req -> new TracesStreamer(errorSource()).streamTraces(req.getLookbackSeconds()), 1, 42);
 
-    VisualisationRequest vizRequest =
-        VisualisationRequest.newBuilder().setDataLookbackSeconds(42).build();
-
-    StepVerifier.create(vizceralBridge.visualisations(vizRequest, Unpooled.EMPTY_BUFFER))
-        .expectErrorMatches(
-            err ->
-                err instanceof IllegalStateException
-                    && "Error reading traces source stream".equals(err.getMessage())
-                    && err.getCause() instanceof RuntimeException)
-        .verify(Duration.ofSeconds(5));
+    StepVerifier.create(
+            vizceralBridge
+                .visualisations(Empty.getDefaultInstance(), Unpooled.EMPTY_BUFFER)
+                .take(Duration.ofSeconds(5)))
+        .expectComplete()
+        .verify();
   }
 
   private static <T> boolean oneMatches(Collection<T> col, Predicate<T> assertion) {

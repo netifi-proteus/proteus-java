@@ -6,112 +6,138 @@ import io.netifi.proteus.tracing.Trace;
 import io.netifi.proteus.tracing.TracesRequest;
 import io.netifi.proteus.vizceral.*;
 import io.netty.buffer.ByteBuf;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
 
 public class VizceralBridge implements VizceralService {
+  private static final Logger logger = LoggerFactory.getLogger(VizceralBridge.class);
 
   private final Function<TracesRequest, Flux<Trace>> traceStreams;
+  private int repeatIntervalSeconds;
+  private int tracesLookbackSeconds;
 
-  public VizceralBridge(Proteus proteus, Optional<String> tracingGroup) {
-    this(new ProteusTraceStreamsSupplier(proteus, tracingGroup));
+  public VizceralBridge(
+      Proteus proteus,
+      Optional<String> tracingGroup,
+      int intervalSeconds,
+      int tracesLookbackSeconds) {
+    this(
+        new ProteusTraceStreamsSupplier(proteus, tracingGroup),
+        intervalSeconds,
+        tracesLookbackSeconds);
   }
 
-  VizceralBridge(Function<TracesRequest, Flux<Trace>> traceStreams) {
+  public VizceralBridge(Proteus proteus, Optional<String> tracingGroup) {
+    this(proteus, tracingGroup, 5, 10);
+  }
+
+  public VizceralBridge(Proteus proteus) {
+    this(proteus, Optional.empty(), 5, 10);
+  }
+
+  VizceralBridge(
+      Function<TracesRequest, Flux<Trace>> traceStreams,
+      int repeatIntervalSeconds,
+      int tracesLookbackSeconds) {
     this.traceStreams = traceStreams;
+    this.repeatIntervalSeconds = repeatIntervalSeconds;
+    this.tracesLookbackSeconds = tracesLookbackSeconds;
   }
 
   @Override
-  public Flux<Node> visualisations(VisualisationRequest message, ByteBuf metadata) {
+  public Flux<Node> visualisations(com.google.protobuf.Empty empty, ByteBuf metadata) {
+
     return Flux.defer(
-        () -> {
-          Flux<GroupedFlux<Edge, Edge>> groupedEdgesPerConnection =
-              traceStreams
-                  .apply(tracesFor(message))
-                  .onErrorResume(
-                      err ->
-                          Flux.error(
-                              new IllegalStateException("Error reading traces source stream", err)))
-                  .flatMap(this::buildEdges)
-                  .groupBy(Function.identity());
+            () -> {
+              Flux<Edge> groupedEdgesPerConnection =
+                  traceStreams
+                      .apply(traceRequest(tracesLookbackSeconds))
+                      .onErrorResume(
+                          err ->
+                              Flux.error(
+                                  new IllegalStateException(
+                                      "Error reading traces source stream", err)))
+                      .flatMap(this::buildEdges);
+              // .groupBy(Function.identity());
 
-          Map<String, Vertex> vertices = new ConcurrentHashMap<>();
-          Flux<Connection> connections =
-              groupedEdgesPerConnection.flatMap(
-                  edges -> {
-                    Edge edge = edges.key();
+              Map<String, Vertex> vertices = new ConcurrentHashMap<>();
+              Map<Edge, EdgeState> edgeStates = new ConcurrentHashMap<>();
+              RootNodeFinder rootNodeFinder = new RootNodeFinder();
 
-                    String sourceNodeName = vizceralSourceName(edge);
-                    String targetNodeName = vizceralTargetName(edge);
+              Flux<Connection> connections =
+                  groupedEdgesPerConnection.map(
+                      edge -> {
+                        String sourceNodeName = vizceralSourceName(edge);
+                        String targetNodeName = vizceralTargetName(edge);
 
-                    Mono<EdgeState> reducedEdge =
-                        edges
-                            .scan(
-                                new EdgeState(),
-                                (s, e) -> {
-                                  if (edge.kind == Edge.Kind.SUCCESS) {
-                                    s.addSuccess();
-                                  } else {
-                                    s.addError();
-                                  }
-                                  s.addService(e.getSvc());
-                                  s.updateTimeStamp(e.getTimeStamp());
-                                  return s;
-                                })
-                            .last();
+                        rootNodeFinder.addEdge(sourceNodeName, targetNodeName);
 
-                    Mono<Connection> connection =
-                        reducedEdge
-                            .doOnSuccess(
-                                s -> {
-                                  long timeStamp = s.getTimestamp();
+                        EdgeState s = edgeStates.computeIfAbsent(edge, e -> new EdgeState());
 
-                                  Vertex source = vertexByName(sourceNodeName, vertices);
-                                  source.updatedAt(timeStamp);
+                        if (edge.getKind() == Edge.Kind.SUCCESS) {
+                          s.addSuccess();
+                        } else {
+                          s.addError();
+                        }
+                        s.addService(edge.getSvc());
+                        s.updateTimeStamp(edge.getTimeStamp());
+                        long timeStamp = s.getTimestamp();
 
-                                  Vertex target = vertexByName(targetNodeName, vertices);
-                                  target.updatedAt(timeStamp);
-                                  target.addMaxVolume(s.getTotal());
-                                })
-                            .map(
-                                s ->
-                                    Connection.newBuilder()
-                                        .setSource(sourceNodeName)
-                                        .setTarget(targetNodeName)
-                                        .setMetrics(s.metrics())
-                                        .addAllNotices(s.notices())
-                                        .build());
+                        Vertex source = vertexByName(sourceNodeName, vertices);
+                        source.updatedAt(timeStamp);
 
-                    return connection;
-                  });
+                        Vertex target = vertexByName(targetNodeName, vertices);
+                        target.updatedAt(timeStamp);
+                        target.addMaxVolume(s.getTotal());
 
-          return connections
-              .collectList()
-              .map(
-                  conns -> {
+                        return Connection.newBuilder()
+                            .setSource(sourceNodeName)
+                            .setTarget(targetNodeName)
+                            .setMetrics(s.metrics())
+                            .addAllNotices(s.notices())
+                            .setUpdated(s.getTimestamp())
+                            .build();
+                      });
+
+              return connections.flatMap(
+                  conn -> {
                     List<Node> nodesCollection =
                         vertices.values().stream().map(Vertex::toNode).collect(Collectors.toList());
 
-                    String rootNodeName = message.getRootNode();
+                    String rootNodeName = rootNodeFinder.getRootNode();
 
-                    return Node.newBuilder()
-                        .setRenderer("region")
-                        .setName(rootNodeName)
-                        .setEntryNode(rootNodeName)
-                        .addAllConnections(conns)
-                        .addAllNodes(nodesCollection)
-                        .build();
+                    Node root =
+                        vertices
+                            .get(rootNodeName)
+                            .toNodeBuilder()
+                            .setMaxVolume(0)
+                            .setEntryNode(rootNodeName)
+                            .setRenderer("region")
+                            .addConnections(conn)
+                            .addAllNodes(nodesCollection)
+                            .build();
+
+                    return Mono.just(root);
                   });
-        });
+            })
+        .onErrorResume(new BackOff())
+        .retry()
+        .repeatWhen(
+            flux -> flux.flatMap(v -> Mono.delay(Duration.ofSeconds(repeatIntervalSeconds))));
   }
 
-  private TracesRequest tracesFor(VisualisationRequest message) {
-    return TracesRequest.newBuilder().setLookbackSeconds(message.getDataLookbackSeconds()).build();
+  private static TracesRequest traceRequest(int tracesLookbackSeconds) {
+    return TracesRequest.newBuilder().setLookbackSeconds(tracesLookbackSeconds).build();
   }
 
   private Vertex vertexByName(String name, Map<String, Vertex> map) {
@@ -132,6 +158,25 @@ public class VizceralBridge implements VizceralService {
 
   private Flux<Edge> buildEdges(Trace trace) {
     return Flux.create(new EdgesBuilder(trace.getSpansList()));
+  }
+
+  static class RootNodeFinder {
+    private final Set<String> responders = new HashSet<>();
+    private final Set<String> requesters = new HashSet<>();
+
+    public void addEdge(String source, String target) {
+      responders.add(target);
+      requesters.remove(target);
+      if (!responders.contains(source)) {
+        requesters.add(source);
+      }
+    }
+
+    public String getRootNode() {
+      Set<String> target =
+          !requesters.isEmpty() ? requesters : !responders.isEmpty() ? responders : null;
+      return Optional.ofNullable(target).map(v -> v.iterator().next()).orElse("");
+    }
   }
 
   static class EdgeState {
@@ -183,7 +228,7 @@ public class VizceralBridge implements VizceralService {
     public Collection<Notice> notices() {
       return services
           .stream()
-          .map(s -> Notice.newBuilder().setTitle(s).build())
+          .map(s -> Notice.newBuilder().setTitle(s).setSeverity(1).build())
           .collect(Collectors.toList());
     }
   }
@@ -208,13 +253,16 @@ public class VizceralBridge implements VizceralService {
     }
 
     public Node toNode() {
+      return toNodeBuilder().build();
+    }
+
+    public Node.Builder toNodeBuilder() {
       return Node.newBuilder()
           .setName(name)
           .setDisplayName(name)
           .setClass_("normal")
           .setMaxVolume(maxVolume)
-          .setUpdated(updated)
-          .build();
+          .setUpdated(updated);
     }
   }
 
@@ -291,6 +339,22 @@ public class VizceralBridge implements VizceralService {
     @Override
     public int hashCode() {
       return Objects.hash(sourceGroup, sourceDest, targetGroup, targetDest);
+    }
+  }
+
+  private static class BackOff implements Function<Throwable, Publisher<? extends Node>> {
+    AtomicLong lastRetry = new AtomicLong(System.currentTimeMillis());
+    AtomicInteger count = new AtomicInteger();
+
+    @Override
+    public Publisher<? extends Node> apply(Throwable throwable) {
+      if (System.currentTimeMillis() - lastRetry.getAndSet(System.currentTimeMillis()) > 30_000) {
+        count.set(0);
+      }
+
+      int i = Math.min(30, count.incrementAndGet());
+      logger.error("error getting vizceral data", throwable);
+      return Mono.delay(Duration.ofSeconds(i)).then(Mono.error(throwable));
     }
   }
 }

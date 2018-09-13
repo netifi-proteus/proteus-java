@@ -7,6 +7,7 @@ targetCompatibility = 1.8
 
 dependencies {
     protobuf project (':proteus-vizceral-idl')
+    protobuf project (':proteus-tracing-idl')
     compile project (':proteus-client')
     compile project (':proteus-tracing-openzipkin')
     compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
