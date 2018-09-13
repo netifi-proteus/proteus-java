@@ -17,7 +17,6 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
 
 public class VizceralBridge implements VizceralService {
@@ -60,7 +59,7 @@ public class VizceralBridge implements VizceralService {
 
     return Flux.defer(
             () -> {
-              Flux<GroupedFlux<Edge, Edge>> groupedEdgesPerConnection =
+              Flux<Edge> groupedEdgesPerConnection =
                   traceStreams
                       .apply(traceRequest(tracesLookbackSeconds))
                       .onErrorResume(
@@ -68,91 +67,68 @@ public class VizceralBridge implements VizceralService {
                               Flux.error(
                                   new IllegalStateException(
                                       "Error reading traces source stream", err)))
-                      .flatMap(this::buildEdges)
-                      .groupBy(Function.identity());
+                      .flatMap(this::buildEdges);
+              // .groupBy(Function.identity());
 
               Map<String, Vertex> vertices = new ConcurrentHashMap<>();
+              Map<Edge, EdgeState> edgeStates = new ConcurrentHashMap<>();
               RootNodeFinder rootNodeFinder = new RootNodeFinder();
 
               Flux<Connection> connections =
-                  groupedEdgesPerConnection.flatMap(
-                      edges -> {
-                        Edge edge = edges.key();
-
+                  groupedEdgesPerConnection.map(
+                      edge -> {
                         String sourceNodeName = vizceralSourceName(edge);
                         String targetNodeName = vizceralTargetName(edge);
 
                         rootNodeFinder.addEdge(sourceNodeName, targetNodeName);
 
-                        Mono<EdgeState> reducedEdge =
-                            edges
-                                .scan(
-                                    new EdgeState(),
-                                    (s, e) -> {
-                                      if (edge.kind == Edge.Kind.SUCCESS) {
-                                        s.addSuccess();
-                                      } else {
-                                        s.addError();
-                                      }
-                                      s.addService(e.getSvc());
-                                      s.updateTimeStamp(e.getTimeStamp());
-                                      return s;
-                                    })
-                                .last();
+                        EdgeState s = edgeStates.computeIfAbsent(edge, e -> new EdgeState());
 
-                        Mono<Connection> connection =
-                            reducedEdge
-                                .doOnSuccess(
-                                    s -> {
-                                      long timeStamp = s.getTimestamp();
+                        if (edge.getKind() == Edge.Kind.SUCCESS) {
+                          s.addSuccess();
+                        } else {
+                          s.addError();
+                        }
+                        s.addService(edge.getSvc());
+                        s.updateTimeStamp(edge.getTimeStamp());
+                        long timeStamp = s.getTimestamp();
 
-                                      Vertex source = vertexByName(sourceNodeName, vertices);
-                                      source.updatedAt(timeStamp);
+                        Vertex source = vertexByName(sourceNodeName, vertices);
+                        source.updatedAt(timeStamp);
 
-                                      Vertex target = vertexByName(targetNodeName, vertices);
-                                      target.updatedAt(timeStamp);
-                                      target.addMaxVolume(s.getTotal());
-                                    })
-                                .map(
-                                    s ->
-                                        Connection.newBuilder()
-                                            .setSource(sourceNodeName)
-                                            .setTarget(targetNodeName)
-                                            .setMetrics(s.metrics())
-                                            .addAllNotices(s.notices())
-                                            .setUpdated(s.getTimestamp())
-                                            .build());
+                        Vertex target = vertexByName(targetNodeName, vertices);
+                        target.updatedAt(timeStamp);
+                        target.addMaxVolume(s.getTotal());
 
-                        return connection;
+                        return Connection.newBuilder()
+                            .setSource(sourceNodeName)
+                            .setTarget(targetNodeName)
+                            .setMetrics(s.metrics())
+                            .addAllNotices(s.notices())
+                            .setUpdated(s.getTimestamp())
+                            .build();
                       });
 
-              return connections
-                  .collectList()
-                  .filter(l -> !l.isEmpty())
-                  .flatMap(
-                      conns -> {
-                        List<Node> nodesCollection =
-                            vertices
-                                .values()
-                                .stream()
-                                .map(Vertex::toNode)
-                                .collect(Collectors.toList());
+              return connections.flatMap(
+                  conn -> {
+                    List<Node> nodesCollection =
+                        vertices.values().stream().map(Vertex::toNode).collect(Collectors.toList());
 
-                        String rootNodeName = rootNodeFinder.getRootNode();
+                    String rootNodeName = rootNodeFinder.getRootNode();
 
-                        Node root =
-                            vertices
-                                .get(rootNodeName)
-                                .toNodeBuilder()
-                                .setMaxVolume(0)
-                                .setEntryNode(rootNodeName)
-                                .setRenderer("region")
-                                .addAllConnections(conns)
-                                .addAllNodes(nodesCollection)
-                                .build();
+                    Node root =
+                        vertices
+                            .get(rootNodeName)
+                            .toNodeBuilder()
+                            .setMaxVolume(0)
+                            .setEntryNode(rootNodeName)
+                            .setRenderer("region")
+                            .addConnections(conn)
+                            .addAllNodes(nodesCollection)
+                            .build();
 
-                        return Mono.just(root);
-                      });
+                    return Mono.just(root);
+                  });
             })
         .onErrorResume(new BackOff())
         .retry()
