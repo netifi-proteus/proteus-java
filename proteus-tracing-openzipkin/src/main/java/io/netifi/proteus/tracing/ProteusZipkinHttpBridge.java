@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.ReplayProcessor;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.resources.PoolResources;
 import zipkin2.proto3.Span;
@@ -22,30 +21,24 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private static final Logger logger = LoggerFactory.getLogger(ProteusZipkinHttpBridge.class);
 
   private static final String DEFAULT_ZIPKIN_SPANS_URL = "/api/v2/spans";
-  private static final Duration DEFAULT_TRACE_RETENTION = Duration.ofSeconds(60);
+  private static final String DEFAULT_ZIPKIN_TRACES_URL = "/api/v2/traces";
 
   private final String host;
   private final int port;
   private final String zipkinSpansUrl;
-  private final Duration retentionPeriod;
-  private final ReplayProcessor<Span> spansProcessor;
   private HttpClient httpClient;
-
-  public ProteusZipkinHttpBridge(String host, int port, String zipkinSpansUrl) {
-    this(host, port, zipkinSpansUrl, DEFAULT_TRACE_RETENTION);
-  }
-
-  public ProteusZipkinHttpBridge(String host, int port) {
-    this(host, port, DEFAULT_ZIPKIN_SPANS_URL, DEFAULT_TRACE_RETENTION);
-  }
+  private TracesStreamer tracesStreamer;
 
   public ProteusZipkinHttpBridge(
-      String host, int port, String zipkinSpansUrl, Duration retentionPeriod) {
+      String host, int port, String zipkinSpansUrl, String zipkinTracesUrl) {
     this.host = host;
     this.port = port;
     this.zipkinSpansUrl = zipkinSpansUrl;
-    this.retentionPeriod = retentionPeriod;
-    this.spansProcessor = ReplayProcessor.createTimeout(this.retentionPeriod);
+    this.tracesStreamer = new TracesStreamer(zipkinTracesUrl, Mono.fromCallable(this::getClient));
+  }
+
+  public ProteusZipkinHttpBridge(String host, int port) {
+    this(host, port, DEFAULT_ZIPKIN_SPANS_URL, DEFAULT_ZIPKIN_TRACES_URL);
   }
 
   public static void main(String... args) {
@@ -58,8 +51,8 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     int zipkinPort = Integer.getInteger("netifi.proteus.zipkinPort", 9411);
     String zipkinSpansUrl =
         System.getProperty("netifi.proteus.zipkinSpansUrl", DEFAULT_ZIPKIN_SPANS_URL);
-    Duration traceRetentionPeriod =
-        Duration.ofSeconds(Integer.getInteger("netifi.proteus.traceRetentionPeriod", 60));
+    String zipkinTracesUrl =
+        System.getProperty("netifi.proteus.zipkinTracesUrl", DEFAULT_ZIPKIN_TRACES_URL);
     long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
     String accessToken =
         System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
@@ -70,7 +63,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     logger.info("zipkin host - {}", zipkinHost);
     logger.info("zipkin port - {}", zipkinPort);
     logger.info("zipkin spans url - {}", zipkinSpansUrl);
-    logger.info("traces retention period - {}", traceRetentionPeriod);
+    logger.info("zipkin traces url - {}", zipkinTracesUrl);
     logger.info("access key - {}", accessKey);
 
     Proteus proteus =
@@ -85,8 +78,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
 
     proteus.addService(
         new ProteusTracingServiceServer(
-            new ProteusZipkinHttpBridge(
-                zipkinHost, zipkinPort, zipkinSpansUrl, traceRetentionPeriod),
+            new ProteusZipkinHttpBridge(zipkinHost, zipkinPort, zipkinSpansUrl, zipkinTracesUrl),
             Optional.empty(),
             Optional.empty()));
 
@@ -120,9 +112,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     return Flux.from(messages)
         .map(
             span -> {
-              // Retain span for replay
-              spansProcessor.onNext(span);
-
               try {
                 String json = JsonFormat.printer().print(span);
                 if (logger.isTraceEnabled()) {
@@ -162,18 +151,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
 
   @Override
   public Flux<Trace> streamTraces(TracesRequest message, ByteBuf metadata) {
-    Duration skipDuration = retentionPeriod.minus(Duration.ofSeconds(message.getLookbackSeconds()));
-    // This isn't working for the moment - WIP
-    // if (skipDuration.isNegative()) {
-    //    } else {
-    //      traces = spansProcessor.skip(skipDuration);
-    //    }
-    return spansProcessor
-        .filter(p -> p != null)
-        .window(Duration.ofSeconds(1))
-        .flatMap(spans -> spans.collectList())
-        .filter(spans -> spans.size() > 0)
-        .map(spans -> Trace.newBuilder().addAllSpans(spans).build())
-        .onBackpressureDrop();
+    return tracesStreamer.streamTraces(message.getLookbackSeconds());
   }
 }

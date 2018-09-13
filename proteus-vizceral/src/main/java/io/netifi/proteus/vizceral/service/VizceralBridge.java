@@ -1,11 +1,11 @@
 package io.netifi.proteus.vizceral.service;
 
+import io.netifi.proteus.Proteus;
 import io.netifi.proteus.tracing.ProteusTraceStreamsSupplier;
 import io.netifi.proteus.tracing.Trace;
 import io.netifi.proteus.tracing.TracesRequest;
 import io.netifi.proteus.vizceral.*;
 import io.netty.buffer.ByteBuf;
-import io.rsocket.RSocket;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,22 +27,22 @@ public class VizceralBridge implements VizceralService {
   private int tracesLookbackSeconds;
 
   public VizceralBridge(
-      Function<String, RSocket> rSocketFactory,
+      Proteus proteus,
       Optional<String> tracingGroup,
       int intervalSeconds,
       int tracesLookbackSeconds) {
     this(
-        new ProteusTraceStreamsSupplier(rSocketFactory, tracingGroup),
+        new ProteusTraceStreamsSupplier(proteus, tracingGroup),
         intervalSeconds,
         tracesLookbackSeconds);
   }
 
-  public VizceralBridge(Function<String, RSocket> rSocketFactory, Optional<String> tracingGroup) {
-    this(rSocketFactory, tracingGroup, 5, 10);
+  public VizceralBridge(Proteus proteus, Optional<String> tracingGroup) {
+    this(proteus, tracingGroup, 5, 10);
   }
 
-  public VizceralBridge(Function<String, RSocket> rSocketFactory) {
-    this(rSocketFactory, Optional.empty(), 5, 10);
+  public VizceralBridge(Proteus proteus) {
+    this(proteus, Optional.empty(), 5, 10);
   }
 
   VizceralBridge(
