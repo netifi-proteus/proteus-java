@@ -87,6 +87,7 @@ public class Proteus implements Closeable {
   @Override
   public void dispose() {
     requestHandlingRSocket.dispose();
+    brokerService.dispose();
     onClose.onComplete();
   }
 

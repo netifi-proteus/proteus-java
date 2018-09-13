@@ -36,7 +36,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
-public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
+public class DefaultProteusBrokerService implements ProteusBrokerService {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
   private static final double DEFAULT_EXP_FACTOR = 4.0;
   private static final double DEFAULT_LOWER_QUANTILE = 0.2;
@@ -162,6 +162,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         .doFinally(
             s -> {
               disposable.dispose();
+              synchronized (this) {
+                members.forEach(WeightedReconnectingRSocket::dispose);
+              }
             })
         .subscribe();
   }
@@ -363,7 +366,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         _m = members;
       }
       int size = _m.size();
-      if (size == 1) {
+      if (isDisposed() || size == 1) {
         rSocket = _m.get(0);
       } else {
         WeightedReconnectingRSocket rsc1 = null;

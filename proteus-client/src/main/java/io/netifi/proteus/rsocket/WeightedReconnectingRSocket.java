@@ -10,6 +10,8 @@ import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.rpc.stats.Median;
 import io.rsocket.rpc.stats.Quantile;
 import io.rsocket.util.Clock;
+
+import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,6 +22,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.Exceptions;
 import reactor.core.publisher.*;
 
 /**
@@ -215,6 +218,10 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   }
 
   void connect() {
+    if (isDisposed()) {
+      return;
+    }
+
     synchronized (this) {
       if (connecting) {
         return;
@@ -239,13 +246,12 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                   long start = System.nanoTime();
                   return getClientFactory(destination)
                       .errorConsumer(
-                          throwable ->
-                              logger.error(
-                                  "proteus client received unhandled exception for connection with address "
-                                      + weighedClientTransportSupplier
-                                          .getSocketAddress()
-                                          .toString(),
-                                  throwable))
+                          throwable -> logger.error(
+                              "proteus client received unhandled exception for connection with address "
+                                  + weighedClientTransportSupplier
+                                  .getSocketAddress()
+                                  .toString(),
+                              throwable))
                       .acceptor(
                           r ->
                               requestHandlingRSocket == null
