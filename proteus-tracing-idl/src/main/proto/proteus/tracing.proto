@@ -26,6 +26,4 @@ message TracesRequest {
 service ProteusTracingService {
 
     rpc StreamSpans (stream zipkin.proto3.Span) returns (Ack) {}
-
-    rpc StreamTraces (TracesRequest) returns (stream Trace) {}
 }

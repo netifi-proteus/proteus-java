@@ -27,18 +27,15 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private final int port;
   private final String zipkinSpansUrl;
   private HttpClient httpClient;
-  private TracesStreamer tracesStreamer;
 
-  public ProteusZipkinHttpBridge(
-      String host, int port, String zipkinSpansUrl, String zipkinTracesUrl) {
+  public ProteusZipkinHttpBridge(String host, int port, String zipkinSpansUrl) {
     this.host = host;
     this.port = port;
     this.zipkinSpansUrl = zipkinSpansUrl;
-    this.tracesStreamer = new TracesStreamer(zipkinTracesUrl, Mono.fromCallable(this::getClient));
   }
 
   public ProteusZipkinHttpBridge(String host, int port) {
-    this(host, port, DEFAULT_ZIPKIN_SPANS_URL, DEFAULT_ZIPKIN_TRACES_URL);
+    this(host, port, DEFAULT_ZIPKIN_SPANS_URL);
   }
 
   public static void main(String... args) {
@@ -51,8 +48,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     int zipkinPort = Integer.getInteger("netifi.proteus.zipkinPort", 9411);
     String zipkinSpansUrl =
         System.getProperty("netifi.proteus.zipkinSpansUrl", DEFAULT_ZIPKIN_SPANS_URL);
-    String zipkinTracesUrl =
-        System.getProperty("netifi.proteus.zipkinTracesUrl", DEFAULT_ZIPKIN_TRACES_URL);
     long accessKey = Long.getLong("netifi.proteus.accessKey", 3855261330795754807L);
     String accessToken =
         System.getProperty("netifi.authentication.accessToken", "kTBDVtfRBO4tHOnZzSyY5ym2kfY");
@@ -63,7 +58,6 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     logger.info("zipkin host - {}", zipkinHost);
     logger.info("zipkin port - {}", zipkinPort);
     logger.info("zipkin spans url - {}", zipkinSpansUrl);
-    logger.info("zipkin traces url - {}", zipkinTracesUrl);
     logger.info("access key - {}", accessKey);
 
     Proteus proteus =
@@ -78,7 +72,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
 
     proteus.addService(
         new ProteusTracingServiceServer(
-            new ProteusZipkinHttpBridge(zipkinHost, zipkinPort, zipkinSpansUrl, zipkinTracesUrl),
+            new ProteusZipkinHttpBridge(zipkinHost, zipkinPort, zipkinSpansUrl),
             Optional.empty(),
             Optional.empty()));
 
@@ -147,10 +141,5 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
                 logger.error(
                     "error sending data to tracing data to url " + zipkinSpansUrl, throwable))
         .then(Mono.never());
-  }
-
-  @Override
-  public Flux<Trace> streamTraces(TracesRequest message, ByteBuf metadata) {
-    return tracesStreamer.streamTraces(message.getLookbackSeconds());
   }
 }
