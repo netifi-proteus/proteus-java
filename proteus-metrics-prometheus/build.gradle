@@ -7,8 +7,8 @@ targetCompatibility = 1.8
 
 dependencies {
     compile project (':proteus-client')
-    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
-    protobuf 'io.rsocket.rpc:rsocket-rpc-metrics-idl:0.2.0'
+    compile "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
+    protobuf "io.rsocket.rpc:rsocket-rpc-metrics-idl:$rsocketRpcVersion"
     compile 'io.micrometer:micrometer-registry-prometheus:1.0.6'
 
     testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
@@ -20,11 +20,11 @@ protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.6.0'
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
         }
     }
     generateProtoTasks {

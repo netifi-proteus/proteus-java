@@ -6,16 +6,16 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+    compile "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
     protobuf project (':proteus-tracing-idl')
     compile project (':proteus-client')
 
-    compile 'io.projectreactor.addons:reactor-adapter:3.1.6.RELEASE'
-    compile 'com.google.protobuf:protobuf-java-util:3.6.0'
+    compile 'io.projectreactor.addons:reactor-adapter:3.1.7.RELEASE'
+    compile "com.google.protobuf:protobuf-java-util:$protobufVersion"
 
     compile 'io.opentracing:opentracing-api:0.31.0'
     compile 'io.opentracing.brave:brave-opentracing:0.31.2'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.6'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
     compile group: 'com.hubspot.jackson', name: 'jackson-datatype-protobuf', version: '0.9.10-jackson2.9-proto3'
 
     testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
@@ -27,11 +27,11 @@ protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.6.0'
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
         }
     }
     generateProtoTasks {

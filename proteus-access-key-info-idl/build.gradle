@@ -3,12 +3,12 @@ plugins {
 }
 
 dependencies {
-    protobuf 'com.google.protobuf:protobuf-java:3.6.0'
+    protobuf "com.google.protobuf:protobuf-java:$protobufVersion"
 }
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.6.0'
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
     generateProtoTasks {
         all()*.enabled = false
