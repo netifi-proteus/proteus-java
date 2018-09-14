@@ -84,11 +84,11 @@ Proteus Java uses a Protobuf plugin to generate application code. Add the follow
 ```
 Protobuf {
     protoc {
-        artifact = 'com.google.Protobuf:protoc:3.6.0'
+        artifact = 'com.google.Protobuf:protoc:3.6.1'
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.netifi.proteus:proteus-java:0.7.x'
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.x'
         }
     }
     generateProtoTasks {
@@ -101,10 +101,10 @@ Protobuf {
 // If you use Intellij add this so it can find the generated classes
 idea {
     module {
-        sourceDirs += file("${projectDir}/build/generated/source/proto/main/java");
-        sourceDirs += file("${projectDir}/build/generated/source/proto/main/proteus");
-        sourceDirs += file("${projectDir}/build/generated/source/proto/test/java");
-        sourceDirs += file("${projectDir}/build/generated/source/proto/test/proteus");
+        sourceDirs += file("${projectDir}/build/generated/source/rsocketRpc/main/java");
+        sourceDirs += file("${projectDir}/build/generated/source/rsocketRpc/main/proteus");
+        sourceDirs += file("${projectDir}/build/generated/source/rsocketRpc/test/java");
+        sourceDirs += file("${projectDir}/build/generated/source/rsocketRpc/test/proteus");
     }
 }
 ```

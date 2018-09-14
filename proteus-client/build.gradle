@@ -12,10 +12,10 @@ dependencies {
     compile project (':proteus-frames')
     compile 'com.typesafe:config:1.3.2'
     compile 'com.google.guava:guava:22.0'
-    compile 'io.rsocket.rpc:rsocket-rpc-core:0.2.0'
+    compile "io.rsocket.rpc:rsocket-rpc-core:$rsocketRpcVersion"
     compile 'io.netty:netty-tcnative:2.0.14.Final:linux-x86_64'
 
-    testProtobuf 'io.rsocket.rpc:rsocket-rpc-protobuf-idl:0.2.0'
+    testProtobuf "io.rsocket.rpc:rsocket-rpc-protobuf-idl:$rsocketRpcVersion"
     testCompile project(':proteus-tracing-openzipkin')
     testCompile project(':proteus-metrics-micrometer')
     testCompile 'io.micrometer:micrometer-registry-atlas:1.0.6'
@@ -30,11 +30,11 @@ protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.6.0'
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
     plugins {
         rsocketRpc {
-            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf:0.2.0'
+            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
         }
     }
     generateProtoTasks {

@@ -95,10 +95,3 @@ project(':proteus-vizceral-idl') {
 
     apply from: file('../gradle/java.gradle')
 }
-
-project(':proteus-vizceral') {
-    description = 'Netifi Proteus Vizceral Service'
-    ext.artifactName = 'proteus-vizceral'
-
-    apply from: file('../gradle/java.gradle')
-}
