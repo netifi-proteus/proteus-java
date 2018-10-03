@@ -13,8 +13,9 @@ import org.slf4j.LoggerFactory;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 import zipkin2.proto3.Span;
 
 public class ProteusZipkinHttpBridge implements ProteusTracingService {
@@ -82,17 +83,15 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
   private synchronized HttpClient getClient() {
     if (httpClient == null) {
       this.httpClient =
-          HttpClient.builder()
-              .options(
-                  builder ->
-                      builder
-                          .compression(true)
-                          .poolResources(PoolResources.fixed("proteusZipkinBridge"))
-                          .option(ChannelOption.SO_KEEPALIVE, true)
-                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000)
+          HttpClient.create(ConnectionProvider.fixed("proteusZipkinBridge"))
+              .compress(true)
+              .port(port)
+              .tcpConfiguration(
+                  tcpClient ->
+                      tcpClient
                           .host(host)
-                          .port(port))
-              .build();
+                          .option(ChannelOption.SO_KEEPALIVE, true)
+                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000));
     }
     return httpClient;
   }
@@ -127,12 +126,11 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
         .concatMap(
             spans ->
                 getClient()
-                    .post(
-                        zipkinSpansUrl,
-                        request -> {
-                          request.addHeader("Content-Type", "application/json");
-                          return request.sendString(Mono.just(spans));
-                        })
+                    .headers(hh -> hh.add("Content-Type", "application/json"))
+                    .post()
+                    .uri(zipkinSpansUrl)
+                    .send(ByteBufFlux.fromString(Mono.just(spans)))
+                    .response()
                     .timeout(Duration.ofSeconds(30))
                     .doOnError(throwable -> resetHttpClient()),
             8)
