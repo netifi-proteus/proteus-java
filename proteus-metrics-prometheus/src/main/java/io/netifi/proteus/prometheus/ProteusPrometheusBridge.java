@@ -26,9 +26,9 @@ import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.http.server.HttpServerRequest;
-import reactor.ipc.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
 
 @Named("ProteusPrometheusBridge")
 public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
@@ -99,8 +99,11 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
   }
 
   private void init() {
-    HttpServer.create(bindAddress, bindPort)
-        .newRouter(routes -> routes.post(metricsUrl, this::handle).get(metricsUrl, this::handle))
+    HttpServer.create()
+        .host(bindAddress)
+        .port(bindPort)
+        .route(routes -> routes.post(metricsUrl, this::handle).get(metricsUrl, this::handle))
+        .bind()
         .subscribe();
   }
 

@@ -17,7 +17,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClient;
 import zipkin2.proto3.Span;
 
 public class TracesStreamer {
@@ -66,13 +66,12 @@ public class TracesStreamer {
     return lookbackSeconds ->
         client.flatMapMany(
             c ->
-                c.get(
-                        zipkinQuery(zipkinUrl, lookbackSeconds),
-                        req -> {
-                          req.context().addHandler(new JsonObjectDecoder(true));
-                          return Mono.empty();
-                        })
-                    .flatMapMany(resp -> resp.receive().asInputStream()));
+                c.doOnRequest(
+                        (__, connection) -> connection.addHandler(new JsonObjectDecoder(true)))
+                    .get()
+                    .uri(zipkinQuery(zipkinUrl, lookbackSeconds))
+                    .responseContent()
+                    .asInputStream());
   }
 
   private static String zipkinQuery(String zipkinUrl, int lookbackSeconds) {

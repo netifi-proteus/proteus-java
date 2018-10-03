@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.ipc.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpClient;
 
 /** This is where the magic happens */
 public class Proteus implements Closeable {
@@ -256,7 +256,7 @@ public class Proteus implements Closeable {
         if (sslDisabled) {
           clientTransportFactory =
               address -> {
-                TcpClient client = TcpClient.create(opts -> opts.connectAddress(() -> address));
+                TcpClient client = TcpClient.create().addressSupplier(() -> address);
                 return TcpClientTransport.create(client);
               };
         } else {
@@ -277,8 +277,7 @@ public class Proteus implements Closeable {
             clientTransportFactory =
                 address -> {
                   TcpClient client =
-                      TcpClient.create(
-                          opts -> opts.connectAddress(() -> address).sslContext(sslContext));
+                      TcpClient.create().addressSupplier(() -> address).secure(sslContext);
                   return TcpClientTransport.create(client);
                 };
           } catch (Exception sslException) {

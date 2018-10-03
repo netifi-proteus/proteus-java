@@ -14,8 +14,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 public class ZipkinTracesStreamerTest {
 
@@ -70,16 +70,14 @@ public class ZipkinTracesStreamerTest {
 
   private Mono<HttpClient> client() {
     return Mono.just(
-        HttpClient.builder()
-            .options(
-                builder ->
-                    builder
-                        .compression(true)
-                        .poolResources(PoolResources.fixed("proteusZipkinBridge"))
+        HttpClient.create(ConnectionProvider.fixed("proteusZipkinBridge"))
+            .compress(true)
+            .port(9411)
+            .tcpConfiguration(
+                tcpClient ->
+                    tcpClient
                         .option(ChannelOption.SO_KEEPALIVE, true)
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000)
-                        .host("127.0.0.1")
-                        .port(9411))
-            .build());
+                        .host("127.0.0.1")));
   }
 }
