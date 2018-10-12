@@ -1,6 +1,9 @@
 package io.netifi.proteus;
 
-import io.netifi.proteus.frames.DestinationSetupFlyweight;
+import io.netifi.proteus.frames.ClientSetupFlyweight;
+import io.netifi.proteus.tags.DefaultTags;
+import io.netifi.proteus.tags.Tags;
+import io.netifi.proteus.tags.TagsCodec;
 import io.netty.buffer.*;
 import io.rsocket.Payload;
 import java.nio.charset.Charset;
@@ -13,11 +16,15 @@ public class ProteusBrokerServiceTest {
   @Test
   public void setupPayloadLeakTest() {
     ByteBuf token = Unpooled.wrappedBuffer("token".getBytes(Charset.defaultCharset()));
+    Tags tags = new DefaultTags();
+    tags.add("group", "foo");
+    tags.add("destination", "bar");
+    ByteBuf fromTags = TagsCodec.encode(ByteBufAllocator.DEFAULT, tags);
+
     PooledByteBufAllocator alloc = nonCachingAllocator();
 
     for (int i = 0; i < 100000; i++) {
-      Payload payload =
-          DefaultProteusBrokerService.getSetupPayload(alloc, "foo", "bar", 123L, token);
+      Payload payload = DefaultProteusBrokerService.getSetupPayload(alloc, 123L, token, fromTags);
     }
     Assert.assertEquals(0, directBuffersCount(alloc));
     Assert.assertEquals(0, heapBuffersCount(alloc));
@@ -26,21 +33,27 @@ public class ProteusBrokerServiceTest {
   @Test
   public void setupDecodeTest() {
     String expectedToken = "token";
-    String expectedDest = "foo";
-    String expectedGroup = "bar";
+    String expectedGroup = "foo";
+    String expectedDest = "bar";
     long expectedKey = 123L;
 
     ByteBuf token = Unpooled.wrappedBuffer(expectedToken.getBytes(Charset.defaultCharset()));
 
+    Tags tags = new DefaultTags();
+    tags.add("group", expectedGroup);
+    tags.add("destination", expectedDest);
+    ByteBuf fromTags = TagsCodec.encode(ByteBufAllocator.DEFAULT, tags);
+
     Payload payload =
         DefaultProteusBrokerService.getSetupPayload(
-            ByteBufAllocator.DEFAULT, expectedDest, expectedGroup, expectedKey, token);
+            ByteBufAllocator.DEFAULT, expectedKey, token, fromTags);
     ByteBuf metadata = payload.sliceMetadata();
-    String actualDest = DestinationSetupFlyweight.destination(metadata);
-    String actualGroup = DestinationSetupFlyweight.group(metadata);
-    long actualAccessKey = DestinationSetupFlyweight.accessKey(metadata);
+    Tags actualTags = TagsCodec.decode(ClientSetupFlyweight.tags(metadata));
+    String actualGroup = actualTags.get("group").toString();
+    String actualDest = actualTags.get("destination").toString();
+    long actualAccessKey = ClientSetupFlyweight.accessKey(metadata);
     String actualAccessToken =
-        DestinationSetupFlyweight.accessToken(metadata).toString(Charset.defaultCharset());
+        ClientSetupFlyweight.accessToken(metadata).toString(Charset.defaultCharset());
 
     Assert.assertEquals(expectedToken, actualAccessToken);
     Assert.assertEquals(expectedDest, actualDest);

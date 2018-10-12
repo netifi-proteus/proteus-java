@@ -5,6 +5,7 @@ import io.rsocket.Closeable;
 import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.Clock;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,18 +26,18 @@ public class WeightedClientTransportSupplier
   private static AtomicInteger SUPPLIER_ID = new AtomicInteger();
   private final MonoProcessor<Void> onClose;
   private final int supplierId;
-  private final Function<SocketAddress, ClientTransport> clientTransportFunction;
+  private final Function<InetSocketAddress, ClientTransport> clientTransportFunction;
   private final Ewma errorPercentage;
   private final Ewma latency;
-  private final SocketAddress socketAddress;
+  private final InetSocketAddress socketAddress;
   private final AtomicInteger activeConnections;
 
   @SuppressWarnings("unused")
   private volatile int selectedCounter = 1;
 
   public WeightedClientTransportSupplier(
-      SocketAddress socketAddress,
-      Function<SocketAddress, ClientTransport> clientTransportFunction) {
+      InetSocketAddress socketAddress,
+      Function<InetSocketAddress, ClientTransport> clientTransportFunction) {
     this.supplierId = SUPPLIER_ID.incrementAndGet();
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;

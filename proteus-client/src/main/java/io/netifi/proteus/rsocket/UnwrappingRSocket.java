@@ -24,17 +24,11 @@ public class UnwrappingRSocket extends RSocketProxy {
       ByteBuf unwrappedMetadata;
       FrameType frameType = FrameHeaderFlyweight.frameType(metadata);
       switch (frameType) {
-        case DESTINATION:
-          unwrappedMetadata = DestinationFlyweight.metadata(metadata);
-          break;
-        case GROUP:
-          unwrappedMetadata = GroupFlyweight.metadata(metadata);
+        case UNICAST:
+          unwrappedMetadata = UnicastFlyweight.metadata(metadata);
           break;
         case BROADCAST:
           unwrappedMetadata = BroadcastFlyweight.metadata(metadata);
-          break;
-        case SHARD:
-          unwrappedMetadata = ShardFlyweight.metadata(metadata);
           break;
         default:
           throw new IllegalStateException("unknown frame type " + frameType);

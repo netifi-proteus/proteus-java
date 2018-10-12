@@ -32,9 +32,6 @@ service BrokerManagementService {
     // Closes connections to a specific set of destinations
     rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (Ack) {}
 
-    // Closes connections to a specific set of groups
-    rpc closeGroup (stream io.netifi.proteus.broker.info.Group) returns (Ack) {}
-
     // Closes connections to a specific set of brokers
     rpc closeBroker (stream io.netifi.proteus.broker.info.Broker) returns (Ack) {}
 

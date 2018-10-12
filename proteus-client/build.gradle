@@ -56,9 +56,9 @@ idea {
     module {
         sourceDirs += file("src/main/proto")
         sourceDirs += file("src/generated/main/java")
-        sourceDirs += file("src/generated/main/proteus")
+        sourceDirs += file("src/generated/main/rsocketRpc")
 
         generatedSourceDirs += file('src/generated/main/java')
-        generatedSourceDirs += file('src/generated/main/proteus')
+        generatedSourceDirs += file('src/generated/main/rsocketRpc')
     }
 }

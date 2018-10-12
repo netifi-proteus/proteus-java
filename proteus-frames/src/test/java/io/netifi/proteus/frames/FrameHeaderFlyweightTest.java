@@ -12,10 +12,10 @@ public class FrameHeaderFlyweightTest {
     short minor = 50;
     ByteBuf byteBuf =
         FrameHeaderFlyweight.encodeFrameHeader(
-            ByteBufAllocator.DEFAULT, major, minor, FrameType.DESTINATION_SETUP);
+            ByteBufAllocator.DEFAULT, major, minor, FrameType.CLIENT_SETUP);
 
     Assert.assertEquals(major, FrameHeaderFlyweight.majorVersion(byteBuf));
     Assert.assertEquals(minor, FrameHeaderFlyweight.minorVersion(byteBuf));
-    Assert.assertEquals(FrameType.DESTINATION_SETUP, FrameHeaderFlyweight.frameType(byteBuf));
+    Assert.assertEquals(FrameType.CLIENT_SETUP, FrameHeaderFlyweight.frameType(byteBuf));
   }
 }

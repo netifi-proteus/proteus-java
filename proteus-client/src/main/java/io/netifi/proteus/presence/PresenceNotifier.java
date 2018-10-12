@@ -1,5 +1,7 @@
 package io.netifi.proteus.presence;
 
+import io.netifi.proteus.tags.Tags;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 /**
@@ -10,15 +12,7 @@ import reactor.core.publisher.Mono;
  * that user is connected.
  */
 public interface PresenceNotifier {
-  void watch(String group);
+  Disposable watch(Tags tags);
 
-  void stopWatching(String group);
-
-  void watch(String destination, String group);
-
-  void stopWatching(String destination, String group);
-
-  Mono<Void> notify(String group);
-
-  Mono<Void> notify(String destination, String group);
+  Mono<Void> notify(Tags tags);
 }

@@ -1,6 +1,8 @@
 package io.netifi.proteus;
 
 import io.netifi.proteus.rsocket.ProteusSocket;
+import io.netifi.proteus.tags.EmptyTags;
+import io.netifi.proteus.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.OpenSsl;
@@ -15,12 +17,10 @@ import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jctools.maps.NonBlockingHashMapLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Exceptions;
@@ -31,7 +31,7 @@ import reactor.netty.tcp.TcpClient;
 /** This is where the magic happens */
 public class Proteus implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(Proteus.class);
-  private static final ConcurrentHashMap<String, Proteus> PROTEUS = new ConcurrentHashMap<>();
+  private static final NonBlockingHashMapLong<Proteus> PROTEUS = new NonBlockingHashMapLong<>();
 
   static {
     // Set the Java DNS cache to 60 seconds
@@ -39,36 +39,32 @@ public class Proteus implements Closeable {
   }
 
   private final long accesskey;
-  private final String fromGroup;
-  private final DestinationNameFactory destinationNameFactory;
+  private final Tags tags;
   private final ProteusBrokerService brokerService;
   private MonoProcessor<Void> onClose;
   private RequestHandlingRSocket requestHandlingRSocket;
 
   private Proteus(
       long accessKey,
-      String group,
       ByteBuf accessToken,
+      Tags tags,
       boolean keepalive,
       long tickPeriodSeconds,
       long ackTimeoutSeconds,
       int missedAcks,
-      DestinationNameFactory destinationNameFactory,
-      List<SocketAddress> seedAddresses,
-      Function<SocketAddress, ClientTransport> clientTransportFactory,
+      List<InetSocketAddress> seedAddresses,
+      Function<InetSocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
       Supplier<Tracer> tracerSupplier) {
     this.accesskey = accessKey;
+    this.tags = tags;
     this.onClose = MonoProcessor.create();
-    this.fromGroup = group;
     this.requestHandlingRSocket = new RequestHandlingRSocket();
-    this.destinationNameFactory = destinationNameFactory;
+
     this.brokerService =
         new DefaultProteusBrokerService(
             seedAddresses,
             requestHandlingRSocket,
-            fromGroup,
-            destinationNameFactory,
             clientTransportFactory,
             poolSize,
             keepalive,
@@ -77,6 +73,7 @@ public class Proteus implements Closeable {
             missedAcks,
             accessKey,
             accessToken,
+            tags,
             tracerSupplier.get());
   }
 
@@ -105,52 +102,43 @@ public class Proteus implements Closeable {
     return this;
   }
 
-  public ProteusSocket destination(String destination, String group) {
-    return brokerService.destination(destination, group);
+  public ProteusSocket unicast(Tags tags) {
+    return brokerService.unicast(tags);
   }
 
-  public ProteusSocket group(String group) {
-    return brokerService.group(group);
-  }
-
-  public ProteusSocket broadcast(String group) {
-    return brokerService.broadcast(group);
+  public ProteusSocket broadcast(Tags tags) {
+    return brokerService.broadcast(tags);
   }
 
   public long getAccesskey() {
     return accesskey;
   }
 
-  public String getGroupName() {
-    return fromGroup;
-  }
-
-  public String getDestination() {
-    return destinationNameFactory.rootName();
+  public Tags getTags() {
+    return tags;
   }
 
   public static class Builder {
     private String host = DefaultBuilderConfig.getHost();
     private Integer port = DefaultBuilderConfig.getPort();
-    private List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
+    private List<InetSocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
     private Long accessKey = DefaultBuilderConfig.getAccessKey();
-    private String group = DefaultBuilderConfig.getGroup();
-    private String destination = DefaultBuilderConfig.getDestination();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
+    private Tags tags = EmptyTags.INSTANCE;
+
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
-    private DestinationNameFactory destinationNameFactory;
 
-    private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
+    private Function<InetSocketAddress, ClientTransport> clientTransportFactory = null;
     private int poolSize = Runtime.getRuntime().availableProcessors();
     private Supplier<Tracer> tracerSupplier = () -> null;
 
     public Builder clientTransportFactory(
-        Function<SocketAddress, ClientTransport> clientTransportFactory) {
+        Function<InetSocketAddress, ClientTransport> clientTransportFactory) {
       this.clientTransportFactory = clientTransportFactory;
       return this;
     }
@@ -200,9 +188,9 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder seedAddresses(Collection<SocketAddress> addresses) {
+    public Builder seedAddresses(Collection<InetSocketAddress> addresses) {
       if (addresses instanceof List) {
-        this.seedAddresses = (List<SocketAddress>) addresses;
+        this.seedAddresses = (List<InetSocketAddress>) addresses;
       } else {
         this.seedAddresses = new ArrayList<>(addresses);
       }
@@ -210,8 +198,8 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder seedAddresses(SocketAddress address, SocketAddress... addresses) {
-      List<SocketAddress> list = new ArrayList<>();
+    public Builder seedAddresses(InetSocketAddress address, InetSocketAddress... addresses) {
+      List<InetSocketAddress> list = new ArrayList<>();
       list.add(address);
 
       if (addresses != null) {
@@ -231,25 +219,14 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder group(String group) {
-      this.group = group;
-      return this;
-    }
-
-    public Builder destination(String destination) {
-      this.destination = destination;
-      return this;
-    }
-
-    public Builder destinationNameFactory(DestinationNameFactory destinationNameFactory) {
-      this.destinationNameFactory = destinationNameFactory;
+    public Builder tags(Tags tags) {
+      this.tags = tags;
       return this;
     }
 
     public Proteus build() {
       Objects.requireNonNull(accessKey, "account key is required");
       Objects.requireNonNull(accessToken, "account token is required");
-      Objects.requireNonNull(group, "group is required");
 
       if (clientTransportFactory == null) {
         logger.info("Client transport factory not provided; using TCP transport.");
@@ -288,15 +265,7 @@ public class Proteus implements Closeable {
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
-      if (destinationNameFactory == null) {
-        if (destination == null) {
-          destination = UUID.randomUUID().toString();
-        }
-
-        destinationNameFactory = DestinationNameFactory.from(destination, new AtomicInteger());
-      }
-
-      List<SocketAddress> socketAddresses;
+      List<InetSocketAddress> socketAddresses;
       if (seedAddresses == null) {
         Objects.requireNonNull(host, "host is required");
         Objects.requireNonNull(port, "port is required");
@@ -305,9 +274,7 @@ public class Proteus implements Closeable {
         socketAddresses = seedAddresses;
       }
 
-      logger.info("registering with netifi with group {}, and destination {}", group, destination);
-
-      String proteusKey = accessKey + group + destination;
+      long proteusKey = Objects.hash(accessKey, tags);
 
       return PROTEUS.computeIfAbsent(
           proteusKey,
@@ -315,13 +282,12 @@ public class Proteus implements Closeable {
             Proteus proteus =
                 new Proteus(
                     accessKey,
-                    group,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    tags,
                     keepalive,
                     tickPeriodSeconds,
                     ackTimeoutSeconds,
                     missedAcks,
-                    destinationNameFactory,
                     socketAddresses,
                     clientTransportFactory,
                     poolSize,

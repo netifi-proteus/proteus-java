@@ -2,4 +2,7 @@ description = 'Netifi Proteus Frames'
 
 dependencies {
     compile 'io.rsocket:rsocket-core'
+    compile 'io.netty:netty-codec'
+    compile 'org.agrona:agrona'
+    compile 'org.roaringbitmap:RoaringBitmap'
 }

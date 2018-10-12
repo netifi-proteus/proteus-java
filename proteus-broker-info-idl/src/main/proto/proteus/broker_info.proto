@@ -8,15 +8,14 @@ option java_package = "io.netifi.proteus.broker.info";
 option java_outer_classname = "BrokerInfo";
 option java_multiple_files = true;
 
-message Group {
-    string group  = 1;
-    Broker broker = 2;
+message Tags {
+    map<string, string> tags = 1;
 }
 
 message Destination {
-    string group       = 1;
-    string destination = 2;
-    Broker broker      = 3;
+    string destinationId = 1;
+    bytes tags           = 2;
+    Broker broker        = 3;
 }
 
 message Broker {
@@ -39,13 +38,8 @@ message Event {
 
 service BrokerInfoService {
     rpc Brokers (google.protobuf.Empty) returns (stream Broker) {}
-    rpc Groups (Broker) returns (stream Group) {}
     rpc Destinations (Broker) returns (stream Destination) {}
-    rpc DestinationsByBrokerAndGroup (Group) returns (stream Destination) {}
-    rpc DestinationsByGroup (Group) returns (stream Destination) {}
-    rpc BrokersWithGroup (Group) returns (stream Broker) {}
-    rpc BrokerWithDestination (Destination) returns (Broker) {}
-    rpc streamGroupEvents (Group) returns (stream Event) {}
-    rpc streamDestinationEvents (Destination) returns (stream Event) {}
+    rpc DestinationsByTags (Tags) returns (stream Destination) {}
+    rpc streamDestinationEvents (Tags) returns (stream Event) {}
     rpc streamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
 }

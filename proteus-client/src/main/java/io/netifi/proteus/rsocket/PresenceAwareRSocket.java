@@ -1,10 +1,12 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.presence.PresenceNotifier;
+import io.netifi.proteus.tags.Tags;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.util.RSocketProxy;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -15,69 +17,57 @@ import reactor.core.publisher.Mono;
  */
 public class PresenceAwareRSocket extends RSocketProxy implements ProteusSocket {
 
-  private final String destination;
-  private final String group;
+  private final Tags tags;
   private final PresenceNotifier presenceNotifier;
-  private final boolean groupRoute;
 
-  private PresenceAwareRSocket(
-      RSocket source, String destination, String group, PresenceNotifier presenceNotifier) {
+  private PresenceAwareRSocket(RSocket source, Tags tags, PresenceNotifier presenceNotifier) {
     super(source);
-    this.destination = destination;
-    this.group = group;
+    this.tags = tags;
     this.presenceNotifier = presenceNotifier;
-    this.groupRoute = destination == null || destination.isEmpty();
 
-    onClose()
-        .doFinally(
-            signalType -> {
-              if (groupRoute) {
-                presenceNotifier.stopWatching(group);
-              } else {
-                presenceNotifier.stopWatching(destination, group);
-              }
-            })
-        .subscribe();
+    Disposable disposable = presenceNotifier.watch(tags);
+    onClose().doFinally(signalType -> disposable.dispose()).subscribe();
   }
 
   public static PresenceAwareRSocket wrap(
-      RSocket source, String destination, String group, PresenceNotifier presenceNotifier) {
-    return new PresenceAwareRSocket(source, destination, group, presenceNotifier);
+      RSocket source, Tags tags, PresenceNotifier presenceNotifier) {
+    return new PresenceAwareRSocket(source, tags, presenceNotifier);
   }
 
   @Override
   public Mono<Void> fireAndForget(Payload payload) {
-    return _notify().doOnError(t -> payload.release()).then(source.fireAndForget(payload));
+    return presenceNotifier
+        .notify(tags)
+        .doOnError(t -> payload.release())
+        .then(source.fireAndForget(payload));
   }
 
   @Override
   public Mono<Payload> requestResponse(Payload payload) {
-    return _notify().doOnError(t -> payload.release()).then(source.requestResponse(payload));
+    return presenceNotifier
+        .notify(tags)
+        .doOnError(t -> payload.release())
+        .then(source.requestResponse(payload));
   }
 
   @Override
   public Flux<Payload> requestStream(Payload payload) {
-    return _notify().doOnError(t -> payload.release()).thenMany(source.requestStream(payload));
+    return presenceNotifier
+        .notify(tags)
+        .doOnError(t -> payload.release())
+        .thenMany(source.requestStream(payload));
   }
 
   @Override
   public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-    return _notify().thenMany(source.requestChannel(payloads));
+    return presenceNotifier.notify(tags).thenMany(source.requestChannel(payloads));
   }
 
   @Override
   public Mono<Void> metadataPush(Payload payload) {
-    return _notify().doOnError(t -> payload.release()).then(source.metadataPush(payload));
-  }
-
-  private Mono<Void> _notify() {
-    return Mono.defer(
-        () -> {
-          if (groupRoute) {
-            return presenceNotifier.notify(group);
-          } else {
-            return presenceNotifier.notify(destination, group);
-          }
-        });
+    return presenceNotifier
+        .notify(tags)
+        .doOnError(t -> payload.release())
+        .then(source.metadataPush(payload));
   }
 }

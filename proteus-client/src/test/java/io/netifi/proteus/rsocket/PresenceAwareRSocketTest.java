@@ -1,6 +1,8 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.presence.PresenceNotifier;
+import io.netifi.proteus.tags.DefaultTags;
+import io.netifi.proteus.tags.Tags;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import java.time.Duration;
@@ -17,15 +19,13 @@ public class PresenceAwareRSocketTest {
     Mockito.when(mock.onClose()).thenReturn(Mono.never());
     PresenceNotifier presenceNotifier = Mockito.mock(PresenceNotifier.class);
 
-    Mockito.when(presenceNotifier.notify(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(Mono.never());
+    Mockito.when(presenceNotifier.notify(Mockito.any(Tags.class))).thenReturn(Mono.never());
 
-    PresenceAwareRSocket rSocket =
-        PresenceAwareRSocket.wrap(
-            mock,
-            "testShouldWaitForPresence-dest",
-            "testShouldWaitForPresence-group",
-            presenceNotifier);
+    Tags tags =
+        new DefaultTags()
+            .add("group", "testShouldWaitForPresence-group")
+            .add("destination", "testShouldWaitForPresence-dest");
+    PresenceAwareRSocket rSocket = PresenceAwareRSocket.wrap(mock, tags, presenceNotifier);
 
     StepVerifier.create(rSocket.requestResponse(Mockito.mock(Payload.class)))
         .expectNextCount(0)
@@ -40,10 +40,10 @@ public class PresenceAwareRSocketTest {
     Mockito.when(mock.onClose()).thenReturn(Mono.never());
     PresenceNotifier presenceNotifier = Mockito.mock(PresenceNotifier.class);
 
-    Mockito.when(presenceNotifier.notify(Mockito.anyString())).thenReturn(Mono.never());
+    Mockito.when(presenceNotifier.notify(Mockito.any(Tags.class))).thenReturn(Mono.never());
 
-    PresenceAwareRSocket rSocket =
-        PresenceAwareRSocket.wrap(mock, null, "testShouldWaitForPresence-group", presenceNotifier);
+    Tags tags = new DefaultTags().add("group", "testShouldWaitForPresence-group");
+    PresenceAwareRSocket rSocket = PresenceAwareRSocket.wrap(mock, tags, presenceNotifier);
 
     StepVerifier.create(rSocket.requestResponse(Mockito.mock(Payload.class)))
         .expectNextCount(0)

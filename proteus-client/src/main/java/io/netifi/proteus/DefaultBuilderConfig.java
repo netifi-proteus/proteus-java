@@ -4,7 +4,6 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -213,8 +212,8 @@ final class DefaultBuilderConfig {
     return exportSystemMetrics;
   }
 
-  static List<SocketAddress> getSeedAddress() {
-    List<SocketAddress> seedAddresses = null;
+  static List<InetSocketAddress> getSeedAddress() {
+    List<InetSocketAddress> seedAddresses = null;
     try {
       String s = conf.getString("proteus.client.seedAddresses");
       if (s != null) {

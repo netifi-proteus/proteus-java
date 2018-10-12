@@ -1,11 +1,10 @@
 package io.netifi.proteus;
 
 import io.netifi.proteus.rsocket.ProteusSocket;
+import io.netifi.proteus.tags.Tags;
 
 interface ProteusBrokerService {
-  ProteusSocket destination(String destination, String group);
+  ProteusSocket unicast(Tags tags);
 
-  ProteusSocket group(String group);
-
-  ProteusSocket broadcast(String group);
+  ProteusSocket broadcast(Tags tags);
 }

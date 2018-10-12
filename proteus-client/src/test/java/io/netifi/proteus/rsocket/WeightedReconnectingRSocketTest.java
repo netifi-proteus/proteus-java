@@ -1,12 +1,10 @@
 package io.netifi.proteus.rsocket;
 
-import io.netifi.proteus.DestinationNameFactory;
 import io.netty.buffer.Unpooled;
 import io.rsocket.RSocket;
 import io.rsocket.rpc.stats.FrugalQuantile;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.junit.Test;
@@ -22,8 +20,7 @@ public class WeightedReconnectingRSocketTest {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
             Mockito.mock(RSocket.class),
-            Mockito.mock(DestinationNameFactory.class),
-            Mockito.mock(Function.class),
+            Mockito.mock(Supplier.class),
             () -> true,
             Mockito.mock(Supplier.class),
             false,
@@ -50,8 +47,7 @@ public class WeightedReconnectingRSocketTest {
         Mockito.spy(
             new WeightedReconnectingRSocket(
                 Mockito.mock(RSocket.class),
-                Mockito.mock(DestinationNameFactory.class),
-                Mockito.mock(Function.class),
+                Mockito.mock(Supplier.class),
                 () -> true,
                 Mockito.mock(Supplier.class),
                 false,
@@ -94,8 +90,7 @@ public class WeightedReconnectingRSocketTest {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
             Mockito.mock(RSocket.class),
-            Mockito.mock(DestinationNameFactory.class),
-            Mockito.mock(Function.class),
+            Mockito.mock(Supplier.class),
             () -> true,
             Mockito.mock(Supplier.class),
             false,
@@ -126,8 +121,7 @@ public class WeightedReconnectingRSocketTest {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
             Mockito.mock(RSocket.class),
-            Mockito.mock(DestinationNameFactory.class),
-            Mockito.mock(Function.class),
+            Mockito.mock(Supplier.class),
             () -> true,
             Mockito.mock(Supplier.class),
             false,

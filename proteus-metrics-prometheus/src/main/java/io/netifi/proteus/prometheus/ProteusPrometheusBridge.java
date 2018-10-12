@@ -7,6 +7,8 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netifi.proteus.Proteus;
+import io.netifi.proteus.tags.DefaultTags;
+import io.netifi.proteus.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.prometheus.client.exporter.common.TextFormat;
@@ -74,14 +76,16 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
     logger.info("broker port - {}", brokerPort);
     logger.info("access key - {}", accessKey);
 
+    Tags tags = new DefaultTags();
+    tags.add("group", group);
+
     Proteus proteus =
         Proteus.builder()
             .accessKey(accessKey)
             .accessToken(accessToken)
-            .group(group)
+            .tags(tags)
             .host(brokerHost)
             .port(brokerPort)
-            .destination("standalonePrometheusBridge")
             .build();
 
     proteus.addService(

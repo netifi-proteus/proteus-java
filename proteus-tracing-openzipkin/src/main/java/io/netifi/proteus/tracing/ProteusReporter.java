@@ -1,7 +1,9 @@
 package io.netifi.proteus.tracing;
 
+import io.netifi.proteus.tags.Tags;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
@@ -21,13 +23,11 @@ class ProteusReporter extends Component implements Reporter<Span> {
   private static final Logger logger = LoggerFactory.getLogger(ProteusReporter.class);
   private final FluxProcessor<Span, Span> sink;
   private final Disposable disposable;
-  private final String group;
-  private final String destination;
+  private final Tags tags;
 
-  ProteusReporter(ProteusTracingServiceClient service, String group, String destination) {
+  ProteusReporter(ProteusTracingServiceClient service, Tags tags) {
     this.sink = DirectProcessor.<Span>create().serialize();
-    this.group = group;
-    this.destination = destination;
+    this.tags = tags;
     AtomicInteger count = new AtomicInteger();
     AtomicLong lastRetry = new AtomicLong(System.currentTimeMillis());
     this.disposable =
@@ -78,16 +78,21 @@ class ProteusReporter extends Component implements Reporter<Span> {
     builder
         .putAllTags(span.tags())
         .setDebug(span.debug() == null ? false : span.debug())
-        .setShared(span.shared() == null ? false : span.shared())
-        .putTags("group", group)
-        .putTags("destination", destination);
+        .setShared(span.shared() == null ? false : span.shared());
+
+    for (Entry<CharSequence, CharSequence> entry : tags) {
+      builder.putTags(entry.getKey().toString(), entry.getValue().toString());
+    }
 
     return builder.build();
   }
 
   private zipkin2.proto3.Endpoint.Builder mapEndpoint(Endpoint endpoint) {
-    zipkin2.proto3.Endpoint.Builder builder =
-        zipkin2.proto3.Endpoint.newBuilder().setServiceName(group);
+    zipkin2.proto3.Endpoint.Builder builder = zipkin2.proto3.Endpoint.newBuilder();
+
+    if (tags.contains("group")) {
+      builder.setServiceName(tags.get("group").toString());
+    }
 
     if (endpoint.ipv4() != null) {
       builder.setIpv4(endpoint.ipv4());

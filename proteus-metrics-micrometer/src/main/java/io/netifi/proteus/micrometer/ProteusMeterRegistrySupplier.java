@@ -1,10 +1,13 @@
 package io.netifi.proteus.micrometer;
 
+import com.google.common.collect.Streams;
 import com.netflix.spectator.atlas.AtlasConfig;
 import io.micrometer.atlas.AtlasMeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.ProteusSocket;
+import io.netifi.proteus.tags.DefaultTags;
 import io.rsocket.rpc.metrics.MetricsExporter;
 import io.rsocket.rpc.metrics.om.MetricsSnapshotHandlerClient;
 import java.time.Duration;
@@ -26,7 +29,9 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
       Optional<Long> stepInMillis,
       Optional<Boolean> export) {
     Objects.requireNonNull(proteus, "must provide a Proteus instance");
-    ProteusSocket proteusSocket = proteus.group(metricsGroup.orElse("com.netifi.proteus.metrics"));
+    DefaultTags toTags = new DefaultTags();
+    toTags.add("group", metricsGroup.orElse("com.netifi.proteus.metrics"));
+    ProteusSocket proteusSocket = proteus.unicast(toTags);
 
     MetricsSnapshotHandlerClient client = new MetricsSnapshotHandlerClient(proteusSocket);
 
@@ -52,17 +57,17 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
               }
             });
 
-    registry
-        .config()
-        .commonTags(
-            "accessKey",
-            String.valueOf(proteus.getAccesskey()),
-            "group",
-            proteus.getGroupName(),
-            "destination",
-            proteus.getDestination());
+    Tags commonTags =
+        Streams.stream(proteus.getTags())
+            .reduce(
+                Tags.empty(),
+                (tags, entry) -> tags.and(entry.getKey().toString(), entry.getValue().toString()),
+                Tags::and)
+            .and("accessKey", String.valueOf(proteus.getAccesskey()));
 
-    new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
+    registry.config().commonTags(commonTags);
+
+    new ProteusOperatingSystemMetrics(registry, Collections.emptyList());
 
     if (export.orElse(true)) {
       MetricsExporter exporter = new MetricsExporter(client, registry, stepDuration, 1024);

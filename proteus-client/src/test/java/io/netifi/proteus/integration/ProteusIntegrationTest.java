@@ -3,6 +3,7 @@ package io.netifi.proteus.integration;
 import com.google.protobuf.Empty;
 import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.ProteusSocket;
+import io.netifi.proteus.tags.DefaultTags;
 import io.netifi.proteus.testing.protobuf.*;
 import io.netty.buffer.ByteBuf;
 import java.time.Duration;
@@ -34,11 +35,11 @@ public class ProteusIntegrationTest {
 
   @BeforeClass
   public static void setup() {
+
     server =
         Proteus.builder()
             .keepalive(false)
-            .group("test.server")
-            .destination("server")
+            .tags(new DefaultTags().add("group", "test.server"))
             .accessKey(accessKey)
             .accessToken(accessToken)
             .host(host)
@@ -48,8 +49,7 @@ public class ProteusIntegrationTest {
     client =
         Proteus.builder()
             .keepalive(false)
-            .group("test.client")
-            .destination("client")
+            .tags(new DefaultTags().add("group", "test.client"))
             .accessKey(accessKey)
             .accessToken(accessToken)
             .host(host)
@@ -59,7 +59,7 @@ public class ProteusIntegrationTest {
     server.addService(
         new SimpleServiceServer(new DefaultSimpleService(), Optional.empty(), Optional.empty()));
 
-    proteusSocket = client.group("test.server");
+    proteusSocket = client.unicast(new DefaultTags().add("group", "test.server"));
   }
 
   @Test

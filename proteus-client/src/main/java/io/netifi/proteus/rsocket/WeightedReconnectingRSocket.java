@@ -1,6 +1,5 @@
 package io.netifi.proteus.rsocket;
 
-import io.netifi.proteus.DestinationNameFactory;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -14,7 +13,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -40,7 +38,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private final long tau;
   private final Ewma errorPercentage;
   private final MonoProcessor<Void> onClose;
-  private final Function<String, Payload> setupPayloadSupplier;
+  private final Supplier<Payload> setupPayloadSupplier;
   private final BooleanSupplier running;
   private final boolean keepalive;
   private final long tickPeriodSeconds;
@@ -50,7 +48,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private final long accessKey;
   private final ByteBuf accessToken;
   private final Supplier<WeightedClientTransportSupplier> transportSupplier;
-  private final DestinationNameFactory destinationNameFactory;
   boolean connecting = false;
   private volatile int pending; // instantaneous rate
   private long errorStamp; // last we got an error
@@ -70,8 +67,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   WeightedReconnectingRSocket(
       RSocket requestHandlingRSocket,
-      DestinationNameFactory destinationNameFactory,
-      Function<String, Payload> setupPayloadSupplier,
+      Supplier<Payload> setupPayloadSupplier,
       BooleanSupplier running,
       Supplier<WeightedClientTransportSupplier> transportSupplier,
       boolean keepalive,
@@ -108,13 +104,11 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
     this.missedAcks = missedAcks;
-    this.destinationNameFactory = destinationNameFactory;
   }
 
   public static WeightedReconnectingRSocket newInstance(
       RSocket requestHandlingRSocket,
-      DestinationNameFactory destinationNameFactory,
-      Function<String, Payload> setupPayloadSupplier,
+      Supplier<Payload> setupPayloadSupplier,
       BooleanSupplier running,
       Supplier<WeightedClientTransportSupplier> transportSupplier,
       boolean keepalive,
@@ -129,7 +123,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
             requestHandlingRSocket,
-            destinationNameFactory,
             setupPayloadSupplier,
             running,
             transportSupplier,
@@ -189,29 +182,23 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     return statsProcessor;
   }
 
-  private RSocketFactory.ClientRSocketFactory getClientFactory(String destination) {
+  private RSocketFactory.ClientRSocketFactory getClientFactory() {
     RSocketFactory.ClientRSocketFactory connect =
-        RSocketFactory.connect().frameDecoder(Frame::retain);
+        RSocketFactory.connect()
+            .frameDecoder(Frame::retain)
+            .setupPayload(setupPayloadSupplier.get());
 
     if (keepalive) {
       connect =
           connect
-              .keepAlive()
               .keepAliveTickPeriod(Duration.ofSeconds(tickPeriodSeconds))
               .keepAliveAckTimeout(Duration.ofSeconds(ackTimeoutSeconds))
               .keepAliveMissedAcks(missedAcks);
     } else {
-      connect
-          .keepAlive()
-          .keepAliveAckTimeout(Duration.ofSeconds(0))
-          .keepAliveAckTimeout(Duration.ofSeconds(0))
-          .keepAliveMissedAcks(missedAcks);
+      connect.keepAliveTickPeriod(Duration.ofSeconds(0));
     }
 
-    return connect
-        .setupPayload(setupPayloadSupplier.apply(destination))
-        .keepAliveAckTimeout(Duration.ofSeconds(0))
-        .keepAliveTickPeriod(Duration.ofSeconds(0));
+    return connect;
   }
 
   void connect() {
@@ -234,10 +221,9 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                   WeightedClientTransportSupplier weighedClientTransportSupplier =
                       transportSupplier.get();
                   this.statsProcessor = getStatsProcessor();
-                  String destination = destinationNameFactory.get();
 
                   long start = System.nanoTime();
-                  return getClientFactory(destination)
+                  return getClientFactory()
                       .errorConsumer(
                           throwable ->
                               logger.error(
@@ -266,12 +252,10 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
                                       if (Duration.ofNanos(stop - start).getSeconds() < 2) {
                                         logger.warn(
-                                            "connection for destionation {} closed in less than 2 seconds - make sure access key {} has a valid access token",
-                                            destinationNameFactory.peek(),
+                                            "connection closed in less than 2 seconds - make sure access key {} has a valid access token",
                                             accessKey);
                                       }
 
-                                      destinationNameFactory.release(destination);
                                       resetStatsProcessor();
                                       availability = 0.0;
                                       synchronized (WeightedReconnectingRSocket.this) {

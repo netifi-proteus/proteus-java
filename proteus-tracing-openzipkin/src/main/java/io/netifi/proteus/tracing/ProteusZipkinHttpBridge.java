@@ -2,6 +2,8 @@ package io.netifi.proteus.tracing;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netifi.proteus.Proteus;
+import io.netifi.proteus.tags.DefaultTags;
+import io.netifi.proteus.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import java.time.Duration;
@@ -61,14 +63,16 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     logger.info("zipkin spans url - {}", zipkinSpansUrl);
     logger.info("access key - {}", accessKey);
 
+    Tags tags = new DefaultTags();
+    tags.add("group", group);
+
     Proteus proteus =
         Proteus.builder()
             .accessKey(accessKey)
             .accessToken(accessToken)
-            .group(group)
+            .tags(tags)
             .host(brokerHost)
             .port(brokerPort)
-            .destination("standaloneZipkinBridge")
             .build();
 
     proteus.addService(

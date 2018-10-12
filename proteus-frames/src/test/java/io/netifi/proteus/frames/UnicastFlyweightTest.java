@@ -10,7 +10,7 @@ import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class BroadcastFlyweightTest {
+public class UnicastFlyweightTest {
   @Test
   public void testEncoding() {
     Tags fromTagsIn = new DefaultTags();
@@ -25,16 +25,15 @@ public class BroadcastFlyweightTest {
     ByteBuf toTags = TagsCodec.encode(ByteBufAllocator.DEFAULT, toTagsIn);
     ByteBuf metadata = Unpooled.wrappedBuffer("metadata".getBytes());
 
-    ByteBuf byteBuf =
-        BroadcastFlyweight.encode(ByteBufAllocator.DEFAULT, fromTags, toTags, metadata);
+    ByteBuf byteBuf = UnicastFlyweight.encode(ByteBufAllocator.DEFAULT, fromTags, toTags, metadata);
 
-    Tags fromTagsOut = TagsCodec.decode(BroadcastFlyweight.fromTags(byteBuf));
-    Tags toTagsOut = TagsCodec.decode(BroadcastFlyweight.toTags(byteBuf));
+    Tags fromTagsOut = TagsCodec.decode(UnicastFlyweight.fromTags(byteBuf));
+    Tags toTagsOut = TagsCodec.decode(UnicastFlyweight.toTags(byteBuf));
 
     Assert.assertEquals(fromTagsIn, fromTagsOut);
     Assert.assertEquals(toTagsIn, toTagsOut);
 
-    System.out.println(ByteBufUtil.prettyHexDump(BroadcastFlyweight.metadata(byteBuf)));
-    Assert.assertTrue(ByteBufUtil.equals(metadata, BroadcastFlyweight.metadata(byteBuf)));
+    System.out.println(ByteBufUtil.prettyHexDump(UnicastFlyweight.metadata(byteBuf)));
+    Assert.assertTrue(ByteBufUtil.equals(metadata, UnicastFlyweight.metadata(byteBuf)));
   }
 }

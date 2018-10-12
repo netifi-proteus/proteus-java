@@ -3,11 +3,11 @@ package io.netifi.proteus.frames;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-public class BroadcastFlyweight {
+public class UnicastFlyweight {
   public static ByteBuf encode(
       ByteBufAllocator allocator, ByteBuf fromTags, ByteBuf toTags, ByteBuf metadata) {
 
-    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.BROADCAST);
+    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.UNICAST);
 
     int fromTagsLength = fromTags.readableBytes();
     byteBuf.writeInt(fromTagsLength);
