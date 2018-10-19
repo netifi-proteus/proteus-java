@@ -2,13 +2,15 @@ plugins {
     id 'com.google.protobuf' version '0.8.5'
 }
 
+description = 'Netifi Proteus Broker Management IDL'
+
 dependencies {
     protobuf project (':proteus-broker-info-idl')
 }
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:$protobufVersion"
+        artifact = "com.google.protobuf:protoc:${ext['protobuf.version']}"
     }
     generateProtoTasks {
         all()*.enabled = false

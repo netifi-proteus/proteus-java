@@ -1,3 +1,5 @@
+description = 'Netifi Proteus Frames'
+
 dependencies {
-    compile 'io.rsocket:rsocket-core:0.11.7'
+    compile 'io.rsocket:rsocket-core'
 }
