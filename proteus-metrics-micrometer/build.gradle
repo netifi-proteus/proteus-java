@@ -7,20 +7,20 @@ targetCompatibility = 1.8
 
 dependencies {
     compile project (':proteus-client')
-    compile "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
-    protobuf "io.rsocket.rpc:rsocket-rpc-metrics-idl:$rsocketRpcVersion"
-    compile 'io.micrometer:micrometer-registry-atlas:1.0.6'
+    compile "io.rsocket.rpc:rsocket-rpc-protobuf"
+    protobuf "io.rsocket.rpc:rsocket-rpc-metrics-idl"
+    compile 'io.micrometer:micrometer-registry-atlas'
 }
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = "com.google.protobuf:protoc:$protobufVersion"
+        artifact = "com.google.protobuf:protoc:${ext['protobuf.version']}"
     }
     plugins {
         rsocketRpc {
-            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
+            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf"
         }
     }
     generateProtoTasks {

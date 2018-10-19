@@ -2,36 +2,31 @@ plugins {
     id 'com.google.protobuf' version '0.8.5'
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+description = 'Netifi Proteus Openzipkin Integration'
 
 dependencies {
-    compile "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
     protobuf project (':proteus-tracing-idl')
     compile project (':proteus-client')
 
-    compile 'io.projectreactor.addons:reactor-adapter:3.2.0.RELEASE'
-    compile "com.google.protobuf:protobuf-java-util:$protobufVersion"
+    compile "io.rsocket.rpc:rsocket-rpc-protobuf"
+    compile 'io.projectreactor.addons:reactor-adapter'
+    compile "com.google.protobuf:protobuf-java-util"
 
-    compile 'io.opentracing:opentracing-api:0.31.0'
-    compile 'io.opentracing.brave:brave-opentracing:0.31.2'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.4'
-    compile group: 'com.hubspot.jackson', name: 'jackson-datatype-protobuf', version: '0.9.10-jackson2.9-proto3'
-
-    testCompile 'org.apache.logging.log4j:log4j-api:2.9.0'
-    testCompile 'org.apache.logging.log4j:log4j-core:2.9.0'
-    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl:2.9.0'
+    compile 'io.opentracing:opentracing-api'
+    compile 'io.opentracing.brave:brave-opentracing'
+    compile 'com.fasterxml.jackson.core:jackson-databind'
+    compile 'com.hubspot.jackson:jackson-datatype-protobuf'
 }
 
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = "com.google.protobuf:protoc:$protobufVersion"
+        artifact = "com.google.protobuf:protoc:${ext['protobuf.version']}"
     }
     plugins {
         rsocketRpc {
-            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf:$rsocketRpcVersion"
+            artifact = "io.rsocket.rpc:rsocket-rpc-protobuf"
         }
     }
     generateProtoTasks {
