@@ -1,6 +1,4 @@
-plugins {
-    id 'com.google.protobuf' version '0.8.5'
-}
+apply plugin: 'com.google.protobuf'
 
 description = 'Netifi Proteus Access Key IDL'
 
@@ -10,7 +8,7 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:${ext['protobuf.version']}"
+        artifact = "com.google.protobuf:protoc"
     }
     generateProtoTasks {
         all()*.enabled = false

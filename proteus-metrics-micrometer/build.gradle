@@ -1,9 +1,4 @@
-plugins {
-    id 'com.google.protobuf' version '0.8.5'
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+apply plugin: 'com.google.protobuf'
 
 dependencies {
     compile project (':proteus-client')
@@ -16,7 +11,7 @@ protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
     protoc {
-        artifact = "com.google.protobuf:protoc:${ext['protobuf.version']}"
+        artifact = "com.google.protobuf:protoc"
     }
     plugins {
         rsocketRpc {
