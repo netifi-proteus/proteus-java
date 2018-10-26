@@ -51,7 +51,7 @@ subprojects {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
-    project.version += project.hasProperty('versionSufix') ? project.property('versionSufix') : ''
+    project.version += project.hasProperty('versionSuffix') ? project.property('versionSuffix') : ''
 
     repositories {
         mavenCentral()
