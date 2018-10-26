@@ -14,12 +14,11 @@ elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "develop" ] 
     # Develop Branch
     echo -e 'Build Branch with Snapshot => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=snapshot
-    ./gradlew clean build publish --stacktrace
+    ./gradlew -PversionSuffix=".BUILD-SNAPSHOT" clean build artifactoryPublish --stacktrace
 elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [[ "$TRAVIS_BRANCH" == release/* ]] && [ "$TRAVIS_TAG" == "" ]; then
     # Release Branch
     echo -e 'Build Branch for Release => Branch ['$TRAVIS_BRANCH']'
-    export ORG_GRADLE_PROJECT_releaseType=releaseCandidate
-    ./gradlew clean build publish --stacktrace
+    ./gradlew -PversionSuffix="-RC" clean build artifactoryPublish --stacktrace
 elif [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; then
     # Master Branch
     echo -e 'Build Master for Release => Branch ['$TRAVIS_BRANCH']'
@@ -34,5 +33,5 @@ else
     # Feature Branch
     echo -e 'Build Branch => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=snapshot
-    ./gradlew clean build publish --stacktrace
+    ./gradlew clean -PversionSuffix=".BUILD-SNAPSHOT" build artifactoryPublish --stacktrace
 fi

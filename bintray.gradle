@@ -1,0 +1,50 @@
+/*
+ * Copyright 2015-2018 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+if (project.hasProperty('bintrayUser') && project.hasProperty('bintrayKey')) {
+
+    subprojects {
+        plugins.withId('com.jfrog.bintray') {
+            bintray {
+                user = project.property('bintrayUser')
+                key = project.property('bintrayKey')
+
+                publications = ['mavenJava']
+
+                //dryRun = true
+                publish = (osdetector.os == 'osx')
+                override = true
+
+                pkg {
+                    repo = 'netifi-oss'
+                    name = project.name
+                    userOrg = 'netifi'
+                    desc = "${project.description}"
+                    websiteUrl = 'https://github.com/netifi-proteus/proteus-java'
+                    issueTrackerUrl = 'https://github.com/netifi-proteus/proteus-java/issues'
+                    vcsUrl = 'https://github.com/netifi-proteus/proteus-java.git'
+                    licenses = ['Apache-2.0']
+                    githubRepo = 'netifi-proteus/proteus-java'
+                    githubReleaseNotesFile = 'CHANGELOG.md'
+
+                    version {
+                        name = "$project.version".toString()
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,7 +1,7 @@
 language: java
 sudo: required
 jdk: oraclejdk8
-script: gradle/buildViaTravis.sh
+script: ci/travis.sh
 before_cache:
 - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
 notifications:
