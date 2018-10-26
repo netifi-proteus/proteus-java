@@ -87,10 +87,6 @@ subprojects {
                 entry 'protobuf-java-util'
             }
 
-            dependencySet( group: 'io.netty', version: ext['netty-tcnative.version']) {
-                entry 'netty-tcnative'
-            }
-
             dependency "com.hubspot.jackson:jackson-datatype-protobuf:${ext['jackson-protobuf.version']}"
             dependency "com.fasterxml.jackson.core:jackson-databind:${ext['jackson.version']}"
             dependency "com.google.guava:guava:${ext['guava.version']}"
