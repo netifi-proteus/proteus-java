@@ -55,7 +55,6 @@ subprojects {
     ext['zipkin.sender.version'] = '2.7.6'
     ext['hdrhistogram.version'] = '2.1.10'
     ext['netty.version'] = '4.1.29.Final'
-    ext['netty-tcnative.version'] = '2.0.18.Final'
     ext['typesafe-config.version'] = '1.3.3'
 
     sourceCompatibility = 1.8
