@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4"
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.8.1"
+    }
+}
+
 plugins {
     id 'com.gradle.build-scan' version '1.16' // declare before any other plugin
     id 'com.google.osdetector' version '1.4.0'
@@ -5,16 +17,14 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1' apply false
     id 'me.champeau.gradle.jmh' version '0.4.7' apply false
     id 'io.morethan.jmhreport' version '0.6.2.1' apply false
-    id 'com.jfrog.artifactory' version '4.7.3'
-    id 'com.jfrog.bintray' version '1.8.4'
     id 'io.spring.dependency-management' version '1.0.6.RELEASE' apply false
     id 'com.google.protobuf' version '0.8.5' apply false
 }
 
-apply from: 'artifactory.gradle'
-apply from: 'bintray.gradle'
-
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
+
+apply from: "artifactory.gradle"
+apply from: "bintray.gradle"
 
 subprojects {
     apply plugin: 'io.spring.dependency-management'
@@ -24,7 +34,7 @@ subprojects {
     apply plugin: 'com.github.sherter.google-java-format'
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
-
+    
     ext['reactor-bom.version'] = 'Californium-SR1'
     ext['rsocket.version'] = '0.11.9'
     ext['rsocket-rpc.version'] = '0.2.4'
@@ -162,5 +172,36 @@ subprojects {
         testCompile 'io.rsocket:rsocket-transport-netty'
         testCompile 'io.rsocket:rsocket-transport-local'
         testCompile 'org.mockito:mockito-core'
+    }
+
+    // Build Source Jars
+    def sourcesJarMap = [name: 'sourcesJar', type: Jar, dependsOn: classes]
+    project.tasks.create(sourcesJarMap, {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+        version = "${project.version}"
+    })
+
+    // Build Javadoc Jars
+    def javadocJarMap = [name: 'javadocJar', type: Jar, dependsOn: javadoc]
+    project.tasks.create(javadocJarMap, {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+        version = "${project.version}"
+    })
+
+    artifacts {
+        archives sourcesJar
+        archives javadocJar
+    }
+    
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+            }
+        }
     }
 }
