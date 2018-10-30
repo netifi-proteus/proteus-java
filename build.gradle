@@ -63,8 +63,6 @@ subprojects {
     repositories {
         mavenCentral()
         jcenter()
-        maven { url 'http://repo.spring.io/libs-snapshot' }
-        maven { url 'https://oss.jfrog.org/oss-snapshot-local' }
         maven { url 'https://oss.jfrog.org/oss-release-local' }
     }
 
