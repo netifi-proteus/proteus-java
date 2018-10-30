@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-if (project.hasProperty('netifiArtifactoryUsernameTest') && project.hasProperty('netifiArtifactoryPasswordTest')) {
+if (project.hasProperty('netifiArtifactoryUsername') && project.hasProperty('netifiArtifactoryPassword')) {
 
     subprojects {
         plugins.withId('com.jfrog.artifactory') {
