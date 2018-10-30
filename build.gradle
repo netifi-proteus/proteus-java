@@ -29,6 +29,7 @@ apply from: "bintray.gradle"
 subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'com.jfrog.bintray'
+    apply plugin: "com.jfrog.artifactory"
     apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'com.github.sherter.google-java-format'
