@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-if (project.hasProperty('netifiArtifactoryUsername') && project.hasProperty('netifiArtifactoryPassword')) {
+if (project.hasProperty('netifiArtifactoryUsernameTest') && project.hasProperty('netifiArtifactoryPasswordTest')) {
 
     subprojects {
         plugins.withId('com.jfrog.artifactory') {
@@ -26,8 +26,8 @@ if (project.hasProperty('netifiArtifactoryUsername') && project.hasProperty('net
                         repoKey = version.contains('SNAPSHOT') ? 'libs-snapshot-local' : 'libs-release-local'
 
                         // Credentials for oss.jfrog.org are a user's Bintray credentials
-                        username = project.property('netifiArtifactoryUsername')
-                        password = project.property('netifiArtifactoryPassword')
+                        username = project.property('netifiArtifactoryUsernameTest')
+                        password = project.property('netifiArtifactoryPasswordTest')
                     }
 
                     defaults {
