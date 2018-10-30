@@ -23,9 +23,6 @@ plugins {
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
-apply from: "artifactory.gradle"
-apply from: "bintray.gradle"
-
 subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'com.jfrog.bintray'
@@ -202,3 +199,6 @@ subprojects {
         }
     }
 }
+
+apply from: "artifactory.gradle"
+apply from: "bintray.gradle"
