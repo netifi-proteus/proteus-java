@@ -20,14 +20,14 @@ if (project.hasProperty('netifiArtifactoryUsernameTest') && project.hasProperty(
         plugins.withId('com.jfrog.artifactory') {
             artifactory {
                 publish {
-                    contextUrl = 'https://artifactory.netifiinc.com'
+                    contextUrl = 'https://artifactory.netifiinc.com/artifactory'
 
                     repository {
                         repoKey = version.contains('SNAPSHOT') ? 'libs-snapshot-local' : 'libs-release-local'
 
                         // Credentials for oss.jfrog.org are a user's Bintray credentials
-                        username = project.property('netifiArtifactoryUsernameTest')
-                        password = project.property('netifiArtifactoryPasswordTest')
+                        username = project.property('netifiArtifactoryUsername')
+                        password = project.property('netifiArtifactoryPassword')
                     }
 
                     defaults {
