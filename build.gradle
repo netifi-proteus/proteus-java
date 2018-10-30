@@ -34,7 +34,7 @@ subprojects {
     apply plugin: 'maven-publish'
     
     ext['reactor-bom.version'] = 'Californium-SR2'
-    ext['rsocket.version'] = '0.11.11'
+    ext['rsocket.version'] = '0.11.12.BUILD-SNAPSHOT'
     ext['rsocket-rpc.version'] = '0.2.5'
 
     ext['jackson.version'] = '2.9.7'
@@ -63,7 +63,10 @@ subprojects {
     repositories {
         mavenCentral()
         jcenter()
+        maven { url 'http://repo.spring.io/libs-snapshot' }
+        maven { url 'https://oss.jfrog.org/oss-snapshot-local' }
         maven { url 'https://oss.jfrog.org/oss-release-local' }
+
     }
 
     googleJavaFormat {
