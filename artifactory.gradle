@@ -20,7 +20,7 @@ if (project.hasProperty('netifiArtifactoryUsername') && project.hasProperty('net
         plugins.withId('com.jfrog.artifactory') {
             artifactory {
                 publish {
-                    contextUrl = 'artifactory.netifiinc.com'
+                    contextUrl = 'https://artifactory.netifiinc.com'
 
                     repository {
                         repoKey = version.contains('SNAPSHOT') ? 'libs-snapshot-local' : 'libs-release-local'
