@@ -31,7 +31,7 @@ if (project.hasProperty('netifiArtifactoryUsername') && project.hasProperty('net
                     }
 
                     defaults {
-                        publications('maven')
+                        publications('mavenJava')
                     }
                 }
             }
