@@ -23,12 +23,10 @@ plugins {
 
 buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
 
-apply from: "artifactory.gradle"
-apply from: "bintray.gradle"
-
 subprojects {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'com.jfrog.bintray'
+    apply plugin: "com.jfrog.artifactory"
     apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'com.github.sherter.google-java-format'
@@ -36,8 +34,8 @@ subprojects {
     apply plugin: 'maven-publish'
     
     ext['reactor-bom.version'] = 'Californium-SR1'
-    ext['rsocket.version'] = '0.11.9'
-    ext['rsocket-rpc.version'] = '0.2.4'
+    ext['rsocket.version'] = '0.11.12'
+    ext['rsocket-rpc.version'] = '0.2.6'
 
     ext['jackson.version'] = '2.9.7'
     ext['jackson-protobuf.version'] = '0.9.10-jackson2.9-proto3'
@@ -67,6 +65,8 @@ subprojects {
         jcenter()
         maven { url 'http://repo.spring.io/libs-snapshot' }
         maven { url 'https://oss.jfrog.org/oss-snapshot-local' }
+        maven { url 'https://oss.jfrog.org/oss-release-local' }
+
     }
 
     googleJavaFormat {
@@ -200,3 +200,6 @@ subprojects {
         }
     }
 }
+
+apply from: "artifactory.gradle"
+apply from: "bintray.gradle"

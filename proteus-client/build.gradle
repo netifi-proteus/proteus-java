@@ -9,8 +9,10 @@ dependencies {
     compile project (':proteus-frames')
     compile 'com.typesafe:config'
     compile 'com.google.guava:guava'
+    compile 'io.rsocket:rsocket-core'
     compile 'io.rsocket.rpc:rsocket-rpc-core'
-    compile "io.netty:netty-tcnative:2.0.18.Final:linux-x86_64"
+    compile 'io.rsocket:rsocket-transport-netty'
+    compile 'io.netty:netty-tcnative:2.0.18.Final:linux-x86_64'
 
     testProtobuf 'io.rsocket.rpc:rsocket-rpc-protobuf-idl'
     testCompile project(':proteus-tracing-openzipkin')
