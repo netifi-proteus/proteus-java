@@ -16,6 +16,7 @@ import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import io.opentracing.Tracer;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
@@ -24,6 +25,7 @@ import io.rsocket.rpc.stats.FrugalQuantile;
 import io.rsocket.rpc.stats.Quantile;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
+import io.rsocket.util.DefaultPayload;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -264,10 +266,25 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   Payload getSetupPayload(String computedFromDestination) {
-    ByteBuf metadata =
-        DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
-    return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata);
+    return getSetupPayload(
+        ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
+  }
+
+  static Payload getSetupPayload(
+      ByteBufAllocator alloc,
+      String computedFromDestination,
+      String group,
+      long accessKey,
+      ByteBuf accessToken) {
+    ByteBuf metadata = null;
+    try {
+      metadata =
+          DestinationSetupFlyweight.encode(
+              alloc, computedFromDestination, group, accessKey, accessToken);
+      return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
+    } finally {
+      ReferenceCountUtil.safeRelease(metadata);
+    }
   }
 
   private ProteusSocket unwrappedDestination(String destination, String group) {
