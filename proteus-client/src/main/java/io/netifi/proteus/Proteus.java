@@ -1,6 +1,8 @@
 package io.netifi.proteus;
 
+import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.rsocket.ProteusSocket;
+import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.OpenSsl;
@@ -55,6 +57,7 @@ public class Proteus implements Closeable {
       int missedAcks,
       DestinationNameFactory destinationNameFactory,
       List<SocketAddress> seedAddresses,
+      Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
       Supplier<Tracer> tracerSupplier) {
@@ -69,6 +72,7 @@ public class Proteus implements Closeable {
             requestHandlingRSocket,
             fromGroup,
             destinationNameFactory,
+            addressSelector,
             clientTransportFactory,
             poolSize,
             keepalive,
@@ -144,6 +148,8 @@ public class Proteus implements Closeable {
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
     private DestinationNameFactory destinationNameFactory;
+    private Function<Broker, InetSocketAddress> addressSelector =
+        BrokerAddressSelectors.TCP_ADDRESS; // Default
 
     private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
     private int poolSize = Runtime.getRuntime().availableProcessors();
@@ -246,6 +252,11 @@ public class Proteus implements Closeable {
       return this;
     }
 
+    public Builder addressSelector(Function<Broker, InetSocketAddress> addressSelector) {
+      this.addressSelector = addressSelector;
+      return this;
+    }
+
     public Proteus build() {
       Objects.requireNonNull(accessKey, "account key is required");
       Objects.requireNonNull(accessToken, "account token is required");
@@ -323,6 +334,7 @@ public class Proteus implements Closeable {
                     missedAcks,
                     destinationNameFactory,
                     socketAddresses,
+                    addressSelector,
                     clientTransportFactory,
                     poolSize,
                     tracerSupplier);

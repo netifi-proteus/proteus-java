@@ -12,6 +12,7 @@ import io.netifi.proteus.presence.BrokerInfoPresenceNotifier;
 import io.netifi.proteus.presence.PresenceNotifier;
 import io.netifi.proteus.rsocket.*;
 import io.netifi.proteus.rsocket.UnwrappingRSocket;
+import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -60,6 +61,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int missedAcks;
   private final long accessKey;
   private final ByteBuf accessToken;
+  private final Function<Broker, InetSocketAddress> addressSelector;
   private final Function<SocketAddress, ClientTransport> clientTransportFactory;
   private final int poolSize;
   private final double expFactor = DEFAULT_EXP_FACTOR;
@@ -76,6 +78,38 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       RequestHandlingRSocket requestHandlingRSocket,
       String group,
       DestinationNameFactory destinationNameFactory,
+      Function<SocketAddress, ClientTransport> clientTransportFactory,
+      int poolSize,
+      boolean keepalive,
+      long tickPeriodSeconds,
+      long ackTimeoutSeconds,
+      int missedAcks,
+      long accessKey,
+      ByteBuf accessToken,
+      Tracer tracer) {
+    this(
+        seedAddresses,
+        requestHandlingRSocket,
+        group,
+        destinationNameFactory,
+        BrokerAddressSelectors.TCP_ADDRESS,
+        clientTransportFactory,
+        poolSize,
+        keepalive,
+        tickPeriodSeconds,
+        ackTimeoutSeconds,
+        missedAcks,
+        accessKey,
+        accessToken,
+        tracer);
+  }
+
+  public DefaultProteusBrokerService(
+      List<SocketAddress> seedAddresses,
+      RequestHandlingRSocket requestHandlingRSocket,
+      String group,
+      DestinationNameFactory destinationNameFactory,
+      Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
       boolean keepalive,
@@ -103,6 +137,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.destinationNameFactory = destinationNameFactory;
     this.members = new ArrayList<>();
     this.suppliers = new ArrayList<>();
+    this.addressSelector = addressSelector;
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
     this.keepalive = keepalive;
@@ -199,8 +234,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   void handleBrokerEvent(Event event) {
     logger.info("received broker event {}", event.toString());
     Broker broker = event.getBroker();
-    InetSocketAddress address =
-        InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
+    InetSocketAddress address = this.addressSelector.apply(broker);
     switch (event.getType()) {
       case JOIN:
         handleJoinEvent(address);
