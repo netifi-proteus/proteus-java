@@ -14,12 +14,14 @@ message AccessKey {
 }
 
 message AccessKeyParameters {
+  string name = 2;
   string description = 1;
 }
 
 message AccessToken {
   int64 key = 1;
   bytes accessToken = 2;
+  string name = 4;
   string description = 3;
 }
 
@@ -28,6 +30,7 @@ message AccessTokenInfo {
   bytes accessTokenHash = 2;
   bytes accessTokenSalt = 3;
   string accessKeyAlgo = 4;
+  string name = 8;
   string description = 5;
   bool disabled = 6;
   google.protobuf.Timestamp timestamp = 7;
