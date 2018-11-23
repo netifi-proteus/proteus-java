@@ -9,6 +9,10 @@ option java_package = "io.netifi.proteus.broker.access";
 option java_outer_classname = "AccessKeyInfo";
 option java_multiple_files = true;
 
+message AccessKeyName {
+  string name = 1;
+}
+
 message AccessKey {
   int64 key = 1;
 }
@@ -43,4 +47,5 @@ service AccessKeyInfoService {
   rpc EnableAccessKey (AccessKey) returns (AccessTokenInfo) {}
   rpc GetAccessKey (AccessKey) returns (AccessTokenInfo) {}
   rpc GetAccessKeys (google.protobuf.Empty) returns (stream AccessTokenInfo) {}
+  rpc GetAccessKeyByName (AccessKeyName) returns (AccessTokenInfo) {}
 }
