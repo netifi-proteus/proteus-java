@@ -1,49 +1,31 @@
 package io.netifi.proteus.tags;
 
-import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
+import io.netifi.proteus.tags.ClientMap.Event.EventType;
 import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import org.agrona.collections.*;
+import java.util.Map.Entry;
+import org.agrona.collections.Hashing;
+import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.collections.Object2ObjectHashMap;
 import org.roaringbitmap.longlong.LongIterator;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 
-public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements IndexableMap<K, V> {
-  private final Map<K, V> delegate;
-  private final DirectProcessor<Event<K>> events;
-  private final Long2ObjectHashMap<K> indexToKey;
-  private final Object2LongHashMap<K> keyToIndex;
-  private final Object2ObjectHashMap<K, Tags> keyToTags;
+public class ClientMapImpl<V> implements ClientMap<V> {
+  private final DirectProcessor<Event> events;
+  private final Long2ObjectHashMap<V> keyToValue;
+  private final Long2ObjectHashMap<Tags> keyToTags;
   private final Table<CharSequence, CharSequence, Roaring64NavigableMap> tagIndexes;
 
-  private static final AtomicLongFieldUpdater<IndexableMapWrapper> KEY_INDEX =
-      AtomicLongFieldUpdater.newUpdater(IndexableMapWrapper.class, "keyIndex");
-  volatile long keyIndex;
-
-  public IndexableMapWrapper(Map<K, V> delegate) {
-    this.delegate = delegate;
+  public ClientMapImpl() {
     this.events = DirectProcessor.create();
-    this.indexToKey = new Long2ObjectHashMap<>();
-    this.keyToIndex = new Object2LongHashMap<>(-1);
-    this.keyToTags = new Object2ObjectHashMap<>();
+    this.keyToValue = new Long2ObjectHashMap<>();
+    this.keyToTags = new Long2ObjectHashMap<>();
     this.tagIndexes =
         Tables.newCustomTable(new Object2ObjectHashMap<>(), Object2ObjectHashMap::new);
-  }
-
-  /**
-   * Wraps an map
-   *
-   * @param target the map to wrapped
-   * @param <K>
-   * @param <V>
-   * @return a IndexableMap
-   */
-  public static <K, V> IndexableMapWrapper<K, V> wrap(Map<K, V> target) {
-    return new IndexableMapWrapper<>(target);
   }
 
   @Override
@@ -77,7 +59,7 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
   }
 
   @Override
-  public Iterable<Entry<K, V>> query(Tags tags) {
+  public Iterable<Entry<Long, V>> query(Tags tags) {
     Roaring64NavigableMap result = null;
     synchronized (this) {
       for (Entry<CharSequence, CharSequence> entry : tags) {
@@ -106,19 +88,13 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
     return new QueryResultIterable(result.getLongIterator());
   }
 
-  private synchronized Entry<K, V> getEntry(long keyIndex) {
-    K k = indexToKey.get(keyIndex);
-    V v = delegate.get(k);
-    return new SimpleImmutableEntry<>(k, v);
-  }
-
   @Override
-  public Flux<Event<K>> events() {
+  public Flux<Event> events() {
     return events;
   }
 
   @Override
-  public Flux<Event<K>> events(Tags tags) {
+  public Flux<Event> events(Tags tags) {
     Objects.requireNonNull(tags);
 
     return events.filter(
@@ -139,7 +115,7 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
   }
 
   @Override
-  public Flux<Event<K>> eventsByTagKeys(CharSequence... tags) {
+  public Flux<Event> eventsByTagKeys(CharSequence... tags) {
     Objects.requireNonNull(tags);
 
     return events.filter(
@@ -160,36 +136,13 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
   }
 
   @Override
-  protected Map<K, V> delegate() {
-    return delegate;
-  }
+  public V put(int brokerId, int clientId, V value, Tags tags) {
+    long keyIndex = Hashing.compoundKey(brokerId, clientId);
 
-  @Override
-  public V put(K key, V value) {
-    return put(key, value, EmptyTags.INSTANCE);
-  }
-
-  @Override
-  public void putAll(Map<? extends K, ? extends V> map) {
-    standardPutAll(map);
-  }
-
-  @Override
-  public V put(K key, V value, Tags tags) {
+    V oldValue;
     synchronized (this) {
-      long keyIndex = keyToIndex.getValue(key);
-      if (keyIndex == keyToIndex.missingValue()) {
-        keyIndex = getNextKeyIndex();
-        indexToKey.put(keyIndex, key);
-        keyToIndex.put(key, keyIndex);
-        keyToTags.put(key, tags);
-      } else {
-        // Remove old tags
-        Tags oldTags = keyToTags.put(key, tags);
-        if (oldTags != null) {
-          removeTags(keyIndex, oldTags);
-        }
-      }
+      oldValue = keyToValue.put(keyIndex, value);
+      keyToTags.put(keyIndex, tags);
 
       for (Entry<CharSequence, CharSequence> entry : tags) {
         Roaring64NavigableMap bitmap = tagIndexes.get(entry.getKey(), entry.getValue());
@@ -202,10 +155,7 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
       }
     }
 
-    V oldValue = delegate.put(key, value);
-
-    Event.EventType type = oldValue == null ? Event.EventType.ADD : Event.EventType.UPDATE;
-    Event<K> kEvent = Event.of(type, key, tags);
+    Event kEvent = Event.of(EventType.ADD, brokerId, clientId, tags);
     events.onNext(kEvent);
 
     return oldValue;
@@ -227,39 +177,28 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
   }
 
   @Override
-  public V remove(Object key) {
-    V remove = delegate.remove(key);
+  public V remove(int brokerId, int clientId) {
+    long keyIndex = Hashing.compoundKey(brokerId, clientId);
+    V oldValue = keyToValue.remove(keyIndex);
 
-    if (remove != null) {
-      Event<K> event;
+    if (oldValue != null) {
+      Event event;
       synchronized (this) {
-        long keyIndex = keyToIndex.removeKey((K) key);
-        indexToKey.remove(keyIndex);
-
-        Tags tags = keyToTags.remove(key);
+        Tags tags = keyToTags.remove(keyIndex);
         if (tags != null) {
           removeTags(keyIndex, tags);
         }
 
-        event = Event.of(Event.EventType.REMOVE, (K) key, tags);
+        event = Event.of(EventType.REMOVE, brokerId, clientId, tags);
       }
 
       events.onNext(event);
     }
 
-    return remove;
+    return oldValue;
   }
 
-  @Override
-  public void clear() {
-    standardClear();
-  }
-
-  private long getNextKeyIndex() {
-    return KEY_INDEX.incrementAndGet(this);
-  }
-
-  private class QueryResultIterable implements Iterable<Entry<K, V>>, Iterator<Entry<K, V>> {
+  private class QueryResultIterable implements Iterable<Entry<Long, V>>, Iterator<Entry<Long, V>> {
     private final LongIterator queryResults;
 
     QueryResultIterable(LongIterator queryResults) {
@@ -267,7 +206,7 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
     }
 
     @Override
-    public Iterator<Entry<K, V>> iterator() {
+    public Iterator<Entry<Long, V>> iterator() {
       return this;
     }
 
@@ -277,10 +216,11 @@ public class IndexableMapWrapper<K, V> extends ForwardingMap<K, V> implements In
     }
 
     @Override
-    public Entry<K, V> next() {
+    public Entry<Long, V> next() {
       if (queryResults.hasNext()) {
-        long next = queryResults.next();
-        return getEntry(next);
+        long key = queryResults.next();
+        V value = keyToValue.get(key);
+        return new SimpleImmutableEntry<>(key, value);
       } else {
         throw new NoSuchElementException();
       }

@@ -20,22 +20,22 @@ public class BrokerInfoPresenceNotifierTest {
 
   @Test
   public void testWatchGroup() throws Exception {
-    BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
+    BrokerInfoService brokerInfo = Mockito.mock(BrokerInfoService.class);
 
     Tags tags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     ByteBuf out = TagsCodec.encode(ByteBufAllocator.DEFAULT, tags);
-    Destination destination =
-        Destination.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
-    Event event = Event.newBuilder().setDestination(destination).build();
+    Client client =
+        Client.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
+    Event event = Event.newBuilder().setClient(client).build();
     Mockito.when(
-            client.streamDestinationEvents(
+            brokerInfo.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.just(event));
 
-    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
+    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(brokerInfo);
 
     CountDownLatch latch = new CountDownLatch(1);
-    notifier.destinations.events().subscribe(d -> latch.countDown());
+    notifier.connections.events().subscribe(d -> latch.countDown());
 
     Tags watchTags = new DefaultTags().add("group", "testGroup");
     notifier.watch(watchTags);
@@ -45,22 +45,22 @@ public class BrokerInfoPresenceNotifierTest {
 
   @Test
   public void testWatchDestination() throws Exception {
-    BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
+    BrokerInfoService brokerInfo = Mockito.mock(BrokerInfoService.class);
 
     Tags tags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     ByteBuf out = TagsCodec.encode(ByteBufAllocator.DEFAULT, tags);
-    Destination destination =
-        Destination.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
-    Event event = Event.newBuilder().setDestination(destination).build();
+    Client client =
+        Client.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
+    Event event = Event.newBuilder().setClient(client).build();
     Mockito.when(
-            client.streamDestinationEvents(
+            brokerInfo.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.just(event));
 
-    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
+    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(brokerInfo);
 
     CountDownLatch latch = new CountDownLatch(1);
-    notifier.destinations.events().subscribe(d -> latch.countDown());
+    notifier.connections.events().subscribe(d -> latch.countDown());
 
     Tags watchTags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     notifier.watch(watchTags);
@@ -70,20 +70,20 @@ public class BrokerInfoPresenceNotifierTest {
 
   @Test
   public void testNotifyGroup() throws Exception {
-    BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
+    BrokerInfoService brokerInfo = Mockito.mock(BrokerInfoService.class);
 
     Tags tags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     ByteBuf out = TagsCodec.encode(ByteBufAllocator.DEFAULT, tags);
-    Destination destination =
-        Destination.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
-    Event event = Event.newBuilder().setDestination(destination).build();
+    Client client =
+        Client.newBuilder().setTags(UnsafeByteOperations.unsafeWrap(out.nioBuffer())).build();
+    Event event = Event.newBuilder().setClient(client).build();
     DirectProcessor<Event> processor = DirectProcessor.create();
     Mockito.when(
-            client.streamDestinationEvents(
+            brokerInfo.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(processor);
 
-    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
+    BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(brokerInfo);
     CountDownLatch latch = new CountDownLatch(1);
 
     Tags watchTags = new DefaultTags().add("group", "testGroup");
@@ -101,8 +101,8 @@ public class BrokerInfoPresenceNotifierTest {
     ByteBuf invalidTagsOut = TagsCodec.encode(ByteBufAllocator.DEFAULT, invalidTags);
     Event invalidEvent =
         Event.newBuilder()
-            .setDestination(
-                Destination.newBuilder()
+            .setClient(
+                Client.newBuilder()
                     .setTags(UnsafeByteOperations.unsafeWrap(invalidTagsOut.nioBuffer()))
                     .build())
             .build();
@@ -111,15 +111,15 @@ public class BrokerInfoPresenceNotifierTest {
     ByteBuf validTagsOut = TagsCodec.encode(ByteBufAllocator.DEFAULT, validTags);
     Event validEvent =
         Event.newBuilder()
-            .setDestination(
-                Destination.newBuilder()
+            .setClient(
+                Client.newBuilder()
                     .setTags(UnsafeByteOperations.unsafeWrap(validTagsOut.nioBuffer()))
                     .build())
             .build();
 
     DirectProcessor<Event> processor = DirectProcessor.create();
     Mockito.when(
-            client.streamDestinationEvents(
+            client.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(processor);
 
@@ -138,13 +138,13 @@ public class BrokerInfoPresenceNotifierTest {
   public void testNotifyExistingGroup() {
     BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
     Mockito.when(
-            client.streamDestinationEvents(
+            client.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.never());
 
     Tags tags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    notifier.destinations.put("1234", Destination.newBuilder().build(), tags);
+    notifier.connections.put(123, 456, Client.newBuilder().build(), tags);
 
     Tags watchTags = new DefaultTags().add("group", "testGroup");
     notifier.watch(watchTags);
@@ -155,13 +155,13 @@ public class BrokerInfoPresenceNotifierTest {
   public void testNotifyExistDestination() {
     BrokerInfoService client = Mockito.mock(BrokerInfoService.class);
     Mockito.when(
-            client.streamDestinationEvents(
+            client.streamClientEvents(
                 Mockito.any(io.netifi.proteus.broker.info.Tags.class), Mockito.any(ByteBuf.class)))
         .thenReturn(Flux.never());
 
     Tags tags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     BrokerInfoPresenceNotifier notifier = new BrokerInfoPresenceNotifier(client);
-    notifier.destinations.put("1234", Destination.newBuilder().build(), tags);
+    notifier.connections.put(123, 456, Client.newBuilder().build(), tags);
 
     Tags watchTags = new DefaultTags().add("group", "testGroup").add("destination", "testDest");
     notifier.watch(watchTags);

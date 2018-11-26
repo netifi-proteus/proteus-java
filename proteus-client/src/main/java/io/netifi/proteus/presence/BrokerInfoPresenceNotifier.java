@@ -1,14 +1,13 @@
 package io.netifi.proteus.presence;
 
 import io.netifi.proteus.broker.info.BrokerInfoService;
-import io.netifi.proteus.broker.info.Destination;
+import io.netifi.proteus.broker.info.Client;
 import io.netifi.proteus.broker.info.Event;
 import io.netifi.proteus.tags.*;
 import io.netty.buffer.Unpooled;
 import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -16,12 +15,12 @@ import reactor.core.publisher.Mono;
 
 public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   private static final Logger logger = LoggerFactory.getLogger(BrokerInfoPresenceNotifier.class);
-  IndexableMap<String, Destination> destinations;
+  ClientMap<Client> connections;
 
   private BrokerInfoService client;
 
   public BrokerInfoPresenceNotifier(BrokerInfoService client) {
-    this.destinations = IndexableMapWrapper.wrap(new ConcurrentHashMap<>());
+    this.connections = new ClientMapImpl<>();
     this.client = client;
   }
 
@@ -35,7 +34,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
       builder.putTags(entry.getKey().toString(), entry.getValue().toString());
     }
     return client
-        .streamDestinationEvents(builder.build(), Unpooled.EMPTY_BUFFER)
+        .streamClientEvents(builder.build(), Unpooled.EMPTY_BUFFER)
         // .doFinally(
         //    s -> {
         //      synchronized (BrokerInfoPresenceNotifier.class) {
@@ -51,16 +50,17 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
   }
 
   private void joinEvent(Event event) {
-    Destination destination = event.getDestination();
+    Client client = event.getClient();
     logger.info("presence notifier received event {}", event.toString());
     switch (event.getType()) {
       case JOIN:
         Tags tags =
-            TagsCodec.decode(Unpooled.wrappedBuffer(destination.getTags().asReadOnlyByteBuffer()));
-        destinations.put(destination.getDestinationId(), destination, tags);
+            TagsCodec.decode(Unpooled.wrappedBuffer(client.getTags().asReadOnlyByteBuffer()));
+        connections.put(
+            client.getBroker().getBrokerId(), client.getClientId(), client, tags);
         break;
       case LEAVE:
-        destinations.remove(destination.getDestinationId());
+        connections.remove(client.getBroker().getBrokerId(), client.getClientId());
         break;
       default:
         throw new IllegalStateException("unknown event type " + event.getType());
@@ -73,10 +73,10 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
     return Mono.defer(
         () -> {
-          if (destinations.contains(tags)) {
+          if (connections.contains(tags)) {
             return Mono.empty();
           } else {
-            return destinations.events(tags).next().then();
+            return connections.events(tags).next().then();
           }
         });
   }

@@ -1,7 +1,7 @@
 package io.netifi.proteus;
 
 import io.netifi.proteus.rsocket.ProteusSocket;
-import io.netifi.proteus.tags.EmptyTags;
+import io.netifi.proteus.tags.DefaultTags;
 import io.netifi.proteus.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -102,6 +102,18 @@ public class Proteus implements Closeable {
     return this;
   }
 
+  @Deprecated
+  public ProteusSocket destination(String destination, String group) {
+    Tags tags = new DefaultTags().add("destination", destination).add("group", group);
+    return brokerService.unicast(tags);
+  }
+
+  @Deprecated
+  public ProteusSocket group(String group) {
+    Tags tags = new DefaultTags().add("group", group);
+    return brokerService.unicast(tags);
+  }
+
   public ProteusSocket unicast(Tags tags) {
     return brokerService.unicast(tags);
   }
@@ -125,7 +137,7 @@ public class Proteus implements Closeable {
     private Long accessKey = DefaultBuilderConfig.getAccessKey();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
-    private Tags tags = EmptyTags.INSTANCE;
+    private Tags tags = new DefaultTags();
 
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
@@ -219,8 +231,18 @@ public class Proteus implements Closeable {
       return this;
     }
 
+    public Builder group(String group) {
+      this.tags.add("group", group);
+      return this;
+    }
+
+    public Builder destination(String destination) {
+      this.tags.add("destination", destination);
+      return this;
+    }
+
     public Builder tags(Tags tags) {
-      this.tags = tags;
+      this.tags.add(tags);
       return this;
     }
 
