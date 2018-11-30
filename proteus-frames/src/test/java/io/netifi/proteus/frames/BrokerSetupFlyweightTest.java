@@ -14,10 +14,10 @@ public class BrokerSetupFlyweightTest {
 
     ByteBuf byteBuf =
         BrokerSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, "brokerId", "clusterId", Long.MAX_VALUE, authToken);
+            ByteBufAllocator.DEFAULT, 123, 456, Long.MAX_VALUE, authToken);
 
-    Assert.assertEquals("brokerId", BrokerSetupFlyweight.brokerId(byteBuf));
-    Assert.assertEquals("clusterId", BrokerSetupFlyweight.clusterId(byteBuf));
+    Assert.assertEquals(123, BrokerSetupFlyweight.clusterId(byteBuf));
+    Assert.assertEquals(456, BrokerSetupFlyweight.brokerId(byteBuf));
     Assert.assertEquals(Long.MAX_VALUE, BrokerSetupFlyweight.accessKey(byteBuf));
     authToken.resetReaderIndex();
     Assert.assertTrue(ByteBufUtil.equals(authToken, BrokerSetupFlyweight.accessToken(byteBuf)));

@@ -56,8 +56,7 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
       case JOIN:
         Tags tags =
             TagsCodec.decode(Unpooled.wrappedBuffer(client.getTags().asReadOnlyByteBuffer()));
-        connections.put(
-            client.getBroker().getBrokerId(), client.getClientId(), client, tags);
+        connections.put(client.getBroker().getBrokerId(), client.getClientId(), client, tags);
         break;
       case LEAVE:
         connections.remove(client.getBroker().getBrokerId(), client.getClientId());
@@ -73,10 +72,10 @@ public class BrokerInfoPresenceNotifier implements PresenceNotifier {
 
     return Mono.defer(
         () -> {
-          if (connections.contains(tags)) {
-            return Mono.empty();
-          } else {
+          if (connections.query(tags).isEmpty()) {
             return connections.events(tags).next().then();
+          } else {
+            return Mono.empty();
           }
         });
   }

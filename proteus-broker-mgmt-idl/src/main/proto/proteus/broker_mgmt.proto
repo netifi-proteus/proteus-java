@@ -30,13 +30,13 @@ service BrokerManagementService {
     rpc join (Brokers) returns (Ack) {}
 
     // Closes connections to a specific set of destinations
-    rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (Ack) {}
+    rpc closeClient (stream io.netifi.proteus.broker.info.Client) returns (Ack) {}
 
     // Closes connections to a specific set of brokers
     rpc closeBroker (stream io.netifi.proteus.broker.info.Broker) returns (Ack) {}
 
     // Closes all connections on the broker - except broker to broker connections
-    rpc closeDestinations (google.protobuf.Empty) returns (Ack) {}
+    rpc closeClients (google.protobuf.Empty) returns (Ack) {}
 
     // Closes connections to all other brokers
     rpc closeBrokers (google.protobuf.Empty) returns (Ack) {}
