@@ -4,18 +4,17 @@ import io.netifi.proteus.rsocket.WeightedRSocket;
 import io.rsocket.Closeable;
 import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
+import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-
-import java.net.SocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class WeightedClientTransportSupplier
     implements Function<Flux<WeightedRSocket>, Supplier<ClientTransport>>, Closeable {
@@ -107,10 +106,9 @@ public class WeightedClientTransportSupplier
   }
 
   /**
-   * Caculates the weight for a transport supplier based on the error percentage, and
-   * number of active connections. The higher weight, the worse the quality the connection is for
-   * selection. Lower is better. Error percentages will exponentially effect the weight of the
-   * connection.
+   * Caculates the weight for a transport supplier based on the error percentage, and number of
+   * active connections. The higher weight, the worse the quality the connection is for selection.
+   * Lower is better. Error percentages will exponentially effect the weight of the connection.
    *
    * @return a weight based on e^(1 / (1.0 - errorPercentage)) * (1 + active connections)
    */

@@ -178,7 +178,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     median.reset();
     interArrivalTime.reset(DEFAULT_INITIAL_INTER_ARRIVAL_TIME);
     pendingStreams.set(0);
-    errorPercentage.reset(1.0);
+    errorPercentage.reset(0.0);
   }
 
   synchronized void resetStatsProcessor() {
@@ -317,16 +317,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(0.0);
-                          } else {
                             recordError(1.0);
+                          } else {
+                            recordError(0.0);
                           }
 
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(0.0);
+                recordError(1.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -351,16 +351,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(0.0);
-                          } else {
                             recordError(1.0);
+                          } else {
+                            recordError(0.0);
                           }
 
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(0.0);
+                recordError(1.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
@@ -383,16 +383,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                         })
                     .doOnNext(
                         o -> {
-                          recordError(1.0);
+                          recordError(0.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnError(
                         t -> {
-                          recordError(0.0);
+                          recordError(1.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                recordError(0.0);
+                recordError(1.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Flux.error(t);
               }
@@ -415,16 +415,16 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                         })
                     .doOnNext(
                         o -> {
-                          recordError(1.0);
+                          recordError(0.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnError(
                         t -> {
-                          recordError(0.0);
+                          recordError(1.0);
                           statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
-                recordError(0.0);
+                recordError(1.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Flux.error(t);
               }
@@ -449,14 +449,14 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(0.0);
-                          } else {
                             recordError(1.0);
+                          } else {
+                            recordError(0.0);
                           }
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(0.0);
+                recordError(1.0);
                 statsProcessor.onNext(WeightedReconnectingRSocket.this);
                 return Mono.error(t);
               }
