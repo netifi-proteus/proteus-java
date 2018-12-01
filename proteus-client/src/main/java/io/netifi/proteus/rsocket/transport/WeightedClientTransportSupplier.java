@@ -4,18 +4,18 @@ import io.netifi.proteus.rsocket.WeightedRSocket;
 import io.rsocket.Closeable;
 import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
-import io.rsocket.util.Clock;
-import java.net.SocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+
+import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class WeightedClientTransportSupplier
     implements Function<Flux<WeightedRSocket>, Supplier<ClientTransport>>, Closeable {
@@ -27,7 +27,6 @@ public class WeightedClientTransportSupplier
   private final int supplierId;
   private final Function<SocketAddress, ClientTransport> clientTransportFunction;
   private final Ewma errorPercentage;
-  private final Ewma latency;
   private final SocketAddress socketAddress;
   private final AtomicInteger activeConnections;
 
@@ -41,7 +40,6 @@ public class WeightedClientTransportSupplier
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;
     this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
-    this.latency = new Ewma(1, TimeUnit.MINUTES, Clock.unit().convert(1L, TimeUnit.SECONDS));
     this.activeConnections = new AtomicInteger();
     this.onClose = MonoProcessor.create();
   }
@@ -60,10 +58,8 @@ public class WeightedClientTransportSupplier
                     logger.trace("recording stats {}", weightedRSocket.toString());
                   }
                   double e = weightedRSocket.errorPercentage();
-                  double i = weightedRSocket.higherQuantileLatency();
 
                   errorPercentage.insert(e);
-                  latency.insert(i);
                 })
             .subscribe();
 
@@ -106,29 +102,23 @@ public class WeightedClientTransportSupplier
     return errorPercentage.value();
   }
 
-  public double latency() {
-    return latency.value();
-  }
-
   public int activeConnections() {
     return activeConnections.get();
   }
 
   /**
-   * Caculates the weight for a transport supplier based on the error percentage, latency, and
+   * Caculates the weight for a transport supplier based on the error percentage, and
    * number of active connections. The higher weight, the worse the quality the connection is for
    * selection. Lower is better. Error percentages will exponentially effect the weight of the
    * connection.
    *
-   * @return a weight based on e^(1 / (1.0 - errorPercentage)) * (1.0 + latency) + (1 + active
-   *     connections)
+   * @return a weight based on e^(1 / (1.0 - errorPercentage)) * (1 + active connections)
    */
   public double weight() {
     double e = Math.min(0.90, errorPercentage());
-    double l = latency();
     int a = activeConnections();
 
-    return Math.exp(1.0 / (1.0 - e)) * (1.0 + l) * (1 + a);
+    return Math.exp(1.0 / (1.0 - e)) * (1 + a);
   }
 
   public SocketAddress getSocketAddress() {
@@ -173,8 +163,6 @@ public class WeightedClientTransportSupplier
         + supplierId
         + ", errorPercentage="
         + errorPercentage
-        + ", latency="
-        + latency
         + ", socketAddress="
         + socketAddress
         + ", activeConnections="
