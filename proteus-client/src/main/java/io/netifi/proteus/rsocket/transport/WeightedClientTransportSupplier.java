@@ -38,7 +38,7 @@ public class WeightedClientTransportSupplier
     this.supplierId = SUPPLIER_ID.incrementAndGet();
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;
-    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
+    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 0.0);
     this.activeConnections = new AtomicInteger();
     this.onClose = MonoProcessor.create();
   }
