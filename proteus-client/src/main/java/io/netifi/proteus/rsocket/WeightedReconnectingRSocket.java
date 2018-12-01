@@ -96,7 +96,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     this.median = new Median();
     this.interArrivalTime = new Ewma(1, TimeUnit.MINUTES, DEFAULT_INITIAL_INTER_ARRIVAL_TIME);
     this.pendingStreams = new AtomicLong();
-    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
+    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 0.0);
     this.tau = Clock.unit().convert((long) (5 / Math.log(2)), TimeUnit.SECONDS);
     this.requestHandlingRSocket = requestHandlingRSocket;
     this.onClose = MonoProcessor.create();
@@ -468,38 +468,22 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     long now = Clock.now();
     long elapsed = Math.max(now - stamp, 1L);
 
-    double weight;
     double prediction = median.estimation();
 
     if (prediction == 0.0) {
       if (pending == 0) {
-        weight = 0.0; // first request
+        prediction = 0.0;
       } else {
-        // subsequent requests while we don't have any history
-        weight = STARTUP_PENALTY + pending;
+        prediction = STARTUP_PENALTY + pending;
       }
     } else if (pending == 0 && elapsed > inactivityFactor * interArrivalTime.value()) {
       // if we did't see any data for a while, we decay the prediction by inserting
       // artificial 0.0 into the median
       median.insert(0.0);
-      weight = median.estimation();
-    } else {
-      double predicted = prediction * pending;
-      double instant = instantaneous(now);
-
-      if (predicted < instant) { // NB: (0.0 < 0.0) == false
-        weight = instant / pending; // NB: pending never equal 0 here
-      } else {
-        // we are under the predictions
-        weight = prediction;
-      }
+      prediction = median.estimation();
     }
 
-    return weight;
-  }
-
-  private synchronized long instantaneous(long now) {
-    return duration + (now - stamp0) * pending;
+    return prediction;
   }
 
   private synchronized long start() {
@@ -569,7 +553,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   @Override
   public double availability() {
     if (Clock.now() - stamp > tau) {
-      recordError(1.0);
+      recordError(0.0);
     }
     return availability * errorPercentage.value();
   }
