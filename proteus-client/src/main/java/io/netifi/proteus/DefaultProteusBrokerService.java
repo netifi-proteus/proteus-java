@@ -11,7 +11,6 @@ import io.netifi.proteus.frames.GroupFlyweight;
 import io.netifi.proteus.presence.BrokerInfoPresenceNotifier;
 import io.netifi.proteus.presence.PresenceNotifier;
 import io.netifi.proteus.rsocket.*;
-import io.netifi.proteus.rsocket.UnwrappingRSocket;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -126,6 +125,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
             .streamBrokerEvents(Empty.getDefaultInstance())
             .doOnNext(this::handleBrokerEvent)
             .filter(event -> event.getType() == Event.Type.JOIN)
+            .windowTimeout(poolSize - 1, Duration.ofSeconds(5))
+            .flatMap(Function.identity())
             .doOnNext(event -> createConnection())
             .doOnError(
                 t -> {
@@ -166,6 +167,23 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
               disposable.dispose();
             })
         .subscribe();
+  }
+
+  static Payload getSetupPayload(
+      ByteBufAllocator alloc,
+      String computedFromDestination,
+      String group,
+      long accessKey,
+      ByteBuf accessToken) {
+    ByteBuf metadata = null;
+    try {
+      metadata =
+          DestinationSetupFlyweight.encode(
+              alloc, computedFromDestination, group, accessKey, accessToken);
+      return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
+    } finally {
+      ReferenceCountUtil.safeRelease(metadata);
+    }
   }
 
   BrokerInfoServiceClient getBrokerInfoServiceClient() {
@@ -268,23 +286,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   Payload getSetupPayload(String computedFromDestination) {
     return getSetupPayload(
         ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
-  }
-
-  static Payload getSetupPayload(
-      ByteBufAllocator alloc,
-      String computedFromDestination,
-      String group,
-      long accessKey,
-      ByteBuf accessToken) {
-    ByteBuf metadata = null;
-    try {
-      metadata =
-          DestinationSetupFlyweight.encode(
-              alloc, computedFromDestination, group, accessKey, accessToken);
-      return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
-    } finally {
-      ReferenceCountUtil.safeRelease(metadata);
-    }
   }
 
   private ProteusSocket unwrappedDestination(String destination, String group) {
@@ -483,7 +484,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         double w1 = supplier1.weight();
         double w2 = supplier2.weight();
 
-        supplier = w1 < w2 ? supplier2 : supplier1;
+        supplier = w1 < w2 ? supplier1 : supplier2;
       }
 
       synchronized (this) {

@@ -99,7 +99,7 @@ public class WeightedClientTransportSupplier
                               })
                           .subscribe();
                     })
-                .doOnError(t -> errorPercentage.insert(0.0));
+                .doOnError(t -> errorPercentage.insert(1.0));
   }
 
   public double errorPercentage() {
@@ -114,12 +114,21 @@ public class WeightedClientTransportSupplier
     return activeConnections.get();
   }
 
+  /**
+   * Caculates the weight for a transport supplier based on the error percentage, latency, and
+   * number of active connections. The higher weight, the worse the quality the connection is for
+   * selection. Lower is better. Error percentages will exponentially effect the weight of the
+   * connection.
+   *
+   * @return a weight based on e^(1 / (1.0 - errorPercentage)) * (1.0 + latency) + (1 + active
+   *     connections)
+   */
   public double weight() {
-    double e = errorPercentage();
+    double e = Math.max(0.90, errorPercentage());
     double l = latency();
     int a = activeConnections();
 
-    return e * 1.0 / (1.0 + l * (a + 1));
+    return Math.exp(1.0 / (1.0 - e)) * (1.0 + l) * (1 + a);
   }
 
   public SocketAddress getSocketAddress() {
