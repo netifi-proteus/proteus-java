@@ -124,7 +124,7 @@ public class WeightedClientTransportSupplier
    *     connections)
    */
   public double weight() {
-    double e = Math.max(0.90, errorPercentage());
+    double e = Math.min(0.90, errorPercentage());
     double l = latency();
     int a = activeConnections();
 
