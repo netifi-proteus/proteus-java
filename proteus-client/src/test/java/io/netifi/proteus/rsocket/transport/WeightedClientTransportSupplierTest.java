@@ -1,13 +1,11 @@
 package io.netifi.proteus.rsocket.transport;
 
-import io.netifi.proteus.rsocket.WeightedRSocket;
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
 import java.net.InetSocketAddress;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
@@ -26,8 +24,8 @@ public class WeightedClientTransportSupplierTest {
         new WeightedClientTransportSupplier(
             InetSocketAddress.createUnresolved("localhost", 8081), address -> transport);
 
-    DirectProcessor<WeightedRSocket> p = DirectProcessor.create();
-    DuplexConnection block = supplier.apply(p).get().connect().block();
+    supplier.activate();
+    DuplexConnection block = supplier.get().connect().block();
 
     int i = supplier.activeConnections();
 

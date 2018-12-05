@@ -1,6 +1,5 @@
 package io.netifi.proteus.rsocket.transport;
 
-import io.netifi.proteus.rsocket.WeightedRSocket;
 import io.rsocket.Closeable;
 import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
@@ -12,12 +11,10 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
-public class WeightedClientTransportSupplier
-    implements Function<Flux<WeightedRSocket>, Supplier<ClientTransport>>, Closeable {
+public class WeightedClientTransportSupplier implements Supplier<ClientTransport>, Closeable {
 
   private static final Logger logger =
       LoggerFactory.getLogger(WeightedClientTransportSupplier.class);
@@ -38,85 +35,75 @@ public class WeightedClientTransportSupplier
     this.supplierId = SUPPLIER_ID.incrementAndGet();
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;
-    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 0.0);
+    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
     this.activeConnections = new AtomicInteger();
     this.onClose = MonoProcessor.create();
   }
 
+  /** Marks the connection as active and in-use. */
+  public void activate() {
+    activeConnections.incrementAndGet();
+  }
+
   @Override
-  public Supplier<ClientTransport> apply(Flux<WeightedRSocket> weightedSocketFlux) {
+  public ClientTransport get() {
     if (onClose.isDisposed()) {
       throw new IllegalStateException("WeightedClientTransportSupplier is closed");
     }
 
-    Disposable subscribe =
-        weightedSocketFlux
-            .doOnNext(
-                weightedRSocket -> {
-                  if (logger.isTraceEnabled()) {
-                    logger.trace("recording stats {}", weightedRSocket.toString());
-                  }
-                  double e = weightedRSocket.errorPercentage();
-
-                  errorPercentage.insert(e);
-                })
-            .subscribe();
+    int i = activeConnections.get();
 
     return () ->
-        () ->
-            clientTransportFunction
-                .apply(socketAddress)
-                .connect()
-                .doOnNext(
-                    duplexConnection -> {
-                      int i = activeConnections.incrementAndGet();
-                      logger.debug(
-                          "supplier id - {} - opened connection to {} - active connections {}",
-                          supplierId,
-                          socketAddress,
-                          i);
+        clientTransportFunction
+            .apply(socketAddress)
+            .connect()
+            .doOnNext(
+                duplexConnection -> {
+                  logger.debug(
+                      "supplier id - {} - opened connection to {} - active connections {}",
+                      supplierId,
+                      socketAddress,
+                      i);
 
-                      Disposable onCloseDisposable =
-                          onClose.doFinally(s -> duplexConnection.dispose()).subscribe();
+                  Disposable onCloseDisposable =
+                      onClose.doFinally(s -> duplexConnection.dispose()).subscribe();
 
-                      duplexConnection
-                          .onClose()
-                          .doFinally(
-                              s -> {
-                                int d = activeConnections.decrementAndGet();
-                                logger.debug(
-                                    "supplier id - {} - closed connection {} - active connections {}",
-                                    supplierId,
-                                    socketAddress,
-                                    d);
-                                onCloseDisposable.dispose();
-                                subscribe.dispose();
-                              })
-                          .subscribe();
-                    })
-                .doOnError(t -> errorPercentage.insert(1.0));
+                  duplexConnection
+                      .onClose()
+                      .doFinally(
+                          s -> {
+                            int d = activeConnections.decrementAndGet();
+                            logger.debug(
+                                "supplier id - {} - closed connection {} - active connections {}",
+                                supplierId,
+                                socketAddress,
+                                d);
+                            onCloseDisposable.dispose();
+                          })
+                      .subscribe();
+
+                  errorPercentage.insert(1.0);
+                })
+            .doOnError(t -> errorPercentage.insert(0.0));
   }
 
-  public double errorPercentage() {
+  private double errorPercentage() {
     return errorPercentage.value();
   }
 
-  public int activeConnections() {
+  int activeConnections() {
     return activeConnections.get();
   }
 
-  /**
-   * Caculates the weight for a transport supplier based on the error percentage, and number of
-   * active connections. The higher weight, the worse the quality the connection is for selection.
-   * Lower is better. Error percentages will exponentially effect the weight of the connection.
-   *
-   * @return a weight based on e^(1 / (1.0 - errorPercentage)) * (1 + active connections)
-   */
   public double weight() {
-    double e = Math.min(0.90, errorPercentage());
+    double e = errorPercentage();
     int a = activeConnections();
 
-    return Math.exp(1.0 / (1.0 - e)) * (1 + a);
+    if (e == 1.0) {
+      return a;
+    } else {
+      return Math.exp(1 / (1 - e)) * a;
+    }
   }
 
   public SocketAddress getSocketAddress() {
@@ -165,8 +152,6 @@ public class WeightedClientTransportSupplier
         + socketAddress
         + ", activeConnections="
         + activeConnections
-        + ", selectedCounter="
-        + selectedCounter
         + '}';
   }
 }

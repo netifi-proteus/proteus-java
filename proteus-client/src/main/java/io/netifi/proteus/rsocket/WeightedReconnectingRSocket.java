@@ -61,7 +61,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private Ewma interArrivalTime;
   private AtomicLong pendingStreams; // number of active streams
   private double availability = 0.0;
-  private DirectProcessor<WeightedRSocket> statsProcessor;
   private long CONNECTION_ATTEMPT_RESET_TS = Duration.ofMinutes(1).toMillis();
   private long lastConnectionAttemptTs = System.currentTimeMillis();
   private long attempts;
@@ -96,7 +95,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     this.median = new Median();
     this.interArrivalTime = new Ewma(1, TimeUnit.MINUTES, DEFAULT_INITIAL_INTER_ARRIVAL_TIME);
     this.pendingStreams = new AtomicLong();
-    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 0.0);
+    this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
     this.tau = Clock.unit().convert((long) (5 / Math.log(2)), TimeUnit.SECONDS);
     this.requestHandlingRSocket = requestHandlingRSocket;
     this.onClose = MonoProcessor.create();
@@ -143,7 +142,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
             higherQuantile,
             inactivityFactor);
 
-    rSocket.resetStatsProcessor();
     rSocket.resetMono();
 
     rSocket.connect();
@@ -178,15 +176,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     median.reset();
     interArrivalTime.reset(DEFAULT_INITIAL_INTER_ARRIVAL_TIME);
     pendingStreams.set(0);
-    errorPercentage.reset(0.0);
-  }
-
-  synchronized void resetStatsProcessor() {
-    this.statsProcessor = DirectProcessor.create();
-  }
-
-  private DirectProcessor<WeightedRSocket> getStatsProcessor() {
-    return statsProcessor;
+    errorPercentage.reset(1.0);
   }
 
   private RSocketFactory.ClientRSocketFactory getClientFactory(String destination) {
@@ -233,7 +223,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
                   WeightedClientTransportSupplier weighedClientTransportSupplier =
                       transportSupplier.get();
-                  this.statsProcessor = getStatsProcessor();
                   String destination = destinationNameFactory.get();
 
                   long start = System.nanoTime();
@@ -251,7 +240,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                               requestHandlingRSocket == null
                                   ? EMPTY_SOCKET
                                   : requestHandlingRSocket)
-                      .transport(weighedClientTransportSupplier.apply(statsProcessor))
+                      .transport(weighedClientTransportSupplier.get())
                       .start()
                       .doOnNext(
                           _rSocket -> {
@@ -272,7 +261,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                       }
 
                                       destinationNameFactory.release(destination);
-                                      resetStatsProcessor();
                                       availability = 0.0;
                                       synchronized (WeightedReconnectingRSocket.this) {
                                         connecting = false;
@@ -317,17 +305,14 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(1.0);
-                          } else {
                             recordError(0.0);
+                          } else {
+                            recordError(1.0);
                           }
-
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(1.0);
-                statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                recordError(0.0);
                 return Mono.error(t);
               }
             });
@@ -351,17 +336,14 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(1.0);
-                          } else {
                             recordError(0.0);
+                          } else {
+                            recordError(1.0);
                           }
-
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(1.0);
-                statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                recordError(0.0);
                 return Mono.error(t);
               }
             });
@@ -379,21 +361,17 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                     .doFinally(
                         s -> {
                           pendingStreams.decrementAndGet();
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnNext(
                         o -> {
-                          recordError(0.0);
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                          recordError(1.0);
                         })
                     .doOnError(
                         t -> {
-                          recordError(1.0);
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                          recordError(0.0);
                         });
               } catch (Throwable t) {
-                recordError(1.0);
-                statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                recordError(0.0);
                 return Flux.error(t);
               }
             });
@@ -411,21 +389,17 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                     .doFinally(
                         s -> {
                           pendingStreams.decrementAndGet();
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
                         })
                     .doOnNext(
                         o -> {
-                          recordError(0.0);
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                          recordError(1.0);
                         })
                     .doOnError(
                         t -> {
-                          recordError(1.0);
-                          statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                          recordError(0.0);
                         });
               } catch (Throwable t) {
-                recordError(1.0);
-                statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                recordError(0.0);
                 return Flux.error(t);
               }
             });
@@ -449,15 +423,14 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                           }
 
                           if (t != null) {
-                            recordError(1.0);
-                          } else {
                             recordError(0.0);
+                          } else {
+                            recordError(1.0);
                           }
                         });
               } catch (Throwable t) {
                 stop(start);
-                recordError(1.0);
-                statsProcessor.onNext(WeightedReconnectingRSocket.this);
+                recordError(0.0);
                 return Mono.error(t);
               }
             });
@@ -468,22 +441,38 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     long now = Clock.now();
     long elapsed = Math.max(now - stamp, 1L);
 
+    double weight;
     double prediction = median.estimation();
 
     if (prediction == 0.0) {
       if (pending == 0) {
-        prediction = 0.0;
+        weight = 0.0; // first request
       } else {
-        prediction = STARTUP_PENALTY + pending;
+        // subsequent requests while we don't have any history
+        weight = STARTUP_PENALTY + pending;
       }
     } else if (pending == 0 && elapsed > inactivityFactor * interArrivalTime.value()) {
       // if we did't see any data for a while, we decay the prediction by inserting
       // artificial 0.0 into the median
       median.insert(0.0);
-      prediction = median.estimation();
+      weight = median.estimation();
+    } else {
+      double predicted = prediction * pending;
+      double instant = instantaneous(now);
+
+      if (predicted < instant) { // NB: (0.0 < 0.0) == false
+        weight = instant / pending; // NB: pending never equal 0 here
+      } else {
+        // we are under the predictions
+        weight = prediction;
+      }
     }
 
-    return prediction;
+    return weight;
+  }
+
+  private synchronized long instantaneous(long now) {
+    return duration + (now - stamp0) * pending;
   }
 
   private synchronized long start() {
@@ -553,7 +542,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   @Override
   public double availability() {
     if (Clock.now() - stamp > tau) {
-      recordError(0.0);
+      recordError(1.0);
     }
     return availability * errorPercentage.value();
   }

@@ -28,7 +28,11 @@ import io.rsocket.util.DefaultPayload;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -36,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.core.scheduler.Schedulers;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -44,13 +49,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int DEFAULT_INACTIVITY_FACTOR = 500;
   private static final int EFFORT = 5;
-  final Quantile lowerQuantile = new FrugalQuantile(DEFAULT_LOWER_QUANTILE);
-  final Quantile higherQuantile = new FrugalQuantile(DEFAULT_HIGHER_QUANTILE);
+  private final Quantile lowerQuantile = new FrugalQuantile(DEFAULT_LOWER_QUANTILE);
+  private final Quantile higherQuantile = new FrugalQuantile(DEFAULT_HIGHER_QUANTILE);
   private final List<SocketAddress> seedAddresses;
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
   private final RSocket requestHandlingRSocket;
-  private final SplittableRandom rnd = new SplittableRandom();
   private final String group;
   private final DestinationNameFactory destinationNameFactory;
   private final boolean keepalive;
@@ -66,9 +70,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final BrokerInfoServiceClient client;
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
-  private final Tracer tracer;
-  private boolean clientTransportMissed = false;
-  private boolean rsocketMissed = false;
+  private int clientTransportMissed = 0;
+  private int rsocketMissed = 0;
 
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
@@ -111,8 +114,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.accessKey = accessKey;
     this.accessToken = accessToken;
     this.onClose = MonoProcessor.create();
-    this.tracer = tracer;
-
     seedClientTransportSupplier();
 
     createFirstConnection();
@@ -125,7 +126,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
             .streamBrokerEvents(Empty.getDefaultInstance())
             .doOnNext(this::handleBrokerEvent)
             .filter(event -> event.getType() == Event.Type.JOIN)
-            .windowTimeout(poolSize - 1, Duration.ofSeconds(5))
+            .windowTimeout(poolSize - 1, Duration.ofSeconds(5), Schedulers.single())
             .flatMap(Function.identity())
             .doOnNext(event -> createConnection())
             .doOnError(
@@ -194,27 +195,27 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     return presenceNotifier;
   }
 
-  void seedClientTransportSupplier() {
+  private void seedClientTransportSupplier() {
     seedAddresses
         .stream()
         .map(address -> new WeightedClientTransportSupplier(address, clientTransportFactory))
         .forEach(suppliers::add);
   }
 
-  void createFirstConnection() {
+  private void createFirstConnection() {
     WeightedReconnectingRSocket weightedReconnectingRSocket = createWeightedReconnectingRSocket();
     members.add(weightedReconnectingRSocket);
   }
 
-  synchronized void createConnection() {
+  private synchronized void createConnection() {
     if (members.size() < poolSize) {
-      rsocketMissed = true;
+      rsocketMissed++;
       WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
       members.add(rSocket);
     }
   }
 
-  void handleBrokerEvent(Event event) {
+  private synchronized void handleBrokerEvent(Event event) {
     logger.info("received broker event {}", event.toString());
     Broker broker = event.getBroker();
     InetSocketAddress address =
@@ -231,7 +232,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     }
   }
 
-  synchronized void handleJoinEvent(InetSocketAddress address) {
+  private void handleJoinEvent(InetSocketAddress address) {
     boolean found = false;
     for (WeightedClientTransportSupplier s : suppliers) {
       if (s.getSocketAddress().equals(address)) {
@@ -245,12 +246,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       WeightedClientTransportSupplier s =
           new WeightedClientTransportSupplier(address, clientTransportFactory);
 
-      clientTransportMissed = true;
+      clientTransportMissed++;
       suppliers.add(s);
     }
   }
 
-  synchronized void handleLeaveEvent(InetSocketAddress address) {
+  private void handleLeaveEvent(InetSocketAddress address) {
     Iterator<WeightedClientTransportSupplier> iterator = suppliers.iterator();
 
     while (iterator.hasNext()) {
@@ -259,13 +260,13 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         logger.info("removing connection to {}", address);
         iterator.remove();
         next.dispose();
-        clientTransportMissed = true;
+        clientTransportMissed++;
         break;
       }
     }
   }
 
-  WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
+  private WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
     return WeightedReconnectingRSocket.newInstance(
         requestHandlingRSocket,
         destinationNameFactory,
@@ -283,7 +284,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         inactivityFactor);
   }
 
-  Payload getSetupPayload(String computedFromDestination) {
+  private Payload getSetupPayload(String computedFromDestination) {
     return getSetupPayload(
         ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
   }
@@ -375,9 +376,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private RSocket selectRSocket() {
     RSocket rSocket;
     List<WeightedReconnectingRSocket> _m;
+    int r;
     for (; ; ) {
       synchronized (this) {
-        rsocketMissed = false;
+        r = rsocketMissed;
         _m = members;
       }
       int size = _m.size();
@@ -388,12 +390,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         WeightedReconnectingRSocket rsc2 = null;
 
         for (int i = 0; i < EFFORT; i++) {
-          int i1;
-          int i2;
-          synchronized (this) {
-            i1 = rnd.nextInt(size);
-            i2 = rnd.nextInt(size - 1);
-          }
+          int i1 = ThreadLocalRandom.current().nextInt(size);
+          int i2 = ThreadLocalRandom.current().nextInt(size - 1);
+
           if (i2 >= i1) {
             i2++;
           }
@@ -414,7 +413,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       }
 
       synchronized (this) {
-        if (!rsocketMissed) {
+        if (r == rsocketMissed) {
           break;
         }
       }
@@ -423,7 +422,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     return rSocket;
   }
 
-  double algorithmicWeight(WeightedRSocket socket) {
+  private double algorithmicWeight(WeightedRSocket socket) {
     if (socket == null || socket.availability() == 0.0) {
       return 0.0;
     }
@@ -453,11 +452,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   private WeightedClientTransportSupplier selectClientTransportSupplier() {
     WeightedClientTransportSupplier supplier;
-
     for (; ; ) {
+      int c;
       List<WeightedClientTransportSupplier> _s;
       synchronized (this) {
-        clientTransportMissed = false;
+        c = clientTransportMissed;
         _s = suppliers;
       }
 
@@ -468,12 +467,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         WeightedClientTransportSupplier supplier1 = null;
         WeightedClientTransportSupplier supplier2 = null;
 
-        int i1;
-        int i2;
-        synchronized (this) {
-          i1 = rnd.nextInt(size);
-          i2 = rnd.nextInt(size - 1);
-        }
+        int i1 = ThreadLocalRandom.current().nextInt(size);
+        int i2 = ThreadLocalRandom.current().nextInt(size - 1);
+
         if (i2 >= i1) {
           i2++;
         }
@@ -484,20 +480,22 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         double w1 = supplier1.weight();
         double w2 = supplier2.weight();
 
-        supplier = w1 < w2 ? supplier1 : supplier2;
+        logger.info("selecting candidate socket {} with weight {}", supplier1.toString(), w1);
+        logger.info("selecting candidate socket {} with weight {}", supplier2.toString(), w2);
+
+        supplier = w1 > w2 ? supplier2 : supplier1;
       }
 
       synchronized (this) {
-        if (!clientTransportMissed) {
+        if (c == clientTransportMissed) {
+          supplier.activate();
+          clientTransportMissed++;
           break;
         }
       }
     }
 
-    logger.info("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
-    if (logger.isDebugEnabled()) {
-      logger.debug("selecting socket {} with weight {}", supplier.toString(), supplier.weight());
-    }
+    logger.info("selected socket {}", supplier.toString());
 
     return supplier;
   }
