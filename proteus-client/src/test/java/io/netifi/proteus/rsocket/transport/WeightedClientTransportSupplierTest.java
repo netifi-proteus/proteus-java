@@ -24,7 +24,7 @@ public class WeightedClientTransportSupplierTest {
         new WeightedClientTransportSupplier(
             InetSocketAddress.createUnresolved("localhost", 8081), address -> transport);
 
-    supplier.activate();
+    supplier.select();
     DuplexConnection block = supplier.get().connect().block();
 
     int i = supplier.activeConnections();

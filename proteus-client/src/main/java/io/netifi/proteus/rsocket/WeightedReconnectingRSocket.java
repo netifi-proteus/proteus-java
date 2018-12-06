@@ -10,6 +10,7 @@ import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.rpc.stats.Median;
 import io.rsocket.rpc.stats.Quantile;
 import io.rsocket.util.Clock;
+import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -218,7 +219,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
             Mono.defer(
                 () -> {
                   if (onClose.isDisposed()) {
-                    return Mono.empty();
+                    return Mono.error(new ClosedChannelException());
                   }
 
                   WeightedClientTransportSupplier weighedClientTransportSupplier =
@@ -255,7 +256,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
                                       if (Duration.ofNanos(stop - start).getSeconds() < 2) {
                                         logger.warn(
-                                            "connection for destionation {} closed in less than 2 seconds - make sure access key {} has a valid access token",
+                                            "connection for destination {} closed in less than 2 seconds - make sure access key {} has a valid access token",
                                             destinationNameFactory.peek(),
                                             accessKey);
                                       }
@@ -573,7 +574,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       }
 
       if (old != null && !old.isTerminated()) {
-        old.onError(new InterruptedException("reset will waiting for new connection"));
+        old.onError(new InterruptedException("reset while waiting for new connection"));
       }
     }
   }

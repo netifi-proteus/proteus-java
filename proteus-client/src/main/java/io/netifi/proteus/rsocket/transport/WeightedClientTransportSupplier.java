@@ -1,5 +1,6 @@
 package io.netifi.proteus.rsocket.transport;
 
+import io.netifi.proteus.broker.info.Broker;
 import io.rsocket.Closeable;
 import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
@@ -18,31 +19,33 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
 
   private static final Logger logger =
       LoggerFactory.getLogger(WeightedClientTransportSupplier.class);
-  private static AtomicInteger SUPPLIER_ID = new AtomicInteger();
   private final MonoProcessor<Void> onClose;
-  private final int supplierId;
   private final Function<SocketAddress, ClientTransport> clientTransportFunction;
   private final Ewma errorPercentage;
   private final SocketAddress socketAddress;
-  private final AtomicInteger activeConnections;
-
-  @SuppressWarnings("unused")
-  private volatile int selectedCounter = 1;
+  private final AtomicInteger selectCount;
+  private final Broker broker;
 
   public WeightedClientTransportSupplier(
       SocketAddress socketAddress,
       Function<SocketAddress, ClientTransport> clientTransportFunction) {
-    this.supplierId = SUPPLIER_ID.incrementAndGet();
+    this(Broker.getDefaultInstance(), socketAddress, clientTransportFunction);
+  }
+
+  public WeightedClientTransportSupplier(
+      Broker broker,
+      SocketAddress socketAddress,
+      Function<SocketAddress, ClientTransport> clientTransportFunction) {
+    this.broker = broker;
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;
     this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
-    this.activeConnections = new AtomicInteger();
+    this.selectCount = new AtomicInteger();
     this.onClose = MonoProcessor.create();
   }
 
-  /** Marks the connection as active and in-use. */
-  public void activate() {
-    activeConnections.incrementAndGet();
+  public void select() {
+    selectCount.incrementAndGet();
   }
 
   @Override
@@ -51,7 +54,7 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
       throw new IllegalStateException("WeightedClientTransportSupplier is closed");
     }
 
-    int i = activeConnections.get();
+    int i = selectCount.get();
 
     return () ->
         clientTransportFunction
@@ -59,11 +62,7 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
             .connect()
             .doOnNext(
                 duplexConnection -> {
-                  logger.debug(
-                      "supplier id - {} - opened connection to {} - active connections {}",
-                      supplierId,
-                      socketAddress,
-                      i);
+                  logger.debug("opened connection to {} - active connections {}", socketAddress, i);
 
                   Disposable onCloseDisposable =
                       onClose.doFinally(s -> duplexConnection.dispose()).subscribe();
@@ -72,12 +71,9 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
                       .onClose()
                       .doFinally(
                           s -> {
-                            int d = activeConnections.decrementAndGet();
+                            int d = selectCount.decrementAndGet();
                             logger.debug(
-                                "supplier id - {} - closed connection {} - active connections {}",
-                                supplierId,
-                                socketAddress,
-                                d);
+                                "closed connection {} - active connections {}", socketAddress, d);
                             onCloseDisposable.dispose();
                           })
                       .subscribe();
@@ -92,7 +88,7 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
   }
 
   int activeConnections() {
-    return activeConnections.get();
+    return selectCount.get();
   }
 
   public double weight() {
@@ -125,6 +121,10 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
     return onClose;
   }
 
+  public Broker getBroker() {
+    return broker;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -143,15 +143,12 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
   @Override
   public String toString() {
     return "WeightedClientTransportSupplier{"
-        + '\''
-        + ", supplierId="
-        + supplierId
-        + ", errorPercentage="
+        + "errorPercentage="
         + errorPercentage
         + ", socketAddress="
         + socketAddress
-        + ", activeConnections="
-        + activeConnections
+        + ", selectCount="
+        + selectCount
         + '}';
   }
 }

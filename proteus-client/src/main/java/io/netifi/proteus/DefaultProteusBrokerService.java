@@ -28,19 +28,17 @@ import io.rsocket.util.DefaultPayload;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.scheduler.Schedulers;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -70,8 +68,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final BrokerInfoServiceClient client;
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
-  private int clientTransportMissed = 0;
-  private int rsocketMissed = 0;
+  private int missed = 0;
+
+  private volatile Disposable disposable;
 
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
@@ -114,58 +113,17 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.accessKey = accessKey;
     this.accessToken = accessToken;
     this.onClose = MonoProcessor.create();
-    seedClientTransportSupplier();
-
-    createFirstConnection();
 
     this.client = new BrokerInfoServiceClient(unwrappedGroup("com.netifi.proteus.brokerServices"));
     this.presenceNotifier = new BrokerInfoPresenceNotifier(client);
-
-    Disposable disposable =
-        client
-            .streamBrokerEvents(Empty.getDefaultInstance())
-            .doOnNext(this::handleBrokerEvent)
-            .filter(event -> event.getType() == Event.Type.JOIN)
-            .windowTimeout(poolSize - 1, Duration.ofSeconds(5), Schedulers.single())
-            .flatMap(Function.identity())
-            .doOnNext(event -> createConnection())
-            .doOnError(
-                t -> {
-                  logger.warn(
-                      "error streaming broker events - make sure access key {} has a valid access token",
-                      accessKey);
-                  logger.trace("error streaming broker events", t);
-                })
-            .onErrorResume(
-                new Function<Throwable, Publisher<? extends Event>>() {
-                  long attempts = 0;
-                  long lastAttempt = System.currentTimeMillis();
-
-                  @Override
-                  public synchronized Publisher<? extends Event> apply(Throwable throwable) {
-                    if (Duration.ofMillis(System.currentTimeMillis() - lastAttempt).getSeconds()
-                        > 30) {
-                      attempts = 0;
-                    }
-
-                    Mono<Event> then =
-                        Mono.delay(Duration.ofMillis(attempts * 500)).then(Mono.error(throwable));
-                    if (attempts < 30) {
-                      attempts++;
-                    }
-
-                    lastAttempt = System.currentTimeMillis();
-
-                    return then;
-                  }
-                })
-            .retry()
-            .subscribe();
+    this.disposable = listenToBrokerEvents().subscribe();
 
     onClose
         .doFinally(
             s -> {
-              disposable.dispose();
+              if (disposable != null) {
+                disposable.dispose();
+              }
             })
         .subscribe();
   }
@@ -187,6 +145,70 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     }
   }
 
+  private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {
+    if (!suppliers.isEmpty()) {
+      Set<Broker> existingBrokers =
+          suppliers
+              .stream()
+              .map(WeightedClientTransportSupplier::getBroker)
+              .collect(Collectors.toSet());
+
+      Set<Broker> remove = new HashSet<>(existingBrokers);
+      remove.removeAll(incomingBrokers);
+      Set<Broker> add = new HashSet<>(incomingBrokers);
+      add.removeAll(existingBrokers);
+
+      for (Broker broker : remove) {
+        handleJoinEvent(broker);
+      }
+
+      for (Broker broker : add) {
+        handleLeaveEvent(broker);
+      }
+    }
+  }
+
+  private Flux<Event> listenToBrokerEvents() {
+    return Flux.defer(
+            () ->
+                client
+                    .brokers(Empty.getDefaultInstance())
+                    .collect(Collectors.toSet())
+                    .doOnNext(this::reconcileSuppliers)
+                    .thenMany(client.streamBrokerEvents(Empty.getDefaultInstance())))
+        .doOnNext(this::handleBrokerEvent)
+        .doOnError(
+            t -> {
+              logger.warn(
+                  "error streaming broker events - make sure access key {} has a valid access token",
+                  accessKey);
+              logger.trace("error streaming broker events", t);
+            })
+        .onErrorResume(
+            new Function<Throwable, Publisher<? extends Event>>() {
+              long attempts = 0;
+              long lastAttempt = System.currentTimeMillis();
+
+              @Override
+              public synchronized Publisher<? extends Event> apply(Throwable throwable) {
+                if (Duration.ofMillis(System.currentTimeMillis() - lastAttempt).getSeconds() > 30) {
+                  attempts = 0;
+                }
+
+                Mono<Event> then =
+                    Mono.delay(Duration.ofMillis(attempts * 500)).then(Mono.error(throwable));
+                if (attempts < 30) {
+                  attempts++;
+                }
+
+                lastAttempt = System.currentTimeMillis();
+
+                return then;
+              }
+            })
+        .retry();
+  }
+
   BrokerInfoServiceClient getBrokerInfoServiceClient() {
     return client;
   }
@@ -196,74 +218,64 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private void seedClientTransportSupplier() {
+    synchronized (this) {
+      missed++;
+    }
     seedAddresses
         .stream()
         .map(address -> new WeightedClientTransportSupplier(address, clientTransportFactory))
         .forEach(suppliers::add);
   }
 
-  private void createFirstConnection() {
-    WeightedReconnectingRSocket weightedReconnectingRSocket = createWeightedReconnectingRSocket();
-    members.add(weightedReconnectingRSocket);
-  }
-
-  private synchronized void createConnection() {
-    if (members.size() < poolSize) {
-      rsocketMissed++;
-      WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
-      members.add(rSocket);
-    }
-  }
-
   private synchronized void handleBrokerEvent(Event event) {
-    logger.info("received broker event {}", event.toString());
+    logger.info("received broker event {} - {}", event.getType(), event.toString());
     Broker broker = event.getBroker();
-    InetSocketAddress address =
-        InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
     switch (event.getType()) {
       case JOIN:
-        handleJoinEvent(address);
+        handleJoinEvent(broker);
         break;
       case LEAVE:
-        handleLeaveEvent(address);
+        handleLeaveEvent(broker);
         break;
       default:
         throw new IllegalStateException("unknown event type " + event.getType());
     }
   }
 
-  private void handleJoinEvent(InetSocketAddress address) {
-    boolean found = false;
-    for (WeightedClientTransportSupplier s : suppliers) {
-      if (s.getSocketAddress().equals(address)) {
-        found = true;
-        break;
-      }
-    }
+  private void handleJoinEvent(Broker broker) {
+    Optional<WeightedClientTransportSupplier> first =
+        suppliers
+            .stream()
+            .filter(
+                supplier ->
+                    Objects.equals(supplier.getBroker().getBrokerId(), broker.getBrokerId()))
+            .findAny();
 
-    if (!found) {
-      logger.info("adding connection to {}", address);
+    if (first.isEmpty()) {
+      logger.info("adding transport supplier to {}", broker);
+
+      InetSocketAddress address =
+          InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
       WeightedClientTransportSupplier s =
-          new WeightedClientTransportSupplier(address, clientTransportFactory);
-
-      clientTransportMissed++;
+          new WeightedClientTransportSupplier(broker, address, clientTransportFactory);
       suppliers.add(s);
+      missed++;
+      createConnection();
     }
   }
 
-  private void handleLeaveEvent(InetSocketAddress address) {
-    Iterator<WeightedClientTransportSupplier> iterator = suppliers.iterator();
-
-    while (iterator.hasNext()) {
-      WeightedClientTransportSupplier next = iterator.next();
-      if (next.getSocketAddress().equals(address)) {
-        logger.info("removing connection to {}", address);
-        iterator.remove();
-        next.dispose();
-        clientTransportMissed++;
-        break;
-      }
-    }
+  private void handleLeaveEvent(Broker broker) {
+    suppliers
+        .stream()
+        .filter(
+            supplier -> Objects.equals(supplier.getBroker().getBrokerId(), broker.getBrokerId()))
+        .findAny()
+        .ifPresent(
+            supplier -> {
+              logger.info("removing transport supplier to {}", broker);
+              supplier.dispose();
+              missed++;
+            });
   }
 
   private WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
@@ -373,15 +385,32 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     return onClose.isDisposed();
   }
 
+  private synchronized void createConnection() {
+    if (members.size() < poolSize) {
+      missed++;
+      WeightedReconnectingRSocket rSocket = createWeightedReconnectingRSocket();
+      members.add(rSocket);
+    }
+  }
+
   private RSocket selectRSocket() {
     RSocket rSocket;
     List<WeightedReconnectingRSocket> _m;
     int r;
     for (; ; ) {
+      boolean createConnection;
       synchronized (this) {
-        r = rsocketMissed;
+        r = missed;
         _m = members;
+
+        createConnection = members.isEmpty();
       }
+
+      if (createConnection) {
+        createConnection();
+        continue;
+      }
+
       int size = _m.size();
       if (size == 1) {
         rSocket = _m.get(0);
@@ -413,7 +442,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       }
 
       synchronized (this) {
-        if (r == rsocketMissed) {
+        if (r == missed) {
           break;
         }
       }
@@ -452,12 +481,20 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   private WeightedClientTransportSupplier selectClientTransportSupplier() {
     WeightedClientTransportSupplier supplier;
+    int c;
     for (; ; ) {
-      int c;
+      boolean selectTransports;
       List<WeightedClientTransportSupplier> _s;
       synchronized (this) {
-        c = clientTransportMissed;
+        c = missed;
         _s = suppliers;
+
+        selectTransports = suppliers.isEmpty();
+      }
+
+      if (selectTransports) {
+        seedClientTransportSupplier();
+        continue;
       }
 
       int size = _s.size();
@@ -480,16 +517,18 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         double w1 = supplier1.weight();
         double w2 = supplier2.weight();
 
-        logger.info("selecting candidate socket {} with weight {}", supplier1.toString(), w1);
-        logger.info("selecting candidate socket {} with weight {}", supplier2.toString(), w2);
+        if (logger.isDebugEnabled()) {
+          logger.debug("selecting candidate socket {} with weight {}", supplier1.toString(), w1);
+          logger.debug("selecting candidate socket {} with weight {}", supplier2.toString(), w2);
+        }
 
-        supplier = w1 > w2 ? supplier2 : supplier1;
+        supplier = w1 < w2 ? supplier1 : supplier2;
       }
 
       synchronized (this) {
-        if (c == clientTransportMissed) {
-          supplier.activate();
-          clientTransportMissed++;
+        if (c == missed) {
+          supplier.select();
+          missed++;
           break;
         }
       }
