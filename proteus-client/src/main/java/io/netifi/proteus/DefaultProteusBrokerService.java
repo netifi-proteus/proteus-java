@@ -251,7 +251,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
                     Objects.equals(supplier.getBroker().getBrokerId(), broker.getBrokerId()))
             .findAny();
 
-    if (first.isEmpty()) {
+    if (!first.isPresent()) {
       logger.info("adding transport supplier to {}", broker);
 
       InetSocketAddress address =
