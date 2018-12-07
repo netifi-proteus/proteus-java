@@ -1,5 +1,6 @@
 package io.netifi.proteus.frames;
 
+import io.micrometer.core.instrument.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -25,38 +26,18 @@ public class DestinationSetupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
+    Tags tags = Tags.of("destination", "destination");
 
     ByteBuf byteBuf =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, address, "destination", "group", Long.MAX_VALUE, accessToken);
-
-    Assert.assertEquals("destination", DestinationSetupFlyweight.destination(byteBuf));
-    Assert.assertEquals("group", DestinationSetupFlyweight.group(byteBuf));
-    Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
-    accessToken.resetReaderIndex();
-    Assert.assertTrue(
-        ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
+            ByteBufAllocator.DEFAULT, address, "group", Long.MAX_VALUE, accessToken, tags);
 
     Assert.assertArrayEquals(
         address.getAddress(), DestinationSetupFlyweight.inetAddress(byteBuf).get().getAddress());
-  }
-
-  @Test
-  public void testBackwardCompatibility() {
-
-    ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
-
-    ByteBuf byteBuf =
-        DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, null, "destination", "group", Long.MAX_VALUE, accessToken);
-
-    Assert.assertEquals("destination", DestinationSetupFlyweight.destination(byteBuf));
     Assert.assertEquals("group", DestinationSetupFlyweight.group(byteBuf));
     Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
-    accessToken.resetReaderIndex();
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
-
-    Assert.assertFalse(DestinationSetupFlyweight.inetAddress(byteBuf).isPresent());
+    Assert.assertEquals(tags, DestinationSetupFlyweight.tags(byteBuf));
   }
 }

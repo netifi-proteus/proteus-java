@@ -1,5 +1,7 @@
 package io.netifi.proteus.tracing;
 
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,12 +24,12 @@ class ProteusReporter extends Component implements Reporter<Span> {
   private final FluxProcessor<Span, Span> sink;
   private final Disposable disposable;
   private final String group;
-  private final String destination;
+  private final Tags tags;
 
-  ProteusReporter(ProteusTracingServiceClient service, String group, String destination) {
+  ProteusReporter(ProteusTracingServiceClient service, String group, Tags tags) {
     this.sink = DirectProcessor.<Span>create().serialize();
     this.group = group;
-    this.destination = destination;
+    this.tags = tags;
     AtomicInteger count = new AtomicInteger();
     AtomicLong lastRetry = new AtomicLong(System.currentTimeMillis());
     this.disposable =
@@ -79,8 +81,11 @@ class ProteusReporter extends Component implements Reporter<Span> {
         .putAllTags(span.tags())
         .setDebug(span.debug() == null ? false : span.debug())
         .setShared(span.shared() == null ? false : span.shared())
-        .putTags("group", group)
-        .putTags("destination", destination);
+        .putTags("group", group);
+
+    for (Tag tag : tags) {
+      builder.putTags(tag.getKey(), tag.getValue());
+    }
 
     return builder.build();
   }
