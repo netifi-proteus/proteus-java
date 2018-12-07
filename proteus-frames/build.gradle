@@ -2,4 +2,5 @@ description = 'Netifi Proteus Frames'
 
 dependencies {
     compile 'io.rsocket:rsocket-core'
+    compile 'io.micrometer:micrometer-core'
 }

@@ -52,15 +52,7 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
               }
             });
 
-    registry
-        .config()
-        .commonTags(
-            "accessKey",
-            String.valueOf(proteus.getAccesskey()),
-            "group",
-            proteus.getGroupName(),
-            "destination",
-            proteus.getDestination());
+    registry.config().commonTags(proteus.getTags());
 
     new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
 

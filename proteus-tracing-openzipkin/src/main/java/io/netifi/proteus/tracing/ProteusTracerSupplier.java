@@ -20,7 +20,7 @@ public class ProteusTracerSupplier implements Supplier<Tracer> {
 
     ProteusTracingServiceClient client = new ProteusTracingServiceClient(proteusSocket);
     ProteusReporter reporter =
-        new ProteusReporter(client, proteus.getGroupName(), proteus.getDestination());
+        new ProteusReporter(client, proteus.getGroupName(), proteus.getTags());
 
     Tracing tracing = Tracing.newBuilder().spanReporter(reporter).build();
 
