@@ -1,5 +1,6 @@
 package io.netifi.proteus.frames;
 
+import io.micrometer.core.instrument.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -12,16 +13,16 @@ public class DestinationSetupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
+    Tags tags = Tags.of("destination", "destination");
 
     ByteBuf byteBuf =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, "destination", "group", Long.MAX_VALUE, accessToken);
+            ByteBufAllocator.DEFAULT, "group", Long.MAX_VALUE, accessToken, tags);
 
-    Assert.assertEquals("destination", DestinationSetupFlyweight.destination(byteBuf));
     Assert.assertEquals("group", DestinationSetupFlyweight.group(byteBuf));
     Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
-    accessToken.resetReaderIndex();
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
+    Assert.assertEquals(tags, DestinationSetupFlyweight.tags(byteBuf));
   }
 }

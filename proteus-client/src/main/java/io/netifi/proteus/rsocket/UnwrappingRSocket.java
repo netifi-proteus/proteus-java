@@ -21,11 +21,8 @@ public class UnwrappingRSocket extends AbstractUnwrappingRSocket {
       ByteBuf unwrappedMetadata;
       FrameType frameType = FrameHeaderFlyweight.frameType(metadata);
       switch (frameType) {
-        case DESTINATION:
-          unwrappedMetadata = DestinationFlyweight.metadata(metadata);
-          break;
-        case GROUP:
-          unwrappedMetadata = GroupFlyweight.metadata(metadata);
+        case UNICAST:
+          unwrappedMetadata = UnicastFlyweight.metadata(metadata);
           break;
         case BROADCAST:
           unwrappedMetadata = BroadcastFlyweight.metadata(metadata);

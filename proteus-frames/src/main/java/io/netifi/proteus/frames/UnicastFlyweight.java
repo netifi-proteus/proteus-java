@@ -9,18 +9,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BroadcastFlyweight {
+public class UnicastFlyweight {
   public static ByteBuf encode(
       ByteBufAllocator allocator, CharSequence group, ByteBuf metadata, Tags tags) {
 
-    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.BROADCAST);
+    ByteBuf byteBuf = FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.UNICAST);
 
     int groupLength = ByteBufUtil.utf8Bytes(group);
     byteBuf.writeInt(groupLength);
     ByteBufUtil.reserveAndWriteUtf8(byteBuf, group, groupLength);
 
-    int metadataSize = metadata.readableBytes();
-    byteBuf.writeInt(metadataSize).writeBytes(metadata, metadata.readerIndex(), metadataSize);
+    int metadataLength = metadata.readableBytes();
+    byteBuf.writeInt(metadataLength).writeBytes(metadata, metadata.readerIndex(), metadataLength);
 
     for (Tag tag : tags) {
       String key = tag.getKey();

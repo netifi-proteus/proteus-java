@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.DoubleConsumer;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.reactivestreams.Publisher;
@@ -142,7 +142,7 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
   private void record(io.rsocket.rpc.metrics.om.Meter meter, MeterMeasurement meterMeasurement) {
     try {
       MeterId id = meter.getId();
-      Iterable<Tag> tags = mapTags(id.getTagList());
+      Tags tags = mapTags(id.getTagList());
       String name = id.getName();
       MeterType type = meter.getId().getType();
       String baseUnit = id.getBaseUnit();
@@ -222,10 +222,10 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
     }
   }
 
-  List<Tag> mapTags(List<MeterTag> tags) {
-    return tags.stream()
-        .map(meterTag -> Tag.of(meterTag.getKey(), meterTag.getValue()))
-        .collect(Collectors.toList());
+  Tags mapTags(List<MeterTag> tags) {
+    Stream<Tag> stream =
+        tags.stream().map(meterTag -> Tag.of(meterTag.getKey(), meterTag.getValue()));
+    return Tags.of(stream::iterator);
   }
 
   String generatePrometheusFriendlyName(Meter.Id id) {

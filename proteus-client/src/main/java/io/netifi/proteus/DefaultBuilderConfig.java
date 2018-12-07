@@ -1,12 +1,13 @@
 package io.netifi.proteus;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
-import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.*;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Gets current default configuration for {@link Proteus.Builder}. Can be overriden with System
@@ -110,16 +111,33 @@ final class DefaultBuilderConfig {
     return destination;
   }
 
-  static Long getAccountId() {
-    Long accountId = null;
-
+  static Tags getTags() {
+    Tags tags = Tags.empty();
     try {
-      accountId = conf.getLong("proteus.client.accountId");
+      Stream<Tag> stream =
+          conf.getObject("proteus.client.tags")
+              .entrySet()
+              .stream()
+              .map(
+                  e -> {
+                    String key = e.getKey();
+                    ConfigValue configValue = e.getValue();
+                    if (configValue.valueType() == ConfigValueType.STRING) {
+                      String value = (String) configValue.unwrapped();
+                      if (value.isEmpty()) {
+                        throw new IllegalArgumentException("Tag mapping " + key + " is empty");
+                      }
+                      return Tag.of(key, value);
+                    }
+                    throw new IllegalArgumentException(
+                        "Tag mapping " + key + " is not a string: " + configValue);
+                  });
+      tags = Tags.of(stream::iterator);
     } catch (ConfigException.Missing m) {
 
     }
 
-    return accountId;
+    return tags;
   }
 
   static Long getAccessKey() {
