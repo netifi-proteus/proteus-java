@@ -1,8 +1,8 @@
 package io.netifi.proteus.rsocket.transport;
 
 import io.netifi.proteus.broker.info.Broker;
+import io.netifi.proteus.common.stats.Ewma;
 import io.rsocket.Closeable;
-import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;

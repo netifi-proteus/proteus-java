@@ -1,5 +1,6 @@
 description = 'Netifi Proteus Authentication Utilities'
 
 dependencies {
+    compile project (':proteus-common')
     compile 'io.netty:netty-buffer'
 }
