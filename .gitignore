@@ -99,7 +99,7 @@ ${sys:appHome}
 
 */logs/**
 
-**/.project
-**/.settings/*
 .classpath
+.project
+**/.settings/*
 **/bin/*

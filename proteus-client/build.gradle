@@ -6,6 +6,7 @@ dependencies {
     protobuf project (':proteus-broker-info-idl')
 
     compile project (':proteus-auth')
+    compile project (':proteus-common')
     compile project (':proteus-frames')
     compile 'com.typesafe:config'
     compile 'com.google.guava:guava'
