@@ -10,7 +10,7 @@ dependencies {
     compile project (':proteus-common')
     compile project (':proteus-frames')
     compile 'com.typesafe:config'
-    compileOnly 'com.google.guava:guava'
+    compile 'com.google.guava:guava'
     compile 'io.rsocket:rsocket-core'
     compile 'io.rsocket.rpc:rsocket-rpc-core'
     compile 'io.rsocket:rsocket-transport-netty'
