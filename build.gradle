@@ -35,7 +35,7 @@ subprojects {
     
     ext['reactor-bom.version'] = 'Californium-SR1'
     ext['rsocket.version'] = '0.11.13'
-    ext['rsocket-rpc.version'] = '0.2.10'
+    ext['rsocket-rpc.version'] = '0.2.11'
 
     ext['jackson.version'] = '2.9.7'
     ext['jackson-protobuf.version'] = '0.9.10-jackson2.9-proto3'
@@ -61,11 +61,11 @@ subprojects {
     project.version += project.hasProperty('versionSuffix') ? project.property('versionSuffix') : ''
 
     repositories {
-        mavenCentral()
         jcenter()
         maven { url 'http://repo.spring.io/libs-snapshot' }
         maven { url 'https://oss.jfrog.org/oss-snapshot-local' }
         maven { url 'https://oss.jfrog.org/oss-release-local' }
+        mavenCentral()
 
     }
 
