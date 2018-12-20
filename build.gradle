@@ -35,7 +35,7 @@ subprojects {
     
     ext['reactor-bom.version'] = 'Californium-SR1'
     ext['rsocket.version'] = '0.11.15'
-    ext['rsocket-rpc.version'] = '0.2.11'
+    ext['rsocket-rpc.version'] = '0.2.12'
 
     ext['jackson.version'] = '2.9.7'
     ext['jackson-protobuf.version'] = '0.9.10-jackson2.9-proto3'
