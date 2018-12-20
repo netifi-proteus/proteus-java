@@ -34,7 +34,7 @@ subprojects {
     apply plugin: 'maven-publish'
     
     ext['reactor-bom.version'] = 'Californium-SR1'
-    ext['rsocket.version'] = '0.11.13'
+    ext['rsocket.version'] = '0.11.15'
     ext['rsocket-rpc.version'] = '0.2.11'
 
     ext['jackson.version'] = '2.9.7'
