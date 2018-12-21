@@ -252,13 +252,22 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
             .findAny();
 
     if (!first.isPresent()) {
-      logger.info("adding transport supplier to {}", broker);
+      logger.info("adding transport supplier to broker {}", broker);
 
       InetSocketAddress address =
           InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
       WeightedClientTransportSupplier s =
           new WeightedClientTransportSupplier(broker, address, clientTransportFactory);
       suppliers.add(s);
+
+      s.onClose()
+          .doFinally(
+              signalType -> {
+                logger.info("removing transport supplier to broker {}", broker);
+                suppliers.remove(s);
+              })
+          .subscribe();
+
       missed++;
       createConnection();
     }
