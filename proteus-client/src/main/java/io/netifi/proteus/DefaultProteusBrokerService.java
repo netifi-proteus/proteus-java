@@ -25,13 +25,6 @@ import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.DefaultPayload;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +32,14 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -243,12 +244,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private void handleJoinEvent(Broker broker) {
+    String incomingBrokerId = broker.getBrokerId();
     Optional<WeightedClientTransportSupplier> first =
         suppliers
             .stream()
             .filter(
-                supplier ->
-                    Objects.equals(supplier.getBroker().getBrokerId(), broker.getBrokerId()))
+                supplier -> Objects.equals(supplier.getBroker().getBrokerId(), incomingBrokerId))
             .findAny();
 
     if (!first.isPresent()) {
@@ -264,7 +265,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
           .doFinally(
               signalType -> {
                 logger.info("removing transport supplier to broker {}", broker);
-                suppliers.remove(s);
+                suppliers.removeIf(
+                    supplier -> supplier.getBroker().getBrokerId().equals(broker.getBrokerId()));
               })
           .subscribe();
 
