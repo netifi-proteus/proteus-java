@@ -69,7 +69,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
   private int missed = 0;
-
+  
+  private final int selectRefresh;
+  
   private volatile Disposable disposable;
 
   public DefaultProteusBrokerService(
@@ -106,6 +108,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.suppliers = new ArrayList<>();
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
+    this.selectRefresh = poolSize / 2;
     this.keepalive = keepalive;
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
@@ -402,7 +405,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       members.add(rSocket);
     }
   }
-
+  
   private RSocket selectRSocket() {
     RSocket rSocket;
     List<WeightedReconnectingRSocket> _m;
@@ -413,7 +416,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         r = missed;
         _m = members;
 
-        createConnection = members.isEmpty();
+        createConnection = members.size() < selectRefresh;
       }
 
       if (createConnection) {

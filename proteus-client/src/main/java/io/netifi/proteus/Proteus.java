@@ -204,7 +204,7 @@ public class Proteus implements Closeable {
     private DestinationNameFactory destinationNameFactory;
 
     private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
-    private int poolSize = Runtime.getRuntime().availableProcessors();
+    private int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     private Supplier<Tracer> tracerSupplier = () -> null;
 
     public Builder clientTransportFactory(
