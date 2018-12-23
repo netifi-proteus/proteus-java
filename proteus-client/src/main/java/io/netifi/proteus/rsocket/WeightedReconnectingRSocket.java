@@ -483,6 +483,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private synchronized long start() {
     long now = Clock.now();
     pending += 1;
+    stamp = now;
     return now;
   }
 
@@ -542,6 +543,11 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   public double availability() {
     if (Clock.now() - stamp > tau) {
       recordError(1.0);
+      double m = interArrivalTime.value();
+      if (m > 0) {
+        m *= 0.5;
+        record(m);
+      }
     }
     return availability * errorPercentage.value();
   }
