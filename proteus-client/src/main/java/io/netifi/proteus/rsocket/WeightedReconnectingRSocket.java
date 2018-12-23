@@ -479,26 +479,18 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   private synchronized long start() {
     long now = Clock.now();
-    interArrivalTime.insert(now - stamp);
-    duration += Math.max(0, now - stamp0) * pending;
     pending += 1;
-    stamp = now;
-    stamp0 = now;
     return now;
   }
 
   private synchronized long stop(long timestamp) {
     long now = Clock.now();
-    duration += Math.max(0, now - stamp0) * pending - (now - timestamp);
     pending -= 1;
-    stamp0 = now;
     return now;
   }
 
   private synchronized void record(double roundTripTime) {
-    median.insert(roundTripTime);
-    lowerQuantile.insert(roundTripTime);
-    higherQuantile.insert(roundTripTime);
+      interArrivalTime.insert(roundTripTime);
   }
 
   private synchronized void recordError(double value) {
