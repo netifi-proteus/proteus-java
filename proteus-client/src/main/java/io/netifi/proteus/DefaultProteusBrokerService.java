@@ -69,9 +69,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
   private int missed = 0;
-  
+
   private final int selectRefresh;
-  
+
   private volatile Disposable disposable;
 
   public DefaultProteusBrokerService(
@@ -405,7 +405,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       members.add(rSocket);
     }
   }
-  
+
   private RSocket selectRSocket() {
     RSocket rSocket;
     List<WeightedReconnectingRSocket> _m;
