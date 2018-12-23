@@ -490,7 +490,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   }
 
   private synchronized void record(double roundTripTime) {
-      interArrivalTime.insert(roundTripTime);
+    interArrivalTime.insert(roundTripTime);
   }
 
   private synchronized void recordError(double value) {
