@@ -442,8 +442,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   @Override
   public synchronized double predictedLatency() {
-    return interArrivalTime.value();
-    /*long now = Clock.now();
+    long now = Clock.now();
     long elapsed = Math.max(now - stamp, 1L);
 
     double weight;
@@ -473,7 +472,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       }
     }
 
-    return weight;*/
+    return weight;
   }
 
   private synchronized long instantaneous(long now) {
@@ -482,19 +481,24 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   private synchronized long start() {
     long now = Clock.now();
+    interArrivalTime.insert(now - stamp);
+    duration += Math.max(0, now - stamp0) * pending;
     pending += 1;
     stamp = now;
+    stamp0 = now;
     return now;
   }
 
   private synchronized long stop(long timestamp) {
     long now = Clock.now();
+    duration += Math.max(0, now - stamp0) * pending - (now - timestamp);
     pending -= 1;
+    stamp0 = now;
     return now;
   }
 
   private synchronized void record(double roundTripTime) {
-    interArrivalTime.insert(roundTripTime);
+    median.insert(roundTripTime);
     lowerQuantile.insert(roundTripTime);
     higherQuantile.insert(roundTripTime);
   }
@@ -543,11 +547,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   public double availability() {
     if (Clock.now() - stamp > tau) {
       recordError(1.0);
-      double m = interArrivalTime.value();
-      if (m > 0) {
-        m *= 0.5;
-        record(m);
-      }
     }
     return availability * errorPercentage.value();
   }
@@ -578,7 +577,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       }
 
       if (old != null && !old.isTerminated()) {
-        old.onError(new InterruptedException("reset while waiting for new connection"));
+        old.onError(new InterruptedException("reset will waiting for new connection"));
       }
     }
   }
