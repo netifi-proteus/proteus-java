@@ -43,7 +43,7 @@ import reactor.core.publisher.MonoProcessor;
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
   private static final double DEFAULT_EXP_FACTOR = 4.0;
-  private static final double DEFAULT_LOWER_QUANTILE = 0.2;
+  private static final double DEFAULT_LOWER_QUANTILE = 0.5;
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int DEFAULT_INACTIVITY_FACTOR = 500;
   private static final int EFFORT = 5;
@@ -462,11 +462,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private double algorithmicWeight(WeightedRSocket socket) {
-    double latency = socket.predictedLatency();
-    int pendings = socket.pending();
-    return socket.availability() * 1.0 / (1.0 + latency * (pendings + 1));
-
-    /*if (socket == null || socket.availability() == 0.0) {
+    if (socket == null || socket.availability() == 0.0) {
       return 0.0;
     }
     int pendings = socket.pending();
@@ -485,7 +481,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       latency *= calculateFactor(latency, high, bandWidth);
     }
 
-    return socket.availability() * 1.0 / (1.0 + latency * (pendings + 1));*/
+    return socket.availability() * 1.0 / (1.0 + latency * (pendings + 1));
   }
 
   private double calculateFactor(double u, double l, double bandWidth) {

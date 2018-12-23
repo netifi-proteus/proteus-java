@@ -21,7 +21,10 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.SignalType;
 
 /**
  * A secure RSocket implementation that contains information about its the error percentage and
@@ -491,6 +494,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   private synchronized void record(double roundTripTime) {
     interArrivalTime.insert(roundTripTime);
+    lowerQuantile.insert(roundTripTime);
+    higherQuantile.insert(roundTripTime);
   }
 
   private synchronized void recordError(double value) {
