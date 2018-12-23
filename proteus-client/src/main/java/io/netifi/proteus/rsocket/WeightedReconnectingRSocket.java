@@ -439,7 +439,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   @Override
   public synchronized double predictedLatency() {
-    long now = Clock.now();
+    return interArrivalTime.value();
+    /*long now = Clock.now();
     long elapsed = Math.max(now - stamp, 1L);
 
     double weight;
@@ -469,7 +470,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
       }
     }
 
-    return weight;
+    return weight;*/
   }
 
   private synchronized long instantaneous(long now) {

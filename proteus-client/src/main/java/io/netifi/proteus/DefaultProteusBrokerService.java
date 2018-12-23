@@ -462,7 +462,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private double algorithmicWeight(WeightedRSocket socket) {
-    return socket.pending();
+    double latency = socket.predictedLatency();
+    int pendings = socket.pending();
+    return socket.availability() * 1.0 / (1.0 + latency * (pendings + 1));
 
     /*if (socket == null || socket.availability() == 0.0) {
       return 0.0;
