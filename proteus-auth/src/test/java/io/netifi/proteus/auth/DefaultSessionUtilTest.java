@@ -1,5 +1,6 @@
 package io.netifi.proteus.auth;
 
+import io.netifi.proteus.common.time.Clock;
 import io.netty.buffer.Unpooled;
 import java.nio.ByteBuffer;
 import org.junit.Assert;

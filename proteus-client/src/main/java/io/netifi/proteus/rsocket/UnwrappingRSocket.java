@@ -5,19 +5,16 @@ import io.netty.buffer.ByteBuf;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.util.ByteBufPayload;
-import io.rsocket.util.RSocketProxy;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 // Need to unwrap RSocketRpc Messages
-public class UnwrappingRSocket extends RSocketProxy {
+public class UnwrappingRSocket extends AbstractUnwrappingRSocket {
 
   public UnwrappingRSocket(RSocket source) {
     super(source);
   }
 
-  private Payload unwrap(Payload payload) {
+  @Override
+  protected Payload unwrap(Payload payload) {
     try {
       ByteBuf data = payload.sliceData();
       ByteBuf metadata = payload.sliceMetadata();
@@ -43,47 +40,6 @@ public class UnwrappingRSocket extends RSocketProxy {
       return ByteBufPayload.create(data.retain(), unwrappedMetadata.retain());
     } finally {
       payload.release();
-    }
-  }
-
-  @Override
-  public Mono<Void> fireAndForget(Payload payload) {
-    try {
-      return super.fireAndForget(unwrap(payload));
-    } catch (Throwable t) {
-      return Mono.error(t);
-    }
-  }
-
-  @Override
-  public Mono<Payload> requestResponse(Payload payload) {
-    try {
-      return super.requestResponse(unwrap(payload));
-    } catch (Throwable t) {
-      return Mono.error(t);
-    }
-  }
-
-  @Override
-  public Flux<Payload> requestStream(Payload payload) {
-    try {
-      return super.requestStream(unwrap(payload));
-    } catch (Throwable t) {
-      return Flux.error(t);
-    }
-  }
-
-  @Override
-  public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-    return super.requestChannel(Flux.from(payloads).map(this::unwrap));
-  }
-
-  @Override
-  public Mono<Void> metadataPush(Payload payload) {
-    try {
-      return super.metadataPush(unwrap(payload));
-    } catch (Throwable t) {
-      return Mono.error(t);
     }
   }
 }

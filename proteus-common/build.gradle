@@ -1,0 +1,12 @@
+plugins {
+    id 'io.morethan.jmhreport'
+    id 'me.champeau.gradle.jmh'
+}
+
+description = 'Netifi Proteus Common'
+
+dependencies {
+    testCompile 'junit:junit'
+}
+
+apply from: 'jmh.gradle'
