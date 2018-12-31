@@ -1,5 +1,6 @@
 package io.netifi.proteus.auth;
 
+import io.netifi.proteus.common.time.Clock;
 import io.netty.buffer.ByteBuf;
 import java.nio.ByteBuffer;
 import javax.crypto.Mac;
@@ -22,7 +23,7 @@ class DefaultSessionUtil extends SessionUtil {
   }
 
   DefaultSessionUtil() {
-    this(new DefaultSystemClock());
+    this(Clock.DEFAULT);
   }
 
   @Override

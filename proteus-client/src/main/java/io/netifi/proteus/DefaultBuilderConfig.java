@@ -24,7 +24,7 @@ final class DefaultBuilderConfig {
   }
 
   static boolean getKeepAlive() {
-    boolean keepalive = false;
+    boolean keepalive = true;
     try {
       keepalive = conf.getBoolean("proteus.client.keepalive.enable");
     } catch (ConfigException.Missing m) {
@@ -35,7 +35,7 @@ final class DefaultBuilderConfig {
   }
 
   static long getTickPeriodSeconds() {
-    long tickPeriodSeconds = 60;
+    long tickPeriodSeconds = 20;
     try {
       tickPeriodSeconds = conf.getLong("proteus.client.keepalive.tickPeriodSeconds");
     } catch (ConfigException.Missing m) {
@@ -46,7 +46,7 @@ final class DefaultBuilderConfig {
   }
 
   static long getAckTimeoutSeconds() {
-    long ackTimeoutSeconds = 120;
+    long ackTimeoutSeconds = 30;
     try {
       ackTimeoutSeconds = conf.getLong("proteus.client.keepalive.ackTimeoutSeconds");
     } catch (ConfigException.Missing m) {
