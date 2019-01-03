@@ -27,6 +27,7 @@ import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.DefaultPayload;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -55,6 +56,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
   private final RSocket requestHandlingRSocket;
+  private final InetAddress localInetAddress;
   private final String group;
   private final DestinationNameFactory destinationNameFactory;
   private final boolean keepalive;
@@ -80,6 +82,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
       RequestHandlingRSocket requestHandlingRSocket,
+      InetAddress localInetAddress,
       String group,
       DestinationNameFactory destinationNameFactory,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
@@ -94,6 +97,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this(
         seedAddresses,
         requestHandlingRSocket,
+        localInetAddress,
         group,
         destinationNameFactory,
         BrokerAddressSelectors.TCP_ADDRESS,
@@ -111,6 +115,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
       RequestHandlingRSocket requestHandlingRSocket,
+      InetAddress localInetAddress,
       String group,
       DestinationNameFactory destinationNameFactory,
       Function<Broker, InetSocketAddress> addressSelector,
@@ -137,6 +142,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     this.seedAddresses = seedAddresses;
     this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
+    this.localInetAddress = localInetAddress;
     this.group = group;
     this.destinationNameFactory = destinationNameFactory;
     this.members = new ArrayList<>();
@@ -169,6 +175,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   static Payload getSetupPayload(
       ByteBufAllocator alloc,
+      InetAddress inetAddress,
       String computedFromDestination,
       String group,
       long accessKey,
@@ -177,7 +184,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     try {
       metadata =
           DestinationSetupFlyweight.encode(
-              alloc, computedFromDestination, group, accessKey, accessToken);
+              alloc, inetAddress, computedFromDestination, group, accessKey, accessToken);
       return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
     } finally {
       ReferenceCountUtil.safeRelease(metadata);
@@ -348,7 +355,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   private Payload getSetupPayload(String computedFromDestination) {
     return getSetupPayload(
-        ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
+        ByteBufAllocator.DEFAULT,
+        localInetAddress,
+        computedFromDestination,
+        group,
+        accessKey,
+        accessToken);
   }
 
   private ProteusSocket unwrappedDestination(String destination, String group) {

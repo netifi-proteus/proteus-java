@@ -19,8 +19,10 @@ import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +54,7 @@ public class Proteus implements Closeable {
 
   private Proteus(
       long accessKey,
+      InetAddress inetAddress,
       String group,
       ByteBuf accessToken,
       boolean keepalive,
@@ -73,6 +76,7 @@ public class Proteus implements Closeable {
         new DefaultProteusBrokerService(
             seedAddresses,
             requestHandlingRSocket,
+            inetAddress,
             fromGroup,
             destinationNameFactory,
             addressSelector,
@@ -192,6 +196,7 @@ public class Proteus implements Closeable {
   }
 
   public static class Builder {
+    private InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
     private String host = DefaultBuilderConfig.getHost();
     private Integer port = DefaultBuilderConfig.getPort();
     private List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
@@ -316,6 +321,19 @@ public class Proteus implements Closeable {
       return seedAddresses(list);
     }
 
+    public Builder localAddress(String address) {
+      try {
+        return localAddress(InetAddress.getByName(address));
+      } catch (UnknownHostException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public Builder localAddress(InetAddress address) {
+      this.inetAddress = address;
+      return this;
+    }
+
     public Builder accessKey(long accessKey) {
       this.accessKey = accessKey;
       return this;
@@ -396,6 +414,14 @@ public class Proteus implements Closeable {
         destinationNameFactory = DestinationNameFactory.from(destination, new AtomicInteger());
       }
 
+      if (inetAddress == null) {
+        try {
+          inetAddress = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+          inetAddress = InetAddress.getLoopbackAddress();
+        }
+      }
+
       List<SocketAddress> socketAddresses;
       if (seedAddresses == null) {
         Objects.requireNonNull(host, "host is required");
@@ -415,6 +441,7 @@ public class Proteus implements Closeable {
             Proteus proteus =
                 new Proteus(
                     accessKey,
+                    inetAddress,
                     group,
                     Unpooled.wrappedBuffer(accessTokenBytes),
                     keepalive,
