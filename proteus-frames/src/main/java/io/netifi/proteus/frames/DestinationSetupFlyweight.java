@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.Optional;
 
 public class DestinationSetupFlyweight {
   public static ByteBuf encode(
@@ -48,8 +49,10 @@ public class DestinationSetupFlyweight {
         .writeInt(accessTokenSize)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenSize);
 
-    byte[] addressBytes = inetAddress.getAddress();
-    byteBuf.writeInt(addressBytes.length).writeBytes(addressBytes);
+    if (inetAddress != null) { // backward compatibility + specific non-inet transports support
+      byte[] addressBytes = inetAddress.getAddress();
+      byteBuf.writeInt(addressBytes.length).writeBytes(addressBytes);
+    }
 
     return byteBuf;
   }
@@ -102,7 +105,7 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, accessTokenLength);
   }
 
-  public static InetAddress inetAddress(ByteBuf byteBuf) {
+  public static Optional<InetAddress> inetAddress(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
     int destinationLength = byteBuf.getInt(offset);
@@ -115,16 +118,15 @@ public class DestinationSetupFlyweight {
     offset += Integer.BYTES + accessTokenLength;
 
     int inetAddressLenght = byteBuf.getInt(offset);
-    byte[] inetAddressBytes = new byte[inetAddressLenght];
-
     offset += Integer.BYTES;
 
+    byte[] inetAddressBytes = new byte[inetAddressLenght];
     byteBuf.getBytes(offset, inetAddressBytes);
 
     try {
-      return InetAddress.getByAddress(inetAddressBytes);
-    } catch (UnknownHostException e) {
-      throw new RuntimeException(e);
+      return Optional.of(InetAddress.getByAddress(inetAddressBytes));
+    } catch (UnknownHostException | IndexOutOfBoundsException e) {
+      return Optional.empty();
     }
   }
 }

@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Function;
 import org.junit.*;
 
@@ -59,13 +60,14 @@ public class ProteusBrokerServiceTest {
     long actualAccessKey = DestinationSetupFlyweight.accessKey(metadata);
     String actualAccessToken =
         DestinationSetupFlyweight.accessToken(metadata).toString(Charset.defaultCharset());
-    InetAddress actualAddress = DestinationSetupFlyweight.inetAddress(metadata);
+    Optional<InetAddress> actualAddress = DestinationSetupFlyweight.inetAddress(metadata);
 
     Assert.assertEquals(expectedToken, actualAccessToken);
     Assert.assertEquals(expectedDest, actualDest);
     Assert.assertEquals(expectedGroup, actualGroup);
     Assert.assertEquals(expectedKey, actualAccessKey);
-    Assert.assertArrayEquals(localAddress.getAddress(), actualAddress.getAddress());
+    Assert.assertTrue(actualAddress.isPresent());
+    Assert.assertArrayEquals(localAddress.getAddress(), actualAddress.get().getAddress());
   }
 
   private static PooledByteBufAllocator nonCachingAllocator() {
