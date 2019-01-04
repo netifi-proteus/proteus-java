@@ -1,12 +1,11 @@
 package io.netifi.proteus.frames;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,8 +16,7 @@ public class DestinationSetupFlyweightTest {
   {
     try {
       address = InetAddress.getLocalHost();
-    }
-    catch (UnknownHostException e) {
+    } catch (UnknownHostException e) {
       address = InetAddress.getLoopbackAddress();
     }
   }
@@ -39,6 +37,7 @@ public class DestinationSetupFlyweightTest {
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
 
-    Assert.assertArrayEquals(address.getAddress(), DestinationSetupFlyweight.inetAddress(byteBuf).getAddress());
+    Assert.assertArrayEquals(
+        address.getAddress(), DestinationSetupFlyweight.inetAddress(byteBuf).getAddress());
   }
 }
