@@ -8,16 +8,23 @@ option java_package = "io.netifi.proteus.broker.info";
 option java_outer_classname = "BrokerInfo";
 option java_multiple_files = true;
 
+message Tag {
+    string key = 1;
+    string value = 2;
+}
+
 message Group {
-    string group  = 1;
-    Broker broker = 2;
+    string group      = 1;
+    Broker broker     = 2;
+    repeated Tag tags = 3;
 }
 
 message Destination {
     string group       = 1;
-    string destination = 2;
+    int32 destination  = 2;
     Broker broker      = 3;
     bytes ipAddress    = 4;
+    repeated Tag tags  = 5;
 }
 
 message Broker {
