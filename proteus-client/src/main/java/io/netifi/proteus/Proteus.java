@@ -1,6 +1,8 @@
 package io.netifi.proteus;
 
 import io.netifi.proteus.broker.info.Broker;
+import io.netifi.proteus.rsocket.NamedRSocketClientWrapper;
+import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netty.buffer.ByteBuf;
@@ -12,12 +14,15 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.opentracing.Tracer;
 import io.rsocket.Closeable;
+import io.rsocket.RSocket;
 import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,6 +54,7 @@ public class Proteus implements Closeable {
 
   private Proteus(
       long accessKey,
+      InetAddress inetAddress,
       String group,
       ByteBuf accessToken,
       boolean keepalive,
@@ -70,6 +76,7 @@ public class Proteus implements Closeable {
         new DefaultProteusBrokerService(
             seedAddresses,
             requestHandlingRSocket,
+            inetAddress,
             fromGroup,
             destinationNameFactory,
             addressSelector,
@@ -104,21 +111,76 @@ public class Proteus implements Closeable {
     return onClose;
   }
 
+  /**
+   * Adds an RSocketRpcService to be handle requests
+   *
+   * @param service the RSocketRpcService instance
+   * @return current Proteus builder instance
+   */
   public Proteus addService(RSocketRpcService service) {
+    Objects.requireNonNull(service);
     requestHandlingRSocket.addService(service);
     return this;
   }
 
+  /**
+   * Adds an RSocket handler that will be located by name. This lets Proteus bridge raw RSocket
+   * betweens services that don't use RSocketRpcService. It will route to a RSocket by specific
+   * name, but it will give you a raw data so the implementor must deal with the incoming Payload.
+   *
+   * @param name the name of the RSocket
+   * @param rSocket the RSocket to handle the requests
+   * @return current Proteus builder instance
+   */
+  public Proteus addNamedRSocket(String name, RSocket rSocket) {
+    Objects.requireNonNull(name);
+    Objects.requireNonNull(rSocket);
+    return addService(NamedRSocketServiceWrapper.wrap(name, rSocket));
+  }
+
+  @Deprecated
   public ProteusSocket destination(String destination, String group) {
+    Objects.requireNonNull(destination);
+    Objects.requireNonNull(group);
     return brokerService.destination(destination, group);
   }
 
+  @Deprecated
   public ProteusSocket group(String group) {
+    Objects.requireNonNull(group);
     return brokerService.group(group);
   }
 
+  @Deprecated
   public ProteusSocket broadcast(String group) {
+    Objects.requireNonNull(group);
     return brokerService.broadcast(group);
+  }
+
+  public ProteusSocket destinationServiceSocket(String destination, String group) {
+    return destination(destination, group);
+  }
+
+  public ProteusSocket groupServiceSocket(String group) {
+    return group(group);
+  }
+
+  public ProteusSocket broadcastServiceSocket(String group) {
+    return broadcast(group);
+  }
+
+  public ProteusSocket destinationNamedRSocket(String name, String destination, String group) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), destinationServiceSocket(destination, group));
+  }
+
+  public ProteusSocket groupNamedRSocket(String name, String group) {
+    return NamedRSocketClientWrapper.wrap(Objects.requireNonNull(name), groupServiceSocket(group));
+  }
+
+  public ProteusSocket broadcastNamedRSocket(String name, String group) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), broadcastServiceSocket(group));
   }
 
   public long getAccesskey() {
@@ -134,6 +196,7 @@ public class Proteus implements Closeable {
   }
 
   public static class Builder {
+    private InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
     private String host = DefaultBuilderConfig.getHost();
     private Integer port = DefaultBuilderConfig.getPort();
     private List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
@@ -152,7 +215,7 @@ public class Proteus implements Closeable {
         BrokerAddressSelectors.TCP_ADDRESS; // Default
 
     private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
-    private int poolSize = Runtime.getRuntime().availableProcessors();
+    private int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     private Supplier<Tracer> tracerSupplier = () -> null;
 
     public Builder clientTransportFactory(
@@ -216,6 +279,37 @@ public class Proteus implements Closeable {
       return this;
     }
 
+    private InetSocketAddress toInetSocketAddress(String address) {
+      Objects.requireNonNull(address);
+      String[] s = address.split(":");
+
+      if (s.length != 2) {
+        throw new IllegalArgumentException(address + " was a valid host address");
+      }
+
+      return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
+    }
+
+    /**
+     * Lets you add a strings in the form host:port
+     *
+     * @param address
+     * @param addresses
+     * @return
+     */
+    public Builder seedAddresses(String address, String... addresses) {
+      List<SocketAddress> list = new ArrayList<>();
+      list.add(toInetSocketAddress(address));
+
+      if (addresses != null) {
+        for (String s : addresses) {
+          list.add(toInetSocketAddress(address));
+        }
+      }
+
+      return seedAddresses(list);
+    }
+
     public Builder seedAddresses(SocketAddress address, SocketAddress... addresses) {
       List<SocketAddress> list = new ArrayList<>();
       list.add(address);
@@ -225,6 +319,19 @@ public class Proteus implements Closeable {
       }
 
       return seedAddresses(list);
+    }
+
+    public Builder localAddress(String address) {
+      try {
+        return localAddress(InetAddress.getByName(address));
+      } catch (UnknownHostException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public Builder localAddress(InetAddress address) {
+      this.inetAddress = address;
+      return this;
     }
 
     public Builder accessKey(long accessKey) {
@@ -307,6 +414,14 @@ public class Proteus implements Closeable {
         destinationNameFactory = DestinationNameFactory.from(destination, new AtomicInteger());
       }
 
+      if (inetAddress == null) {
+        try {
+          inetAddress = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+          inetAddress = InetAddress.getLoopbackAddress();
+        }
+      }
+
       List<SocketAddress> socketAddresses;
       if (seedAddresses == null) {
         Objects.requireNonNull(host, "host is required");
@@ -326,6 +441,7 @@ public class Proteus implements Closeable {
             Proteus proteus =
                 new Proteus(
                     accessKey,
+                    inetAddress,
                     group,
                     Unpooled.wrappedBuffer(accessTokenBytes),
                     keepalive,

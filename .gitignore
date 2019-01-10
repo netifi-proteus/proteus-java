@@ -98,3 +98,8 @@ gradle-app.setting
 ${sys:appHome}
 
 */logs/**
+
+.classpath
+.project
+**/.settings/*
+**/bin/*

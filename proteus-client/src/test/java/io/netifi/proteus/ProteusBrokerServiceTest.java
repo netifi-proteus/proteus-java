@@ -3,12 +3,25 @@ package io.netifi.proteus;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netty.buffer.*;
 import io.rsocket.Payload;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Function;
 import org.junit.*;
 
 public class ProteusBrokerServiceTest {
+
+  InetAddress localAddress;
+
+  {
+    try {
+      localAddress = InetAddress.getLocalHost();
+    } catch (UnknownHostException e) {
+      localAddress = InetAddress.getLoopbackAddress();
+    }
+  }
 
   @Test
   public void setupPayloadLeakTest() {
@@ -17,7 +30,8 @@ public class ProteusBrokerServiceTest {
 
     for (int i = 0; i < 100000; i++) {
       Payload payload =
-          DefaultProteusBrokerService.getSetupPayload(alloc, "foo", "bar", 123L, token);
+          DefaultProteusBrokerService.getSetupPayload(
+              alloc, localAddress, "foo", "bar", 123L, token);
     }
     Assert.assertEquals(0, directBuffersCount(alloc));
     Assert.assertEquals(0, heapBuffersCount(alloc));
@@ -34,18 +48,26 @@ public class ProteusBrokerServiceTest {
 
     Payload payload =
         DefaultProteusBrokerService.getSetupPayload(
-            ByteBufAllocator.DEFAULT, expectedDest, expectedGroup, expectedKey, token);
+            ByteBufAllocator.DEFAULT,
+            localAddress,
+            expectedDest,
+            expectedGroup,
+            expectedKey,
+            token);
     ByteBuf metadata = payload.sliceMetadata();
     String actualDest = DestinationSetupFlyweight.destination(metadata);
     String actualGroup = DestinationSetupFlyweight.group(metadata);
     long actualAccessKey = DestinationSetupFlyweight.accessKey(metadata);
     String actualAccessToken =
         DestinationSetupFlyweight.accessToken(metadata).toString(Charset.defaultCharset());
+    Optional<InetAddress> actualAddress = DestinationSetupFlyweight.inetAddress(metadata);
 
     Assert.assertEquals(expectedToken, actualAccessToken);
     Assert.assertEquals(expectedDest, actualDest);
     Assert.assertEquals(expectedGroup, actualGroup);
     Assert.assertEquals(expectedKey, actualAccessKey);
+    Assert.assertTrue(actualAddress.isPresent());
+    Assert.assertArrayEquals(localAddress.getAddress(), actualAddress.get().getAddress());
   }
 
   private static PooledByteBufAllocator nonCachingAllocator() {

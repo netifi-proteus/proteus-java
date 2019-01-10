@@ -4,10 +4,23 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class DestinationSetupFlyweightTest {
+
+  InetAddress address;
+
+  {
+    try {
+      address = InetAddress.getLocalHost();
+    } catch (UnknownHostException e) {
+      address = InetAddress.getLoopbackAddress();
+    }
+  }
+
   @Test
   public void testEncoding() {
 
@@ -15,7 +28,7 @@ public class DestinationSetupFlyweightTest {
 
     ByteBuf byteBuf =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, "destination", "group", Long.MAX_VALUE, accessToken);
+            ByteBufAllocator.DEFAULT, address, "destination", "group", Long.MAX_VALUE, accessToken);
 
     Assert.assertEquals("destination", DestinationSetupFlyweight.destination(byteBuf));
     Assert.assertEquals("group", DestinationSetupFlyweight.group(byteBuf));
@@ -23,5 +36,27 @@ public class DestinationSetupFlyweightTest {
     accessToken.resetReaderIndex();
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
+
+    Assert.assertArrayEquals(
+        address.getAddress(), DestinationSetupFlyweight.inetAddress(byteBuf).get().getAddress());
+  }
+
+  @Test
+  public void testBackwardCompatibility() {
+
+    ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
+
+    ByteBuf byteBuf =
+        DestinationSetupFlyweight.encode(
+            ByteBufAllocator.DEFAULT, null, "destination", "group", Long.MAX_VALUE, accessToken);
+
+    Assert.assertEquals("destination", DestinationSetupFlyweight.destination(byteBuf));
+    Assert.assertEquals("group", DestinationSetupFlyweight.group(byteBuf));
+    Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
+    accessToken.resetReaderIndex();
+    Assert.assertTrue(
+        ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
+
+    Assert.assertFalse(DestinationSetupFlyweight.inetAddress(byteBuf).isPresent());
   }
 }

@@ -1,9 +1,9 @@
 package io.netifi.proteus.rsocket;
 
 import io.netifi.proteus.DestinationNameFactory;
+import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netty.buffer.Unpooled;
 import io.rsocket.RSocket;
-import io.rsocket.rpc.stats.FrugalQuantile;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;

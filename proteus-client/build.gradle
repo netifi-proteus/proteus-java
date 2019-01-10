@@ -1,4 +1,5 @@
 apply plugin: 'com.google.protobuf'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 description = 'Netifi Proteus Client'
 
@@ -6,6 +7,7 @@ dependencies {
     protobuf project (':proteus-broker-info-idl')
 
     compile project (':proteus-auth')
+    compile project (':proteus-common')
     compile project (':proteus-frames')
     compile 'com.typesafe:config'
     compile 'com.google.guava:guava'
@@ -23,6 +25,16 @@ dependencies {
     testCompile 'org.apache.logging.log4j:log4j-api'
     testCompile 'org.apache.logging.log4j:log4j-core'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl'
+}
+
+shadowJar {
+    mergeServiceFiles()
+    classifier = ''
+    dependencies {
+        include(dependency('com.google.guava:guava'))
+    }
+    relocate 'com.google.common', 'netifi.com.google.common'
+    relocate 'com.google.thirdparty', 'netifi.com.google.thirdparty'
 }
 
 protobuf {
@@ -62,3 +74,7 @@ idea {
         generatedSourceDirs += file('src/generated/main/proteus')
     }
 }
+
+
+build.finalizedBy(shadowJar)
+

@@ -3,8 +3,10 @@ package io.netifi.proteus;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +26,7 @@ final class DefaultBuilderConfig {
   }
 
   static boolean getKeepAlive() {
-    boolean keepalive = false;
+    boolean keepalive = true;
     try {
       keepalive = conf.getBoolean("proteus.client.keepalive.enable");
     } catch (ConfigException.Missing m) {
@@ -35,7 +37,7 @@ final class DefaultBuilderConfig {
   }
 
   static long getTickPeriodSeconds() {
-    long tickPeriodSeconds = 60;
+    long tickPeriodSeconds = 20;
     try {
       tickPeriodSeconds = conf.getLong("proteus.client.keepalive.tickPeriodSeconds");
     } catch (ConfigException.Missing m) {
@@ -46,7 +48,7 @@ final class DefaultBuilderConfig {
   }
 
   static long getAckTimeoutSeconds() {
-    long ackTimeoutSeconds = 120;
+    long ackTimeoutSeconds = 30;
     try {
       ackTimeoutSeconds = conf.getLong("proteus.client.keepalive.ackTimeoutSeconds");
     } catch (ConfigException.Missing m) {
@@ -64,6 +66,18 @@ final class DefaultBuilderConfig {
     }
 
     return missedAcks;
+  }
+
+  static InetAddress getLocalAddress() {
+    InetAddress localAddress = null;
+
+    try {
+      localAddress = InetAddress.getByName(conf.getString("proteus.client.localAddress"));
+    } catch (ConfigException.Missing | UnknownHostException m) {
+
+    }
+
+    return localAddress;
   }
 
   static String getHost() {

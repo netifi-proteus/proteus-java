@@ -1,10 +1,9 @@
 package io.netifi.proteus.rsocket.transport;
 
-import io.netifi.proteus.rsocket.WeightedRSocket;
+import io.netifi.proteus.broker.info.Broker;
+import io.netifi.proteus.common.stats.Ewma;
 import io.rsocket.Closeable;
-import io.rsocket.rpc.stats.Ewma;
 import io.rsocket.transport.ClientTransport;
-import io.rsocket.util.Clock;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,113 +12,94 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 
-public class WeightedClientTransportSupplier
-    implements Function<Flux<WeightedRSocket>, Supplier<ClientTransport>>, Closeable {
+public class WeightedClientTransportSupplier implements Supplier<ClientTransport>, Closeable {
 
   private static final Logger logger =
       LoggerFactory.getLogger(WeightedClientTransportSupplier.class);
-  private static AtomicInteger SUPPLIER_ID = new AtomicInteger();
   private final MonoProcessor<Void> onClose;
-  private final int supplierId;
   private final Function<SocketAddress, ClientTransport> clientTransportFunction;
   private final Ewma errorPercentage;
-  private final Ewma latency;
   private final SocketAddress socketAddress;
-  private final AtomicInteger activeConnections;
-
-  @SuppressWarnings("unused")
-  private volatile int selectedCounter = 1;
+  private final AtomicInteger selectCount;
+  private final Broker broker;
 
   public WeightedClientTransportSupplier(
       SocketAddress socketAddress,
       Function<SocketAddress, ClientTransport> clientTransportFunction) {
-    this.supplierId = SUPPLIER_ID.incrementAndGet();
+    this(Broker.getDefaultInstance(), socketAddress, clientTransportFunction);
+  }
+
+  public WeightedClientTransportSupplier(
+      Broker broker,
+      SocketAddress socketAddress,
+      Function<SocketAddress, ClientTransport> clientTransportFunction) {
+    this.broker = broker;
     this.clientTransportFunction = clientTransportFunction;
     this.socketAddress = socketAddress;
     this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
-    this.latency = new Ewma(1, TimeUnit.MINUTES, Clock.unit().convert(1L, TimeUnit.SECONDS));
-    this.activeConnections = new AtomicInteger();
+    this.selectCount = new AtomicInteger();
     this.onClose = MonoProcessor.create();
   }
 
+  public void select() {
+    selectCount.incrementAndGet();
+  }
+
   @Override
-  public Supplier<ClientTransport> apply(Flux<WeightedRSocket> weightedSocketFlux) {
+  public ClientTransport get() {
     if (onClose.isDisposed()) {
       throw new IllegalStateException("WeightedClientTransportSupplier is closed");
     }
 
-    Disposable subscribe =
-        weightedSocketFlux
-            .doOnNext(
-                weightedRSocket -> {
-                  if (logger.isTraceEnabled()) {
-                    logger.trace("recording stats {}", weightedRSocket.toString());
-                  }
-                  double e = weightedRSocket.errorPercentage();
-                  double i = weightedRSocket.higherQuantileLatency();
-
-                  errorPercentage.insert(e);
-                  latency.insert(i);
-                })
-            .subscribe();
+    int i = selectCount.get();
 
     return () ->
-        () ->
-            clientTransportFunction
-                .apply(socketAddress)
-                .connect()
-                .doOnNext(
-                    duplexConnection -> {
-                      int i = activeConnections.incrementAndGet();
-                      logger.debug(
-                          "supplier id - {} - opened connection to {} - active connections {}",
-                          supplierId,
-                          socketAddress,
-                          i);
+        clientTransportFunction
+            .apply(socketAddress)
+            .connect()
+            .doOnNext(
+                duplexConnection -> {
+                  logger.debug("opened connection to {} - active connections {}", socketAddress, i);
 
-                      Disposable onCloseDisposable =
-                          onClose.doFinally(s -> duplexConnection.dispose()).subscribe();
+                  Disposable onCloseDisposable =
+                      onClose.doFinally(s -> duplexConnection.dispose()).subscribe();
 
-                      duplexConnection
-                          .onClose()
-                          .doFinally(
-                              s -> {
-                                int d = activeConnections.decrementAndGet();
-                                logger.debug(
-                                    "supplier id - {} - closed connection {} - active connections {}",
-                                    supplierId,
-                                    socketAddress,
-                                    d);
-                                onCloseDisposable.dispose();
-                                subscribe.dispose();
-                              })
-                          .subscribe();
-                    })
-                .doOnError(t -> errorPercentage.insert(0.0));
+                  duplexConnection
+                      .onClose()
+                      .doFinally(
+                          s -> {
+                            int d = selectCount.decrementAndGet();
+                            logger.debug(
+                                "closed connection {} - active connections {}", socketAddress, d);
+                            onCloseDisposable.dispose();
+                          })
+                      .subscribe();
+
+                  errorPercentage.insert(1.0);
+                })
+            .doOnError(t -> errorPercentage.insert(0.0));
   }
 
-  public double errorPercentage() {
+  private double errorPercentage() {
     return errorPercentage.value();
   }
 
-  public double latency() {
-    return latency.value();
-  }
-
-  public int activeConnections() {
-    return activeConnections.get();
+  int activeConnections() {
+    return selectCount.get();
   }
 
   public double weight() {
     double e = errorPercentage();
-    double l = latency();
     int a = activeConnections();
 
-    return e * 1.0 / (1.0 + l * (a + 1));
+    if (e == 1.0) {
+      return a;
+    } else {
+      return Math.exp(1 / (1 - e)) * a;
+    }
   }
 
   public SocketAddress getSocketAddress() {
@@ -141,6 +121,10 @@ public class WeightedClientTransportSupplier
     return onClose;
   }
 
+  public Broker getBroker() {
+    return broker;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -159,19 +143,12 @@ public class WeightedClientTransportSupplier
   @Override
   public String toString() {
     return "WeightedClientTransportSupplier{"
-        + '\''
-        + ", supplierId="
-        + supplierId
-        + ", errorPercentage="
+        + "errorPercentage="
         + errorPercentage
-        + ", latency="
-        + latency
         + ", socketAddress="
         + socketAddress
-        + ", activeConnections="
-        + activeConnections
-        + ", selectedCounter="
-        + selectedCounter
+        + ", selectCount="
+        + selectCount
         + '}';
   }
 }
