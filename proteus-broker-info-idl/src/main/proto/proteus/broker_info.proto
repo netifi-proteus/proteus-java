@@ -17,6 +17,7 @@ message Destination {
     string group       = 1;
     string destination = 2;
     Broker broker      = 3;
+    bytes ipAddress    = 4;
 }
 
 message Broker {

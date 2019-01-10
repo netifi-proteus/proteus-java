@@ -3,8 +3,10 @@ package io.netifi.proteus;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,6 +66,18 @@ final class DefaultBuilderConfig {
     }
 
     return missedAcks;
+  }
+
+  static InetAddress getLocalAddress() {
+    InetAddress localAddress = null;
+
+    try {
+      localAddress = InetAddress.getByName(conf.getString("proteus.client.localAddress"));
+    } catch (ConfigException.Missing | UnknownHostException m) {
+
+    }
+
+    return localAddress;
   }
 
   static String getHost() {
