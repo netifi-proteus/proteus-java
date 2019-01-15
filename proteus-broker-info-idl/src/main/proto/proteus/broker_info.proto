@@ -20,6 +20,11 @@ message Destination {
     bytes ipAddress    = 4;
 }
 
+message Cluster {
+    string id   = 1;
+    string name = 2;
+}
+
 message Broker {
    string brokerId          = 1;
    string ipAddress         = 2;
@@ -34,6 +39,7 @@ message Broker {
    int32 tcpPort            = 11;
    string webConsoleAddress = 12;
    int32 webConsolePort     = 13;
+   Cluster cluster          = 14;
 }
 
 message Event {
