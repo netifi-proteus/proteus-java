@@ -25,7 +25,6 @@ import io.rsocket.RSocket;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
-import io.rsocket.util.DefaultPayload;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -64,6 +63,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final long accessKey;
   private final ByteBuf accessToken;
   private final Tags tags;
+  private final ByteBuf setupMetadata;
+
   private final Function<Broker, InetSocketAddress> addressSelector;
   private final Function<SocketAddress, ClientTransport> clientTransportFactory;
   private final int poolSize;
@@ -155,6 +156,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.accessKey = accessKey;
     this.accessToken = accessToken;
     this.tags = tags;
+    this.setupMetadata =
+        DestinationSetupFlyweight.encode(
+            ByteBufAllocator.DEFAULT, localInetAddress, group, accessKey, accessToken, tags);
     this.onClose = MonoProcessor.create();
 
     this.client =
@@ -171,16 +175,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         .subscribe();
   }
 
-  private Payload setupPayloadSupplier() {
-    ByteBuf metadata = null;
-    try {
-      metadata =
-          DestinationSetupFlyweight.encode(
-              ByteBufAllocator.DEFAULT, localInetAddress, group, accessKey, accessToken, tags);
-      return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
-    } finally {
-      ReferenceCountUtil.safeRelease(metadata);
-    }
+  private Payload getSetupPayload() {
+    return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(setupMetadata));
   }
 
   private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {
@@ -322,7 +318,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
     return WeightedReconnectingRSocket.newInstance(
         requestHandlingRSocket,
-        this::setupPayloadSupplier,
+        this::getSetupPayload,
         this::isDisposed,
         this::selectClientTransportSupplier,
         keepalive,
@@ -384,6 +380,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   @Override
   public void dispose() {
+    ReferenceCountUtil.safeRelease(setupMetadata);
     onClose.onComplete();
   }
 
