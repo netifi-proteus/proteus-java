@@ -102,8 +102,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
     this.group = group;
     this.destinationNameFactory = destinationNameFactory;
-    this.members = new ArrayList<>();
-    this.suppliers = new ArrayList<>();
+    this.members = Collections.synchronizedList(new ArrayList<>());
+    this.suppliers = Collections.synchronizedList(new ArrayList<>());
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
     this.selectRefresh = poolSize / 2;
