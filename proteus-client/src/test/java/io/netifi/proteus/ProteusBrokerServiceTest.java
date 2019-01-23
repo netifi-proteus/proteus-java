@@ -32,6 +32,7 @@ public class ProteusBrokerServiceTest {
       Payload payload =
           DefaultProteusBrokerService.getSetupPayload(
               alloc, localAddress, "foo", "bar", 123L, token);
+      payload.release();
     }
     Assert.assertEquals(0, directBuffersCount(alloc));
     Assert.assertEquals(0, heapBuffersCount(alloc));

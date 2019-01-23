@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
-import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.frames.Metadata;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.RSocketProxy;
@@ -22,7 +21,7 @@ public class NamedRSocketClientWrapper extends RSocketProxy implements ProteusSo
   }
 
   /**
-   * Wraps an RSocket with {@link RSocketProxy} and {@link RSocketRpcService}
+   * Wraps an RSocket with {@link RSocketProxy} and RSocketRpcService
    *
    * @param name what you want your RSocket to be found as
    * @param source the raw socket to handle to wrap
@@ -63,6 +62,6 @@ public class NamedRSocketClientWrapper extends RSocketProxy implements ProteusSo
     ByteBuf metadata =
         Metadata.encode(ByteBufAllocator.DEFAULT, name, name, payload.sliceMetadata());
 
-    return ByteBufPayload.create(payload.sliceMetadata().retain(), metadata);
+    return ByteBufPayload.create(payload.sliceData().retain(), metadata);
   }
 }

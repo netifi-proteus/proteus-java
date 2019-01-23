@@ -183,7 +183,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     errorPercentage.reset(1.0);
   }
 
-  private RSocketFactory.ClientRSocketFactory getClientFactory(String destination) {
+  private RSocketFactory.ClientRSocketFactory getClientFactory(Payload setupPayload) {
     RSocketFactory.ClientRSocketFactory connect =
         RSocketFactory.connect().frameDecoder(Frame::retain);
 
@@ -203,7 +203,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     }
 
     return connect
-        .setupPayload(setupPayloadSupplier.apply(destination))
+        .setupPayload(setupPayload)
         .keepAliveAckTimeout(Duration.ofSeconds(0))
         .keepAliveTickPeriod(Duration.ofSeconds(0));
   }
@@ -228,9 +228,10 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                   WeightedClientTransportSupplier weighedClientTransportSupplier =
                       transportSupplier.get();
                   String destination = destinationNameFactory.get();
+                  Payload setupPayload = setupPayloadSupplier.apply(destination);
 
                   long start = System.nanoTime();
-                  return getClientFactory(destination)
+                  return getClientFactory(setupPayload)
                       .errorConsumer(
                           throwable ->
                               logger.error(
@@ -276,7 +277,8 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                     })
                                 .subscribe();
                             setRSocket(rSocket);
-                          });
+                          })
+                      .doFinally(signalType -> setupPayload.release());
                 }))
         .doOnError(t -> logger.error("error trying to broker", t))
         .retry()

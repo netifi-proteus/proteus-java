@@ -19,14 +19,12 @@ import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import io.opentracing.Tracer;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
-import io.rsocket.util.DefaultPayload;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -180,15 +178,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       String group,
       long accessKey,
       ByteBuf accessToken) {
-    ByteBuf metadata = null;
-    try {
-      metadata =
-          DestinationSetupFlyweight.encode(
-              alloc, inetAddress, computedFromDestination, group, accessKey, accessToken);
-      return DefaultPayload.create(Unpooled.EMPTY_BUFFER, metadata);
-    } finally {
-      ReferenceCountUtil.safeRelease(metadata);
-    }
+    ByteBuf metadata =
+        DestinationSetupFlyweight.encode(
+            alloc, inetAddress, computedFromDestination, group, accessKey, accessToken);
+    return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata);
   }
 
   private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {
