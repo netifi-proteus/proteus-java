@@ -1,0 +1,6 @@
+description = 'Netifi Proteus Discovery Library'
+
+dependencies {
+    implementation 'io.projectreactor:reactor-core'
+    implementation 'com.google.guava:guava'
+}
