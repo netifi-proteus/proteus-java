@@ -48,8 +48,7 @@ public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
   }
 
   @Override
-  public final Flux<Payload> requestChannel(Payload payload, Flux<Payload> publisher) {
-    return reactor.core.publisher.Flux.error(
-        new UnsupportedOperationException("Request-Channel not implemented."));
+  public Flux<Payload> requestChannel(Payload payload, Flux<Payload> publisher) {
+    return super.requestChannel(publisher);
   }
 }

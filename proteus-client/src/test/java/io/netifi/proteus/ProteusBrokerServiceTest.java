@@ -18,6 +18,7 @@ public class ProteusBrokerServiceTest {
     for (int i = 0; i < 100000; i++) {
       Payload payload =
           DefaultProteusBrokerService.getSetupPayload(alloc, "foo", "bar", 123L, token);
+      payload.release();
     }
     Assert.assertEquals(0, directBuffersCount(alloc));
     Assert.assertEquals(0, heapBuffersCount(alloc));
