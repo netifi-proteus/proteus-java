@@ -21,19 +21,12 @@ public class KubernetesDiscoveryStrategy implements DiscoveryStrategy {
   private static final Logger logger = LoggerFactory.getLogger(KubernetesDiscoveryStrategy.class);
 
   private final CoreV1Api client;
-  private final String namespace;
-  private final String deploymentName;
-  private final String portName;
-  private final HostAndPort currentAddress;
+  private final KubernetesDiscoveryConfig kubernetesDiscoveryConfig;
+
   private Set<HostAndPort> knownBrokers;
 
-  public KubernetesDiscoveryStrategy(
-      String namespace, String deploymentName, String portName, HostAndPort currentAddress) {
-
-    this.namespace = namespace;
-    this.deploymentName = deploymentName;
-    this.portName = portName;
-    this.currentAddress = currentAddress;
+  public KubernetesDiscoveryStrategy(KubernetesDiscoveryConfig kubernetesDiscoveryConfig) {
+    this.kubernetesDiscoveryConfig = kubernetesDiscoveryConfig;
     this.knownBrokers = new HashSet<>();
     ApiClient apiClient = null;
     try {
@@ -47,9 +40,9 @@ public class KubernetesDiscoveryStrategy implements DiscoveryStrategy {
 
     logger.info(
         "netifi.discovery.kubernetes -> searching in namespace {} for endpoint {} with portName {}",
-        namespace,
-        deploymentName,
-        portName);
+        this.kubernetesDiscoveryConfig.getNamespace(),
+        this.kubernetesDiscoveryConfig.getDeploymentName(),
+        this.kubernetesDiscoveryConfig.getPortName());
   }
 
   @Override
@@ -61,7 +54,12 @@ public class KubernetesDiscoveryStrategy implements DiscoveryStrategy {
     try {
 
       V1Endpoints endpoints =
-          client.readNamespacedEndpoints(deploymentName, namespace, null, true, true);
+          client.readNamespacedEndpoints(
+              this.kubernetesDiscoveryConfig.getDeploymentName(),
+              this.kubernetesDiscoveryConfig.getNamespace(),
+              null,
+              true,
+              true);
 
       Set<HostAndPort> incomingNodes =
           endpoints
@@ -74,13 +72,23 @@ public class KubernetesDiscoveryStrategy implements DiscoveryStrategy {
                         subset
                             .getPorts()
                             .stream()
-                            .filter(p -> p.getName().equals(portName))
+                            .filter(
+                                p ->
+                                    p.getName()
+                                        .equals(this.kubernetesDiscoveryConfig.getPortName()))
                             .findFirst()
-                            .orElse(new V1EndpointPort().name(portName).port(7001).protocol("tcp"));
+                            .orElse(
+                                new V1EndpointPort()
+                                    .name(this.kubernetesDiscoveryConfig.getPortName())
+                                    .port(
+                                        KubernetesDiscoveryConfig
+                                            .DISCOVERY_CONFIG_SYSTEM_PROPERTY_KUBERNETES_DEFAULT_PORT)
+                                    .protocol(
+                                        KubernetesDiscoveryConfig
+                                            .DISCOVERY_CONFIG_SYSTEM_PROPERTY_KUBERNETES_DEFAULT_PROTOCOL));
                     return subset
                         .getAddresses()
                         .stream()
-                        .filter(addr -> !addr.getIp().equals(currentAddress.getHost()))
                         .map(
                             address -> {
                               HostAndPort hostAndPort =

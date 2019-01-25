@@ -10,20 +10,24 @@ import reactor.core.publisher.Mono;
 public class StaticListDiscoveryStrategy implements DiscoveryStrategy {
   private static final Logger logger = LoggerFactory.getLogger(StaticListDiscoveryStrategy.class);
 
+  private final StaticListDiscoveryConfig staticListDiscoveryConfig;
   private Mono<? extends Collection<HostAndPort>> nodes;
 
-  public StaticListDiscoveryStrategy(String addresses) {
+  public StaticListDiscoveryStrategy(StaticListDiscoveryConfig staticListDiscoveryConfig) {
+    this.staticListDiscoveryConfig = staticListDiscoveryConfig;
     this.nodes =
         Mono.defer(
                 () -> {
-                  if (addresses.isEmpty()) {
+                  if (this.staticListDiscoveryConfig.getAddresses().isEmpty()) {
                     return Mono.empty();
                   } else {
-                    logger.debug("seeding cluster with {}", addresses);
-                    return Flux.fromArray(addresses.split(","))
+                    logger.debug(
+                        "seeding cluster with {}", this.staticListDiscoveryConfig.getAddresses());
+                    return Flux.fromIterable(this.staticListDiscoveryConfig.getAddresses())
                         .map(
                             hostPortString ->
-                                HostAndPort.fromString(hostPortString).withDefaultPort(7001))
+                                HostAndPort.fromString(hostPortString)
+                                    .withDefaultPort(this.staticListDiscoveryConfig.getPort()))
                         .collectList();
                   }
                 })

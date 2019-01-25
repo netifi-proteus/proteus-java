@@ -6,7 +6,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import reactor.core.Exceptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.ec2.Ec2AsyncClient;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
@@ -14,65 +15,65 @@ import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Filter;
 
 public class EC2TagsDiscoveryStrategy implements DiscoveryStrategy {
+  private static final Logger logger = LoggerFactory.getLogger(EC2TagsDiscoveryStrategy.class);
 
   private Ec2AsyncClient client;
-  private final String tagName;
-  private final String tagValue;
-  private final int staticPort;
+  private final EC2TagsDiscoveryConfig ec2TagsDiscoveryConfig;
 
   private Set<HostAndPort> knownBrokers;
 
-  public EC2TagsDiscoveryStrategy(String tagName, String tagValue, int staticPort) {
+  public EC2TagsDiscoveryStrategy(EC2TagsDiscoveryConfig ec2TagsDiscoveryConfig) {
     // TODO: when should we: client.close(); ?
     this.client = Ec2AsyncClient.builder().build();
-    this.tagName = tagName;
-    this.tagValue = tagValue;
-    this.staticPort = staticPort;
+    this.ec2TagsDiscoveryConfig = ec2TagsDiscoveryConfig;
   }
 
   @Override
   public Mono<? extends Collection<HostAndPort>> discoverNodes() {
-    return Mono.fromSupplier(this::getInstances);
-  }
-
-  private Collection<HostAndPort> getInstances() {
+    logger.debug(
+        "using tag name {} and tag value {}",
+        this.ec2TagsDiscoveryConfig.getTagName(),
+        this.ec2TagsDiscoveryConfig.getTagValue());
     final CompletableFuture<DescribeInstancesResponse> future =
         client.describeInstances(
             DescribeInstancesRequest.builder()
-                .filters(Filter.builder().name("tag:" + tagName).values(tagValue).build())
+                .filters(
+                    Filter.builder()
+                        .name("tag:" + this.ec2TagsDiscoveryConfig.getTagName())
+                        .values(this.ec2TagsDiscoveryConfig.getTagValue())
+                        .build())
                 .build());
-    Set<HostAndPort> incomingNodes =
-        future
-            .handle(
-                (resp, err) -> {
-                  try {
-                    if (resp != null) {
-                      return resp.reservations()
-                          .stream()
-                          .flatMap(
-                              reservation ->
-                                  reservation
-                                      .instances()
-                                      .stream()
-                                      .map(
-                                          instance ->
-                                              HostAndPort.fromParts(
-                                                  instance.privateIpAddress(), staticPort)))
-                          .collect(Collectors.toSet());
-                    } else {
-                      throw Exceptions.propagate(err);
-                    }
-                  } catch (Exception e) {
-                    throw Exceptions.propagate(e);
-                  }
-                })
-            .join();
+    return Mono.fromFuture(future)
+        .map(
+            resp -> {
+              Set<HostAndPort> incomingNodes =
+                  resp.reservations()
+                      .stream()
+                      .flatMap(
+                          reservation ->
+                              reservation
+                                  .instances()
+                                  .stream()
+                                  .map(
+                                      instance -> {
+                                        String instanceIP = instance.privateIpAddress();
+                                        int port = this.ec2TagsDiscoveryConfig.getPort();
+                                        logger.debug(
+                                            "found instance {} with private ip {} and port {}",
+                                            instance.instanceId(),
+                                            instanceIP,
+                                            port);
+                                        return HostAndPort.fromParts(instanceIP, port);
+                                      }))
+                      .collect(Collectors.toSet());
 
-    Set<HostAndPort> diff = new HashSet<>(incomingNodes);
-    synchronized (this) {
-      diff.removeAll(knownBrokers);
-      knownBrokers = incomingNodes;
-    }
-    return diff;
+              Set<HostAndPort> diff = new HashSet<>(incomingNodes);
+              synchronized (this) {
+                diff.removeAll(knownBrokers);
+                knownBrokers = incomingNodes;
+              }
+              logger.debug("returning these nodes {}", diff);
+              return diff;
+            });
   }
 }

@@ -20,13 +20,14 @@ public class ConsulDiscoveryStrategy implements DiscoveryStrategy {
   private static final Logger logger = LoggerFactory.getLogger(ConsulDiscoveryStrategy.class);
 
   private final Consul consul;
-  private final String serviceName;
+  private final ConsulDiscoveryConfig consulDiscoveryConfig;
   private Set<HostAndPort> knownBrokers;
 
-  public ConsulDiscoveryStrategy(String consulAddress, String serviceName) {
-    this.serviceName = serviceName;
-    logger.info("netifi.discovery.consul.address -> {}", consulAddress);
-    this.consul = Consul.builder().withUrl(consulAddress).build();
+  public ConsulDiscoveryStrategy(ConsulDiscoveryConfig consulDiscoveryConfig) {
+    this.consulDiscoveryConfig = consulDiscoveryConfig;
+    logger.debug("Using consul url {}", this.consulDiscoveryConfig.getConsulURL());
+    logger.debug("Using consul service name {}", this.consulDiscoveryConfig.getServiceName());
+    this.consul = Consul.builder().withUrl(this.consulDiscoveryConfig.getConsulURL()).build();
     this.knownBrokers = new HashSet<>();
   }
 
@@ -37,7 +38,7 @@ public class ConsulDiscoveryStrategy implements DiscoveryStrategy {
           consul
               .healthClient()
               .getHealthyServiceInstances(
-                  serviceName,
+                  this.consulDiscoveryConfig.getServiceName(),
                   QueryOptions.BLANK,
                   new ConsulResponseCallback<List<ServiceHealth>>() {
                     @Override
@@ -46,7 +47,9 @@ public class ConsulDiscoveryStrategy implements DiscoveryStrategy {
                       List<ServiceHealth> response = consulResponse.getResponse();
 
                       if (response.isEmpty()) {
-                        logger.debug("no brokers found in consul for {}", serviceName);
+                        logger.debug(
+                            "no brokers found in consul for {}",
+                            consulDiscoveryConfig.getServiceName());
                         knownBrokers.clear();
                         sink.success();
                         return;
