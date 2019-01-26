@@ -1,6 +1,6 @@
 package io.netifi.proteus.discovery;
 
-import com.google.common.net.HostAndPort;
+import io.netifi.proteus.common.net.HostAndPort;
 import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Objects;

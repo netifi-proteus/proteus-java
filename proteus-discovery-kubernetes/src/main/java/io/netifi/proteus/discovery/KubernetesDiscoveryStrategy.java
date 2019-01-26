@@ -1,12 +1,12 @@
 package io.netifi.proteus.discovery;
 
-import com.google.common.net.HostAndPort;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.models.V1EndpointPort;
 import io.kubernetes.client.models.V1Endpoints;
 import io.kubernetes.client.util.Config;
+import io.netifi.proteus.common.net.HostAndPort;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;

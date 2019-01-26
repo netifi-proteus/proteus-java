@@ -1,6 +1,7 @@
 description = 'Netifi Proteus Discovery Library For Consul'
 
 dependencies {
+    implementation project(':proteus-common')
     implementation project(':proteus-discovery')
     implementation 'com.orbitz.consul:consul-client:1.3.0'
     implementation 'io.projectreactor:reactor-core'

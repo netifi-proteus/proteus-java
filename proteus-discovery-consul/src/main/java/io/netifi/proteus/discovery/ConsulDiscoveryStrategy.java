@@ -1,12 +1,12 @@
 package io.netifi.proteus.discovery;
 
-import com.google.common.net.HostAndPort;
 import com.orbitz.consul.Consul;
 import com.orbitz.consul.async.ConsulResponseCallback;
 import com.orbitz.consul.model.ConsulResponse;
 import com.orbitz.consul.model.health.Service;
 import com.orbitz.consul.model.health.ServiceHealth;
 import com.orbitz.consul.option.QueryOptions;
+import io.netifi.proteus.common.net.HostAndPort;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;

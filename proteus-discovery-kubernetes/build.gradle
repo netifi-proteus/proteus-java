@@ -1,6 +1,7 @@
 description = 'Netifi Proteus Discovery Library For Kubernetes'
 
 dependencies {
+    implementation project(':proteus-common')
     implementation project(':proteus-discovery')
     implementation 'io.kubernetes:client-java:3.0.0'
     implementation 'io.projectreactor:reactor-core'

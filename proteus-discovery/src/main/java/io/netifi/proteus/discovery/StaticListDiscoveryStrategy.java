@@ -1,6 +1,6 @@
 package io.netifi.proteus.discovery;
 
-import com.google.common.net.HostAndPort;
+import io.netifi.proteus.common.net.HostAndPort;
 import java.util.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

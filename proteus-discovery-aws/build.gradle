@@ -7,6 +7,7 @@ dependencyManagement {
 }
 
 dependencies {
+    implementation project(':proteus-common')
     implementation project(':proteus-discovery')
     implementation 'software.amazon.awssdk:ec2'
     implementation 'io.projectreactor:reactor-core'
