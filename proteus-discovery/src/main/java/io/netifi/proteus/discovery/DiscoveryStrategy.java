@@ -16,7 +16,7 @@ public interface DiscoveryStrategy {
     try {
       Class discoveryStrategyClass = discoveryConfig.getDiscoveryStrategyClass();
       Constructor discoveryStrategyClassConstructor =
-          discoveryStrategyClass.getConstructor(DiscoveryConfig.class);
+          discoveryStrategyClass.getConstructor(discoveryConfig.getClass());
       return (DiscoveryStrategy) discoveryStrategyClassConstructor.newInstance(discoveryConfig);
 
     } catch (Exception e) {

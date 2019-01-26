@@ -19,6 +19,13 @@ public class StaticListDiscoveryConfigTest {
   }
 
   @Test
+  public void withDiscoveryStrategy() {
+    DiscoveryStrategy discoveryStrategy =
+        DiscoveryStrategy.getInstance(new StaticListDiscoveryConfig());
+    assertEquals(discoveryStrategy.getClass(), StaticListDiscoveryStrategy.class);
+  }
+
+  @Test
   public void propertyAddressConfig() {
     System.setProperty(
         StaticListDiscoveryConfig.DISCOVERY_CONFIG_SYSTEM_PROPERTY_STATIC_LIST_ADDRESSES,
