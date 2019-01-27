@@ -302,9 +302,9 @@ public class Proteus implements Closeable {
     /**
      * Lets you add a strings in the form host:port
      *
-     * @param address
-     * @param addresses
-     * @return
+     * @param address the first address to seed the broker with.
+     * @param addresses additional addresses to seed the broker with.
+     * @return the initial builder.
      */
     public Builder seedAddresses(String address, String... addresses) {
       List<SocketAddress> list = new ArrayList<>();

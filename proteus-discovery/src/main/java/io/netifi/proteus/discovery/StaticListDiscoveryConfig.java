@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+// TODO: implement a version that parses a comma-delimited list of hostAndPorts
 public class StaticListDiscoveryConfig implements DiscoveryConfig {
   public static final String DISCOVERY_CONFIG_SYSTEM_PROPERTY_STATIC_LIST_ADDRESSES =
       "netifi.proteus.discovery.staticlist.addresses";
@@ -82,6 +83,9 @@ public class StaticListDiscoveryConfig implements DiscoveryConfig {
   }
 
   private List<String> commaDelimitedListToList(String commaDelimitedList) {
+    if (commaDelimitedList == null || commaDelimitedList.isEmpty()) {
+      return Collections.emptyList();
+    }
     return Arrays.asList(commaDelimitedList.split("\\s*,\\s*"));
   }
 }

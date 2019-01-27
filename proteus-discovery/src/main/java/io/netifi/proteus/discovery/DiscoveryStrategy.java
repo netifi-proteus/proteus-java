@@ -9,8 +9,6 @@ import reactor.core.publisher.Mono;
 
 public interface DiscoveryStrategy {
 
-  // TODO: pull static list into this version
-  // TODO: pull in HostAndPort to this project
   static DiscoveryStrategy getInstance(DiscoveryConfig discoveryConfig) {
     Objects.requireNonNull(discoveryConfig);
     try {

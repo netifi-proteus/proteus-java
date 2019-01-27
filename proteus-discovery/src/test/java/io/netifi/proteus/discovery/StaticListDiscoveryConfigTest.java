@@ -4,6 +4,7 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,5 +75,11 @@ public class StaticListDiscoveryConfigTest {
     assertTrue(addresses.stream().anyMatch("3.3.3.3"::equals));
     assertEquals(3, addresses.size());
     assertEquals(9000, staticListDiscoveryConfig.getPort());
+  }
+
+  @Test
+  public void providedEmptyList() {
+    List<String> address = new StaticListDiscoveryConfig(7001, "").getAddresses();
+    assertEquals(Collections.emptyList(), address);
   }
 }

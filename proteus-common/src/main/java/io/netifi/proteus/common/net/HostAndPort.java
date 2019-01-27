@@ -56,14 +56,14 @@ public final class HostAndPort implements Serializable {
   }
 
   /**
-   * Returns the portion of this {@code HostAndPort} instance that should represent the hostname or
-   * IPv4/IPv6 literal.
+   * @return the portion of this {@code HostAndPort} instance that should represent the hostname or
+   *     IPv4/IPv6 literal.
    */
   public String getHost() {
     return host;
   }
 
-  /** Return true if this instance has a defined port. */
+  /** @return true if this instance has a defined port. */
   public boolean hasPort() {
     return port >= 0;
   }
@@ -82,7 +82,10 @@ public final class HostAndPort implements Serializable {
     return port;
   }
 
-  /** Returns the current port number, with a default if no port is defined. */
+  /**
+   * @param defaultPort a port number, from [0..65535]
+   * @return the current port number, with a default if no port is defined.
+   */
   public int getPortOrDefault(int defaultPort) {
     return hasPort() ? port : defaultPort;
   }
