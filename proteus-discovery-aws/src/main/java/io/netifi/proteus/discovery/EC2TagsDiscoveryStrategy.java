@@ -26,6 +26,7 @@ public class EC2TagsDiscoveryStrategy implements DiscoveryStrategy {
     // TODO: when should we: client.close(); ?
     this.client = Ec2AsyncClient.builder().build();
     this.ec2TagsDiscoveryConfig = ec2TagsDiscoveryConfig;
+    this.knownBrokers = new HashSet<>();
   }
 
   @Override
