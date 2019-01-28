@@ -1,0 +1,7 @@
+description = 'Netifi Proteus Discovery Library'
+
+dependencies {
+    implementation project(':proteus-common')
+    implementation 'io.projectreactor:reactor-core'
+    implementation 'org.slf4j:slf4j-api'
+}

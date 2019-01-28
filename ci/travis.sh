@@ -33,5 +33,5 @@ else
     # Feature Branch
     echo -e 'Build Branch => Branch ['$TRAVIS_BRANCH']'
     export ORG_GRADLE_PROJECT_releaseType=snapshot
-    ./gradlew clean -PversionSuffix=".BUILD-SNAPSHOT" build artifactoryPublish --stacktrace
+    ./gradlew clean -PversionSuffix=".${TRAVIS_COMMIT::7}.BUILD-SNAPSHOT" build artifactoryPublish --stacktrace
 fi
