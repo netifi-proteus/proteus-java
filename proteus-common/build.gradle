@@ -10,3 +10,15 @@ dependencies {
 }
 
 apply from: 'jmh.gradle'
+
+license {
+    excludes([
+        "**/*net/HostAndPort.java",
+        "**/*stats/Ewma.java",
+        "**/*stats/experiment",
+        "**/*stats/FrugalQuantile.java",
+        "**/*stats/Median.java",
+        "**/*stats/Quantile.java",
+        "**/*net/HostAndPortTest.java"
+    ])
+}
