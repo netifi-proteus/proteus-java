@@ -39,6 +39,7 @@ message Destination {
     Broker broker      = 3;
     bytes ipAddress    = 4;
     repeated Tag tags  = 5;
+    int64 accessKey    = 6;
 }
 
 message Broker {
