@@ -1,7 +1,6 @@
 rootProject.name = 'proteus-java'
 
 include 'proteus-auth'
-include 'proteus-access-key-info-idl'
 include 'proteus-broker-info-idl'
 include 'proteus-broker-mgmt-idl'
 include 'proteus-frames'
