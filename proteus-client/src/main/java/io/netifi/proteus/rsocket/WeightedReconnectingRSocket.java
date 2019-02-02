@@ -190,22 +190,17 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     if (keepalive) {
       connect =
           connect
-              .keepAlive()
               .keepAliveTickPeriod(Duration.ofSeconds(tickPeriodSeconds))
               .keepAliveAckTimeout(Duration.ofSeconds(ackTimeoutSeconds))
               .keepAliveMissedAcks(missedAcks);
     } else {
       connect
-          .keepAlive()
           .keepAliveAckTimeout(Duration.ofSeconds(0))
           .keepAliveAckTimeout(Duration.ofSeconds(0))
           .keepAliveMissedAcks(missedAcks);
     }
 
-    return connect
-        .setupPayload(setupPayload)
-        .keepAliveAckTimeout(Duration.ofSeconds(0))
-        .keepAliveTickPeriod(Duration.ofSeconds(0));
+    return connect.setupPayload(setupPayload);
   }
 
   void connect() {
