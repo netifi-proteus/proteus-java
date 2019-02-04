@@ -7,7 +7,6 @@ dependencies {
     compile 'io.rsocket.rpc:rsocket-rpc-protobuf'
     protobuf "io.rsocket.rpc:rsocket-rpc-metrics-idl"
     compile 'io.micrometer:micrometer-registry-prometheus'
-    compile 'com.google.guava:guava'
 
     testCompile 'org.apache.logging.log4j:log4j-api'
     testCompile 'org.apache.logging.log4j:log4j-core'

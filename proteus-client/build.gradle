@@ -10,7 +10,6 @@ dependencies {
     compile project (':proteus-common')
     compile project (':proteus-frames')
     compile 'com.typesafe:config'
-    compile 'com.google.guava:guava'
     compile 'io.rsocket:rsocket-core'
     compile 'io.rsocket.rpc:rsocket-rpc-core'
     compile 'io.rsocket:rsocket-transport-netty'
@@ -30,11 +29,6 @@ dependencies {
 shadowJar {
     mergeServiceFiles()
     classifier = ''
-    dependencies {
-        include(dependency('com.google.guava:guava'))
-    }
-    relocate 'com.google.common', 'netifi.com.google.common'
-    relocate 'com.google.thirdparty', 'netifi.com.google.thirdparty'
 }
 
 protobuf {

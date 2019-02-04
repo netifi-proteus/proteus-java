@@ -15,8 +15,8 @@
  */
 package io.netifi.proteus.frames;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
+import io.netifi.proteus.common.tags.Tag;
+import io.netifi.proteus.common.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;

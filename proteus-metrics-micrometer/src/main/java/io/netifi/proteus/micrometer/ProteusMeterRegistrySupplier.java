@@ -18,15 +18,16 @@ package io.netifi.proteus.micrometer;
 import com.netflix.spectator.atlas.AtlasConfig;
 import io.micrometer.atlas.AtlasMeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import io.netifi.proteus.Proteus;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.rsocket.rpc.metrics.MetricsExporter;
 import io.rsocket.rpc.metrics.om.MetricsSnapshotHandlerClient;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -67,7 +68,14 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
               }
             });
 
-    registry.config().commonTags(proteus.getTags());
+    Stream<Tag> tags = proteus.getTags().stream().map(tag -> Tag.of(tag.getKey(), tag.getValue()));
+    registry
+        .config()
+        .commonTags(
+            Tags.of(
+                    "accessKey", String.valueOf(proteus.getAccesskey()),
+                    "group", proteus.getGroupName())
+                .and(tags::iterator));
 
     new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
 

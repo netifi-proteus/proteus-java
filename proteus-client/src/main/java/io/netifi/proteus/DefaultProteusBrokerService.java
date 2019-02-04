@@ -16,12 +16,12 @@
 package io.netifi.proteus;
 
 import com.google.protobuf.Empty;
-import io.micrometer.core.instrument.Tags;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
 import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
+import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.frames.BroadcastFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;

@@ -15,7 +15,7 @@
  */
 package io.netifi.proteus;
 
-import io.micrometer.core.instrument.Tags;
+import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netty.buffer.ByteBuf;
 

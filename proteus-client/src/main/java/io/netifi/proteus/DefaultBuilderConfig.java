@@ -16,8 +16,8 @@
 package io.netifi.proteus;
 
 import com.typesafe.config.*;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
+import io.netifi.proteus.common.tags.Tag;
+import io.netifi.proteus.common.tags.Tags;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

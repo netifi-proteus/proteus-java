@@ -15,10 +15,12 @@ license {
     excludes([
         "**/*net/HostAndPort.java",
         "**/*stats/Ewma.java",
-        "**/*stats/experiment",
         "**/*stats/FrugalQuantile.java",
         "**/*stats/Median.java",
         "**/*stats/Quantile.java",
+        "**/*tags/ImmutableTag.java",
+        "**/*tags/Tag.java",
+        "**/*tags/Tags.java",
         "**/*net/HostAndPortTest.java"
     ])
 }

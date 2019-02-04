@@ -15,9 +15,9 @@
  */
 package io.netifi.proteus;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
 import io.netifi.proteus.broker.info.Broker;
+import io.netifi.proteus.common.tags.Tag;
+import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.rsocket.NamedRSocketClientWrapper;
 import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
