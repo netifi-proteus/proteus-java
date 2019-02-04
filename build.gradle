@@ -32,7 +32,7 @@ subprojects {
     apply plugin: 'com.github.sherter.google-java-format'
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
-    
+
     ext['reactor-bom.version'] = 'Californium-SR1'
     ext['rsocket.version'] = '0.11.15'
     ext['rsocket-rpc.version'] = '0.2.12'
@@ -73,7 +73,7 @@ subprojects {
         toolVersion = '1.6'
         exclude '**/generated'
     }
-    
+
     dependencyManagement {
         imports {
             mavenBom "io.projectreactor:reactor-bom:${ext['reactor-bom.version']}"
@@ -119,6 +119,7 @@ subprojects {
                 entry 'micrometer-core'
                 entry 'micrometer-registry-atlas'
                 entry 'micrometer-registry-prometheus'
+                entry 'micrometer-registry-influx'
             }
 
             dependency "io.opentracing:opentracing-api:${ext['opentracing.version']}"
@@ -190,7 +191,7 @@ subprojects {
         archives sourcesJar
         archives javadocJar
     }
-    
+
     publishing {
         publications {
             mavenJava(MavenPublication) {

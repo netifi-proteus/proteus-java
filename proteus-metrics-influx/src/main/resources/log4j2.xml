@@ -18,7 +18,7 @@
         <logger name="io.rsocket.FrameLogger" level="ERROR" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </logger>
-        <logger name="io.netifi.proteus.influx.ProteusPrometheusBridge" level="INFO" additivity="false">
+        <logger name="io.netifi.proteus.influx.ProteusInfluxBridge" level="INFO" additivity="false">
             <AppenderRef ref="STDOUT"/>
         </logger>
     </Loggers>
