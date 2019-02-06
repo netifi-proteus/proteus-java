@@ -57,7 +57,8 @@ public class EC2TagsDiscoveryStrategy implements DiscoveryStrategy {
                     Filter.builder()
                         .name("tag:" + this.ec2TagsDiscoveryConfig.getTagName())
                         .values(this.ec2TagsDiscoveryConfig.getTagValue())
-                        .build())
+                        .build(),
+                    Filter.builder().name("instance-state-name").values("running").build())
                 .build());
     return Mono.fromFuture(future)
         .map(
@@ -70,6 +71,7 @@ public class EC2TagsDiscoveryStrategy implements DiscoveryStrategy {
                               reservation
                                   .instances()
                                   .stream()
+                                  .filter(instance -> instance.privateIpAddress() != null)
                                   .map(
                                       instance -> {
                                         String instanceIP = instance.privateIpAddress();
