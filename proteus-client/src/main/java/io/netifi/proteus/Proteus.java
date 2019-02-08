@@ -119,7 +119,7 @@ public class Proteus implements Closeable {
 
   @Override
   public boolean isDisposed() {
-    return onClose.isDisposed();
+    return onClose.isTerminated();
   }
 
   @Override

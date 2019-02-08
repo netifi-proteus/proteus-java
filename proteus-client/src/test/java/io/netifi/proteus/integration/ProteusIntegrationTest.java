@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -35,7 +36,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-@Ignore
 public class ProteusIntegrationTest {
 
   private static final long accessKey = 9007199254740991L;
@@ -78,6 +78,16 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  public void shouldReturnCorrectStatusWhenProteusHasBeenDisposed() {
+    server.dispose();
+    client.dispose();
+
+    Assert.assertTrue(server.isDisposed());
+    Assert.assertTrue(client.isDisposed());
+  }
+
+  @Test
+  @Ignore
   public void testUnaryRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse simpleResponse =
@@ -90,6 +100,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testUnaryRpc_100() {
     doTest(100);
     doTest(100);
@@ -102,6 +113,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testUnaryRpc_multiple() {
     doTest(1_000_000);
     doTest(1_000_000);
@@ -132,6 +144,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testServerStreamingRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
@@ -144,6 +157,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testServerStreamingFireHose() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
@@ -156,6 +170,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testClientStreamingRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     Flux<SimpleRequest> map =
@@ -168,6 +183,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testBidiRequest() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
 
@@ -192,6 +208,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testFireAndForget() throws Exception {
     int count = 1;
     CountDownLatch latch = new CountDownLatch(count);
