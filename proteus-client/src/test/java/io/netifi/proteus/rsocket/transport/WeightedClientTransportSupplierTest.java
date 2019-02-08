@@ -17,7 +17,6 @@ package io.netifi.proteus.rsocket.transport;
 
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
-import java.net.InetSocketAddress;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -37,7 +36,7 @@ public class WeightedClientTransportSupplierTest {
 
     WeightedClientTransportSupplier supplier =
         new WeightedClientTransportSupplier(
-            InetSocketAddress.createUnresolved("localhost", 8081), address -> transport);
+            BrokerAddressSelectors.TCP_ADDRESS, address -> transport);
 
     supplier.select();
     DuplexConnection block = supplier.get().connect().block();

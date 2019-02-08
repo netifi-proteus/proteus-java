@@ -19,6 +19,7 @@ import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.common.stats.Ewma;
 import io.rsocket.Closeable;
 import io.rsocket.transport.ClientTransport;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,18 +43,18 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
   private final Broker broker;
 
   public WeightedClientTransportSupplier(
-      SocketAddress socketAddress,
+      Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFunction) {
-    this(Broker.getDefaultInstance(), socketAddress, clientTransportFunction);
+    this(Broker.getDefaultInstance(), addressSelector, clientTransportFunction);
   }
 
   public WeightedClientTransportSupplier(
       Broker broker,
-      SocketAddress socketAddress,
+      Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFunction) {
     this.broker = broker;
     this.clientTransportFunction = clientTransportFunction;
-    this.socketAddress = socketAddress;
+    this.socketAddress = addressSelector.apply(broker);
     this.errorPercentage = new Ewma(5, TimeUnit.SECONDS, 1.0);
     this.selectCount = new AtomicInteger();
     this.onClose = MonoProcessor.create();
