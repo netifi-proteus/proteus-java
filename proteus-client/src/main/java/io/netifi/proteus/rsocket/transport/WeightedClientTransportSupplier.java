@@ -43,12 +43,6 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
   private final Broker broker;
 
   public WeightedClientTransportSupplier(
-      Function<Broker, InetSocketAddress> addressSelector,
-      Function<SocketAddress, ClientTransport> clientTransportFunction) {
-    this(Broker.getDefaultInstance(), addressSelector, clientTransportFunction);
-  }
-
-  public WeightedClientTransportSupplier(
       Broker broker,
       Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFunction) {

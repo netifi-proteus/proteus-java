@@ -15,6 +15,7 @@
  */
 package io.netifi.proteus.rsocket.transport;
 
+import io.netifi.proteus.broker.info.Broker;
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
 import org.junit.Assert;
@@ -34,9 +35,10 @@ public class WeightedClientTransportSupplierTest {
     ClientTransport transport = Mockito.mock(ClientTransport.class);
     Mockito.when(transport.connect()).thenReturn(Mono.just(duplexConnection));
 
+    Broker b = Broker.newBuilder().setTcpAddress("localhost").setTcpPort(8001).build();
     WeightedClientTransportSupplier supplier =
         new WeightedClientTransportSupplier(
-            BrokerAddressSelectors.TCP_ADDRESS, address -> transport);
+            b, BrokerAddressSelectors.BIND_ADDRESS, address -> transport);
 
     supplier.select();
     DuplexConnection block = supplier.get().connect().block();
@@ -51,5 +53,14 @@ public class WeightedClientTransportSupplierTest {
     i = supplier.activeConnections();
 
     Assert.assertEquals(0, i);
+  }
+
+  @Test
+  public void testShouldGetCorrectSocketAddress() {
+    Broker b =
+        Broker.newBuilder().setWebSocketAddress("edge.netifi.com").setWebSocketPort(443).build();
+    WeightedClientTransportSupplier supplier =
+        new WeightedClientTransportSupplier(b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, null);
+    Assert.assertEquals("edge.netifi.com:443", supplier.getSocketAddress().toString());
   }
 }

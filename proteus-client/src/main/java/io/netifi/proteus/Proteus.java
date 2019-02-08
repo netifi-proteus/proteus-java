@@ -237,7 +237,7 @@ public class Proteus implements Closeable {
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
     private Function<Broker, InetSocketAddress> addressSelector =
-        BrokerAddressSelectors.TCP_ADDRESS; // Default
+        BrokerAddressSelectors.BIND_ADDRESS; // Default
 
     private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
     private int poolSize = Runtime.getRuntime().availableProcessors() * 2;
