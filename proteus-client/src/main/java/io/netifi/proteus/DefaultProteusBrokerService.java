@@ -19,6 +19,7 @@ import com.google.protobuf.Empty;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
+import io.netifi.proteus.common.net.HostAndPort;
 import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
 import io.netifi.proteus.common.tags.Tags;
@@ -114,7 +115,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         requestHandlingRSocket,
         localInetAddress,
         group,
-        BrokerAddressSelectors.TCP_ADDRESS,
+        BrokerAddressSelectors.BIND_ADDRESS,
         clientTransportFactory,
         poolSize,
         keepalive,
@@ -269,7 +270,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
             address -> {
               Broker b;
               URI u = URI.create(address.toString());
-
               switch (u.getScheme()) {
                 case "ws":
                 case "wss":
@@ -280,11 +280,21 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
                           .build();
                   return new WeightedClientTransportSupplier(
                       b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, clientTransportFactory);
-                default:
+                case "tcp":
                   b =
                       Broker.newBuilder()
                           .setTcpAddress(u.getHost())
                           .setTcpPort(u.getPort())
+                          .build();
+                  return new WeightedClientTransportSupplier(
+                      b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+                default:
+                  // Assume URI is actually a HostAndPort, and TCP is our default
+                  HostAndPort hostAndPort = HostAndPort.fromString(address.toString());
+                  b =
+                      Broker.newBuilder()
+                          .setTcpAddress(hostAndPort.getHost())
+                          .setTcpPort(hostAndPort.getPort())
                           .build();
                   return new WeightedClientTransportSupplier(
                       b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);

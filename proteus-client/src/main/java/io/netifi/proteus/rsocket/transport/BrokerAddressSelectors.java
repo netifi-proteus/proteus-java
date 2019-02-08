@@ -21,8 +21,10 @@ import java.util.function.Function;
 
 public class BrokerAddressSelectors {
 
-  public static Function<Broker, InetSocketAddress> TCP_ADDRESS =
+  public static Function<Broker, InetSocketAddress> BIND_ADDRESS =
       broker -> InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
+  public static Function<Broker, InetSocketAddress> TCP_ADDRESS =
+      broker -> InetSocketAddress.createUnresolved(broker.getTcpAddress(), broker.getTcpPort());
   public static Function<Broker, InetSocketAddress> WEBSOCKET_ADDRESS =
       broker ->
           InetSocketAddress.createUnresolved(
