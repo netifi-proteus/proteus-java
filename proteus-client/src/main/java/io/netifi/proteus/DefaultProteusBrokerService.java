@@ -43,6 +43,7 @@ import io.rsocket.util.ByteBufPayload;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -264,7 +265,30 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     }
     seedAddresses
         .stream()
-        .map(address -> new WeightedClientTransportSupplier(address, clientTransportFactory))
+        .map(
+            address -> {
+              Broker b;
+              URI u = URI.create(address.toString());
+
+              switch (u.getScheme()) {
+                case "ws":
+                  b =
+                      Broker.newBuilder()
+                          .setWebSocketAddress(u.getHost())
+                          .setWebSocketPort(u.getPort())
+                          .build();
+                  return new WeightedClientTransportSupplier(
+                      b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, clientTransportFactory);
+                default:
+                  b =
+                      Broker.newBuilder()
+                          .setTcpAddress(u.getHost())
+                          .setTcpPort(u.getPort())
+                          .build();
+                  return new WeightedClientTransportSupplier(
+                      b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+              }
+            })
         .forEach(suppliers::add);
   }
 
@@ -295,10 +319,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     if (!first.isPresent()) {
       logger.info("adding transport supplier to broker {}", broker);
 
-      InetSocketAddress address =
-          InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
       WeightedClientTransportSupplier s =
-          new WeightedClientTransportSupplier(broker, address, clientTransportFactory);
+          new WeightedClientTransportSupplier(broker, addressSelector, clientTransportFactory);
       suppliers.add(s);
 
       s.onClose()
