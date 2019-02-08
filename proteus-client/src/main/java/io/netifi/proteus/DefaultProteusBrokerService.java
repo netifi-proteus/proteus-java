@@ -271,7 +271,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private synchronized void handleBrokerEvent(Event event) {
     logger.info("received broker event {} - {}", event.getType(), event.toString());
     Broker broker = event.getBroker();
-    InetSocketAddress address = this.addressSelector.apply(broker);
     switch (event.getType()) {
       case JOIN:
         handleJoinEvent(broker);

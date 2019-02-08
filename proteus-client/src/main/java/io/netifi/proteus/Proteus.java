@@ -95,6 +95,7 @@ public class Proteus implements Closeable {
             requestHandlingRSocket,
             inetAddress,
             group,
+            addressSelector,
             clientTransportFactory,
             poolSize,
             keepalive,
