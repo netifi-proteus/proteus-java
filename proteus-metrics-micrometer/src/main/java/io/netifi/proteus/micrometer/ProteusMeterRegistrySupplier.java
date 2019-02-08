@@ -27,7 +27,7 @@ import io.rsocket.rpc.metrics.om.MetricsSnapshotHandlerClient;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -68,14 +68,19 @@ public class ProteusMeterRegistrySupplier implements Supplier<MeterRegistry> {
               }
             });
 
-    Stream<Tag> tags = proteus.getTags().stream().map(tag -> Tag.of(tag.getKey(), tag.getValue()));
+    List<Tag> tags =
+        proteus
+            .getTags()
+            .stream()
+            .map(tag -> Tag.of(tag.getKey(), tag.getValue()))
+            .collect(Collectors.toList());
     registry
         .config()
         .commonTags(
             Tags.of(
                     "accessKey", String.valueOf(proteus.getAccesskey()),
                     "group", proteus.getGroupName())
-                .and(tags::iterator));
+                .and(tags));
 
     new ProteusOperatingSystemMetrics(registry, Collections.EMPTY_LIST);
 
