@@ -272,6 +272,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
               switch (u.getScheme()) {
                 case "ws":
+                case "wss":
                   b =
                       Broker.newBuilder()
                           .setWebSocketAddress(u.getHost())
