@@ -19,7 +19,7 @@ plugins {
     id 'me.champeau.gradle.jmh' version '0.4.7' apply false
     id 'io.morethan.jmhreport' version '0.6.2.1' apply false
     id 'io.spring.dependency-management' version '1.0.6.RELEASE' apply false
-    id 'com.google.protobuf' version '0.8.5' apply false
+    id 'com.google.protobuf' version '0.8.8' apply false
 }
 
 //buildScan { licenseAgreementUrl = 'https://gradle.com/terms-of-service'; licenseAgree = 'yes' }
