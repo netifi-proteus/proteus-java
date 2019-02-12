@@ -59,8 +59,8 @@ public class Proteus implements Closeable {
   private static final ConcurrentHashMap<String, Proteus> PROTEUS = new ConcurrentHashMap<>();
 
   static {
-        // Set the Java DNS cache to 60 seconds
-        java.security.Security.setProperty("networkaddress.cache.ttl", "60");
+    // Set the Java DNS cache to 60 seconds
+    java.security.Security.setProperty("networkaddress.cache.ttl", "60");
   }
 
   private final long accesskey;
