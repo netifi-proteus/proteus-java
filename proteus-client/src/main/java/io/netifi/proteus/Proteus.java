@@ -36,11 +36,13 @@ import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
+import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -57,8 +59,8 @@ public class Proteus implements Closeable {
   private static final ConcurrentHashMap<String, Proteus> PROTEUS = new ConcurrentHashMap<>();
 
   static {
-    // Set the Java DNS cache to 60 seconds
-    java.security.Security.setProperty("networkaddress.cache.ttl", "60");
+        // Set the Java DNS cache to 60 seconds
+        java.security.Security.setProperty("networkaddress.cache.ttl", "60");
   }
 
   private final long accesskey;
@@ -108,8 +110,21 @@ public class Proteus implements Closeable {
             tracerSupplier.get());
   }
 
+  @Deprecated
   public static Builder builder() {
     return new Builder();
+  }
+
+  public static WebSocketBuilder ws() {
+    return new WebSocketBuilder();
+  }
+
+  public static TcpBuilder tcp() {
+    return new TcpBuilder();
+  }
+
+  public static CustomizableBuilder customizable() {
+    return new CustomizableBuilder();
   }
 
   @Override
@@ -220,6 +235,415 @@ public class Proteus implements Closeable {
     return tags;
   }
 
+  public abstract static class CommonBuilder<SELF extends CommonBuilder<SELF>> {
+    Long accessKey = DefaultBuilderConfig.getAccessKey();
+    String group = DefaultBuilderConfig.getGroup();
+    String destination = DefaultBuilderConfig.getDestination();
+    Tags tags = DefaultBuilderConfig.getTags();
+    String accessToken = DefaultBuilderConfig.getAccessToken();
+    byte[] accessTokenBytes = new byte[20];
+    int poolSize = Runtime.getRuntime().availableProcessors() * 2;
+    Supplier<Tracer> tracerSupplier = () -> null;
+    boolean keepalive = DefaultBuilderConfig.getKeepAlive();
+    long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
+    long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
+    int missedAcks = DefaultBuilderConfig.getMissedAcks();
+    InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
+    String host = DefaultBuilderConfig.getHost();
+    Integer port = DefaultBuilderConfig.getPort();
+    List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
+    String proteusKey;
+    List<SocketAddress> socketAddresses;
+
+    public SELF poolSize(int poolSize) {
+      this.poolSize = poolSize;
+      return (SELF) this;
+    }
+
+    public SELF tracerSupplier(Supplier<Tracer> tracerSupplier) {
+      this.tracerSupplier = tracerSupplier;
+      return (SELF) this;
+    }
+
+    public SELF accessKey(long accessKey) {
+      this.accessKey = accessKey;
+      return (SELF) this;
+    }
+
+    public SELF accessToken(String accessToken) {
+      this.accessToken = accessToken;
+      return (SELF) this;
+    }
+
+    public SELF group(String group) {
+      this.group = group;
+      return (SELF) this;
+    }
+
+    public SELF destination(String destination) {
+      this.destination = destination;
+      return (SELF) this;
+    }
+
+    public SELF tag(String key, String value) {
+      this.tags = tags.and(key, value);
+      return (SELF) this;
+    }
+
+    public SELF tags(String... tags) {
+      this.tags = this.tags.and(tags);
+      return (SELF) this;
+    }
+
+    public SELF tags(Iterable<Tag> tags) {
+      this.tags = this.tags.and(tags);
+      return (SELF) this;
+    }
+
+    public SELF keepalive(boolean useKeepAlive) {
+      this.keepalive = useKeepAlive;
+      return (SELF) this;
+    }
+
+    public SELF tickPeriodSeconds(long tickPeriodSeconds) {
+      this.tickPeriodSeconds = tickPeriodSeconds;
+      return (SELF) this;
+    }
+
+    public SELF ackTimeoutSeconds(long ackTimeoutSeconds) {
+      this.ackTimeoutSeconds = ackTimeoutSeconds;
+      return (SELF) this;
+    }
+
+    public SELF missedAcks(int missedAcks) {
+      this.missedAcks = missedAcks;
+      return (SELF) this;
+    }
+
+    public SELF host(String host) {
+      this.host = host;
+      return (SELF) this;
+    }
+
+    public SELF port(int port) {
+      this.port = port;
+      return (SELF) this;
+    }
+
+    public SELF seedAddresses(Collection<SocketAddress> addresses) {
+      if (addresses instanceof List) {
+        this.seedAddresses = (List<SocketAddress>) addresses;
+      } else {
+        this.seedAddresses = new ArrayList<>(addresses);
+      }
+
+      return (SELF) this;
+    }
+
+    /**
+     * Lets you add a strings in the form host:port
+     *
+     * @param address the first address to seed the broker with.
+     * @param addresses additional addresses to seed the broker with.
+     * @return the initial builder.
+     */
+    public SELF seedAddresses(String address, String... addresses) {
+      List<SocketAddress> list = new ArrayList<>();
+      list.add(toInetSocketAddress(address));
+
+      if (addresses != null) {
+        for (String s : addresses) {
+          list.add(toInetSocketAddress(address));
+        }
+      }
+
+      return seedAddresses(list);
+    }
+
+    public SELF seedAddresses(SocketAddress address, SocketAddress... addresses) {
+      List<SocketAddress> list = new ArrayList<>();
+      list.add(address);
+
+      if (addresses != null) {
+        list.addAll(Arrays.asList(addresses));
+      }
+
+      return seedAddresses(list);
+    }
+
+    public SELF localAddress(String address) {
+      try {
+        return localAddress(InetAddress.getByName(address));
+      } catch (UnknownHostException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public SELF localAddress(InetAddress address) {
+      this.inetAddress = address;
+      return (SELF) this;
+    }
+
+    private InetSocketAddress toInetSocketAddress(String address) {
+      Objects.requireNonNull(address);
+      String[] s = address.split(":");
+
+      if (s.length != 2) {
+        throw new IllegalArgumentException(address + " was a valid host address");
+      }
+
+      return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
+    }
+
+    void prebuild() {
+      Objects.requireNonNull(accessKey, "account key is required");
+      Objects.requireNonNull(accessToken, "account token is required");
+      Objects.requireNonNull(group, "group is required");
+
+      if (destination != null) {
+        tags = tags.and("destination", destination);
+      }
+
+      this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
+
+      if (inetAddress == null) {
+        try {
+          inetAddress = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+          inetAddress = InetAddress.getLoopbackAddress();
+        }
+      }
+
+      if (seedAddresses == null) {
+        Objects.requireNonNull(host, "host is required");
+        Objects.requireNonNull(port, "port is required");
+        socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
+      } else {
+        socketAddresses = seedAddresses;
+      }
+
+      logger.info("registering with netifi with group {}", group);
+
+      proteusKey = accessKey + group;
+    }
+  }
+
+  public static class WebSocketBuilder extends CommonBuilder<WebSocketBuilder> {
+    private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
+    private Callable<SslContext> sslContextSupplier =
+        () -> {
+          final SslProvider sslProvider;
+          if (OpenSsl.isAvailable()) {
+            logger.info("Native SSL provider is available; will use native provider.");
+            sslProvider = SslProvider.OPENSSL_REFCNT;
+          } else {
+            logger.info("Native SSL provider not available; will use JDK SSL provider.");
+            sslProvider = SslProvider.JDK;
+          }
+          return SslContextBuilder.forClient()
+              .trustManager(InsecureTrustManagerFactory.INSTANCE)
+              .sslProvider(sslProvider)
+              .build();
+        };
+
+    public WebSocketBuilder disableSsl() {
+      this.sslDisabled = true;
+      return this;
+    }
+
+    public WebSocketBuilder enableSsl() {
+      this.sslDisabled = false;
+      return this;
+    }
+
+    public WebSocketBuilder enableSsl(Callable<SslContext> sslContextSupplier) {
+      this.sslContextSupplier = sslContextSupplier;
+      return enableSsl();
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      Function<SocketAddress, ClientTransport> clientTransportFactory;
+
+      logger.info("Client transport factory not provided; using WS transport.");
+      if (sslDisabled) {
+        clientTransportFactory =
+            address -> {
+              TcpClient client = TcpClient.create().addressSupplier(() -> address);
+              return TcpClientTransport.create(client);
+            };
+      } else {
+        try {
+          final SslContext sslContext = sslContextSupplier.call();
+          clientTransportFactory =
+              address -> {
+                TcpClient client =
+                    TcpClient.create().addressSupplier(() -> address).secure(sslContext);
+                return WebsocketClientTransport.create(client);
+              };
+        } catch (Exception sslException) {
+          throw Exceptions.propagate(sslException);
+        }
+      }
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    inetAddress,
+                    group,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    BrokerAddressSelectors.WEBSOCKET_ADDRESS,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  public static class TcpBuilder extends CommonBuilder<TcpBuilder> {
+    private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
+    private Callable<SslContext> sslContextSupplier =
+        () -> {
+          final SslProvider sslProvider;
+          if (OpenSsl.isAvailable()) {
+            logger.info("Native SSL provider is available; will use native provider.");
+            sslProvider = SslProvider.OPENSSL_REFCNT;
+          } else {
+            logger.info("Native SSL provider not available; will use JDK SSL provider.");
+            sslProvider = SslProvider.JDK;
+          }
+          return SslContextBuilder.forClient()
+              .trustManager(InsecureTrustManagerFactory.INSTANCE)
+              .sslProvider(sslProvider)
+              .build();
+        };
+
+    public TcpBuilder disableSsl() {
+      this.sslDisabled = true;
+      return this;
+    }
+
+    public TcpBuilder enableSsl() {
+      this.sslDisabled = false;
+      return this;
+    }
+
+    public TcpBuilder enableSsl(Callable<SslContext> sslContextSupplier) {
+      this.sslContextSupplier = sslContextSupplier;
+      return enableSsl();
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      Function<SocketAddress, ClientTransport> clientTransportFactory;
+
+      logger.info("Client transport factory not provided; using WS transport.");
+      if (sslDisabled) {
+        clientTransportFactory =
+            address -> {
+              TcpClient client = TcpClient.create().addressSupplier(() -> address);
+              return TcpClientTransport.create(client);
+            };
+      } else {
+        try {
+          final SslContext sslContext = sslContextSupplier.call();
+          clientTransportFactory =
+              address -> {
+                TcpClient client =
+                    TcpClient.create().addressSupplier(() -> address).secure(sslContext);
+                return TcpClientTransport.create(client);
+              };
+        } catch (Exception sslException) {
+          throw Exceptions.propagate(sslException);
+        }
+      }
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    inetAddress,
+                    group,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    BrokerAddressSelectors.TCP_ADDRESS,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  public static class CustomizableBuilder extends CommonBuilder<CustomizableBuilder> {
+    Function<SocketAddress, ClientTransport> clientTransportFactory;
+    Function<Broker, InetSocketAddress> addressSelector;
+
+    public CustomizableBuilder clientTransportFactory(
+        Function<SocketAddress, ClientTransport> clientTransportFactory) {
+      this.clientTransportFactory = clientTransportFactory;
+      return this;
+    }
+
+    public CustomizableBuilder addressSelector(
+        Function<Broker, InetSocketAddress> addressSelector) {
+      this.addressSelector = addressSelector;
+      return this;
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    inetAddress,
+                    group,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    addressSelector,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  @Deprecated
   public static class Builder {
     private InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
     private String host = DefaultBuilderConfig.getHost();
