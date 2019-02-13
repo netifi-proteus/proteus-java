@@ -28,7 +28,6 @@ import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;
 import io.netifi.proteus.frames.ShardFlyweight;
 import io.netifi.proteus.rsocket.*;
-import io.netifi.proteus.rsocket.UnwrappingRSocket;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
@@ -89,10 +88,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int inactivityFactor = DEFAULT_INACTIVITY_FACTOR;
   private final BrokerInfoServiceClient client;
   private final MonoProcessor<Void> onClose;
-  private int missed = 0;
-
   private final int selectRefresh;
-
+  private int missed = 0;
   private volatile Disposable disposable;
 
   public DefaultProteusBrokerService(
@@ -268,36 +265,50 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         .stream()
         .map(
             address -> {
-              Broker b;
-              URI u = URI.create(address.toString());
-              switch (u.getScheme()) {
-                case "ws":
-                case "wss":
-                  b =
-                      Broker.newBuilder()
-                          .setWebSocketAddress(u.getHost())
-                          .setWebSocketPort(u.getPort())
-                          .build();
-                  return new WeightedClientTransportSupplier(
-                      b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, clientTransportFactory);
-                case "tcp":
-                  b =
-                      Broker.newBuilder()
-                          .setTcpAddress(u.getHost())
-                          .setTcpPort(u.getPort())
-                          .build();
-                  return new WeightedClientTransportSupplier(
-                      b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
-                default:
-                  // Assume URI is actually a HostAndPort, and TCP is our default
-                  HostAndPort hostAndPort = HostAndPort.fromString(address.toString());
-                  b =
-                      Broker.newBuilder()
-                          .setTcpAddress(hostAndPort.getHost())
-                          .setTcpPort(hostAndPort.getPort())
-                          .build();
-                  return new WeightedClientTransportSupplier(
-                      b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+              try {
+                Broker b;
+                String str = address.toString();
+                URI u = URI.create(str);
+                switch (u.getScheme()) {
+                  case "ws":
+                  case "wss":
+                    b =
+                        Broker.newBuilder()
+                            .setWebSocketAddress(u.getHost())
+                            .setWebSocketPort(u.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, clientTransportFactory);
+                  case "tcp":
+                    b =
+                        Broker.newBuilder()
+                            .setTcpAddress(u.getHost())
+                            .setTcpPort(u.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+                  default:
+                    // Assume URI is actually a HostAndPort, and TCP is our default
+                    HostAndPort hostAndPort = HostAndPort.fromString(str);
+                    b =
+                        Broker.newBuilder()
+                            .setTcpAddress(hostAndPort.getHost())
+                            .setTcpPort(hostAndPort.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+                }
+              } catch (Throwable t) {
+                InetSocketAddress address1 = (InetSocketAddress) address;
+
+                logger.info("can't parse socket to URI");
+                return new WeightedClientTransportSupplier(
+                    Broker.newBuilder()
+                        .setTcpAddress(address1.getHostName())
+                        .setTcpPort(address1.getPort())
+                        .build(),
+                    BrokerAddressSelectors.TCP_ADDRESS,
+                    clientTransportFactory);
               }
             })
         .forEach(suppliers::add);
