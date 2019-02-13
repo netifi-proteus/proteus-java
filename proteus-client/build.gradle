@@ -10,7 +10,7 @@ dependencies {
     compile project (':proteus-common')
     compile project (':proteus-frames')
     
-    compile 'org.apache.logging.log4j:log4j-slf4j-impl'
+    compile 'org.slf4j:slf4j-api'
     compile 'com.google.protobuf:protobuf-java'
     compile 'com.typesafe:config'
     compile 'io.rsocket:rsocket-core'
