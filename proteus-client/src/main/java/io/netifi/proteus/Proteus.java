@@ -257,6 +257,12 @@ public class Proteus implements Closeable {
     List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
     String proteusKey;
     List<SocketAddress> socketAddresses;
+    DiscoveryStrategy discoveryStrategy = null;
+
+    public SELF discoveryStrategy(DiscoveryStrategy discoveryStrategy) {
+      this.discoveryStrategy = discoveryStrategy;
+      return (SELF) this;
+    }
 
     public SELF poolSize(int poolSize) {
       this.poolSize = poolSize;
@@ -417,12 +423,15 @@ public class Proteus implements Closeable {
         }
       }
 
-      if (seedAddresses == null) {
-        Objects.requireNonNull(host, "host is required");
-        Objects.requireNonNull(port, "port is required");
-        socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
-      } else {
-        socketAddresses = seedAddresses;
+      if (discoveryStrategy == null) {
+        if (seedAddresses == null) {
+          Objects.requireNonNull(host, "host is required");
+          Objects.requireNonNull(port, "port is required");
+          socketAddresses =
+              Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
+        } else {
+          socketAddresses = seedAddresses;
+        }
       }
 
       logger.info("registering with netifi with group {}", group);
@@ -508,7 +517,8 @@ public class Proteus implements Closeable {
                     BrokerAddressSelectors.WEBSOCKET_ADDRESS,
                     clientTransportFactory,
                     poolSize,
-                    tracerSupplier);
+                    tracerSupplier,
+                    discoveryStrategy);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             return proteus;
@@ -593,7 +603,8 @@ public class Proteus implements Closeable {
                     BrokerAddressSelectors.TCP_ADDRESS,
                     clientTransportFactory,
                     poolSize,
-                    tracerSupplier);
+                    tracerSupplier,
+                    discoveryStrategy);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             return proteus;
@@ -638,7 +649,8 @@ public class Proteus implements Closeable {
                     addressSelector,
                     clientTransportFactory,
                     poolSize,
-                    tracerSupplier);
+                    tracerSupplier,
+                    discoveryStrategy);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             return proteus;
