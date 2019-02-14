@@ -41,6 +41,14 @@ import io.rsocket.RSocket;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -51,13 +59,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 
 public class DefaultProteusBrokerService implements ProteusBrokerService, Disposable {
   private static final Logger logger = LoggerFactory.getLogger(DefaultProteusBrokerService.class);
@@ -150,10 +151,14 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     this.discoveryStrategy = discoveryStrategy;
 
-    if (discoveryStrategy == null && seedAddresses.isEmpty()) {
-      throw new IllegalStateException("seedAddress is empty");
+    if (discoveryStrategy == null) {
+      if (seedAddresses.isEmpty()) {
+        throw new IllegalStateException("seedAddress is empty");
+      } else {
+        this.seedAddresses = seedAddresses;
+      }
     } else {
-      this.seedAddresses = seedAddresses;
+      this.seedAddresses = new CopyOnWriteArrayList<>();
     }
 
     Objects.requireNonNull(accessToken);
@@ -162,12 +167,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     }
 
     Objects.requireNonNull(clientTransportFactory);
-
-    if (discoveryStrategy != null) {
-      logger.info("discovery strategy found using " + discoveryStrategy.getClass());
-      seedAddresses = new CopyOnWriteArrayList<>();
-      useDiscoveryStrategy();
-    }
 
     this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
     this.localInetAddress = localInetAddress;
@@ -189,6 +188,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         DestinationSetupFlyweight.encode(
             ByteBufAllocator.DEFAULT, localInetAddress, group, accessKey, accessToken, tags);
     this.onClose = MonoProcessor.create();
+
+    if (discoveryStrategy != null) {
+      logger.info("discovery strategy found using " + discoveryStrategy.getClass());
+      useDiscoveryStrategy();
+    }
 
     this.client =
         new BrokerInfoServiceClient(group("com.netifi.proteus.brokerServices", Tags.empty()));
