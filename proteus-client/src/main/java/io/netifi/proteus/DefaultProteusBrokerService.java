@@ -211,11 +211,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
             .flatMapIterable(Function.identity())
             .map(hostAndPort -> new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()))
             .collectList()
-            .doOnNext(seedAddresses::addAll)
             .doOnNext(
                 i -> {
                   synchronized (this) {
                     missed++;
+                    seedAddresses.clear();
+                    seedAddresses.addAll(i);
                   }
                 })
             .doOnError(
