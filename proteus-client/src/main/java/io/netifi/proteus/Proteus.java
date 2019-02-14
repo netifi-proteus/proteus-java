@@ -461,9 +461,9 @@ public class Proteus implements Closeable {
           inetAddress = InetAddress.getLoopbackAddress();
         }
       }
-
+  
+      List<SocketAddress> socketAddresses = null;
       if (discoveryStrategy == null) {
-        List<SocketAddress> socketAddresses;
         if (seedAddresses == null) {
           Objects.requireNonNull(host, "host is required");
           Objects.requireNonNull(port, "port is required");
@@ -476,7 +476,8 @@ public class Proteus implements Closeable {
       logger.info("registering with netifi with group {}", group);
 
       String proteusKey = accessKey + group;
-
+  
+      List<SocketAddress> _s = socketAddresses;
       return PROTEUS.computeIfAbsent(
           proteusKey,
           _k -> {
@@ -491,7 +492,7 @@ public class Proteus implements Closeable {
                     tickPeriodSeconds,
                     ackTimeoutSeconds,
                     missedAcks,
-                    socketAddresses,
+                    _s,
                     addressSelector,
                     clientTransportFactory,
                     poolSize,
