@@ -483,7 +483,7 @@ public class Proteus implements Closeable {
         clientTransportFactory =
             address -> {
               TcpClient client = TcpClient.create().addressSupplier(() -> address);
-              return TcpClientTransport.create(client);
+              return WebsocketClientTransport.create(client);
             };
       } else {
         try {
