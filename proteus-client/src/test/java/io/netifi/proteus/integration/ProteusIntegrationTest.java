@@ -50,7 +50,7 @@ public class ProteusIntegrationTest {
   @BeforeClass
   public static void setup() {
     server =
-        Proteus.builder()
+        Proteus.tcp()
             .keepalive(false)
             .group("test.server")
             .destination("server")
@@ -61,7 +61,7 @@ public class ProteusIntegrationTest {
             .build();
 
     client =
-        Proteus.builder()
+        Proteus.tcp()
             .keepalive(false)
             .group("test.client")
             .destination("client")

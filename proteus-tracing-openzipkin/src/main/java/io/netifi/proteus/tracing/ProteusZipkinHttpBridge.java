@@ -77,7 +77,7 @@ public class ProteusZipkinHttpBridge implements ProteusTracingService {
     logger.info("access key - {}", accessKey);
 
     Proteus proteus =
-        Proteus.builder()
+        Proteus.tcp()
             .accessKey(accessKey)
             .accessToken(accessToken)
             .group(group)
