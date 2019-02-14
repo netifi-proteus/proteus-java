@@ -462,13 +462,15 @@ public class Proteus implements Closeable {
         }
       }
 
-      List<SocketAddress> socketAddresses;
-      if (seedAddresses == null) {
-        Objects.requireNonNull(host, "host is required");
-        Objects.requireNonNull(port, "port is required");
-        socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
-      } else {
-        socketAddresses = seedAddresses;
+      if (discoveryStrategy == null) {
+        List<SocketAddress> socketAddresses;
+        if (seedAddresses == null) {
+          Objects.requireNonNull(host, "host is required");
+          Objects.requireNonNull(port, "port is required");
+          socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
+        } else {
+          socketAddresses = seedAddresses;
+        }
       }
 
       logger.info("registering with netifi with group {}", group);
