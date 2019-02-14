@@ -23,6 +23,7 @@ import io.netifi.proteus.common.net.HostAndPort;
 import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
 import io.netifi.proteus.common.tags.Tags;
+import io.netifi.proteus.discovery.DiscoveryStrategy;
 import io.netifi.proteus.frames.BroadcastFlyweight;
 import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.frames.GroupFlyweight;
@@ -46,6 +47,7 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -89,6 +91,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final BrokerInfoServiceClient client;
   private final MonoProcessor<Void> onClose;
   private final int selectRefresh;
+  private final DiscoveryStrategy discoveryStrategy;
   private int missed = 0;
   private volatile Disposable disposable;
 
@@ -106,7 +109,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       long accessKey,
       ByteBuf accessToken,
       Tags tags,
-      Tracer tracer) {
+      Tracer tracer,
+      DiscoveryStrategy discoveryStrategy) {
     this(
         seedAddresses,
         requestHandlingRSocket,
@@ -122,7 +126,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         accessKey,
         accessToken,
         tags,
-        tracer);
+        tracer,
+        discoveryStrategy);
   }
 
   public DefaultProteusBrokerService(
@@ -140,10 +145,15 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       long accessKey,
       ByteBuf accessToken,
       Tags tags,
-      Tracer tracer) {
-    Objects.requireNonNull(seedAddresses);
-    if (seedAddresses.isEmpty()) {
+      Tracer tracer,
+      DiscoveryStrategy discoveryStrategy) {
+
+    this.discoveryStrategy = discoveryStrategy;
+
+    if (discoveryStrategy == null && seedAddresses.isEmpty()) {
       throw new IllegalStateException("seedAddress is empty");
+    } else {
+      this.seedAddresses = seedAddresses;
     }
 
     Objects.requireNonNull(accessToken);
@@ -153,7 +163,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     Objects.requireNonNull(clientTransportFactory);
 
-    this.seedAddresses = seedAddresses;
+    if (discoveryStrategy != null) {
+      logger.info("discovery strategy found using " + discoveryStrategy.getClass());
+      seedAddresses = new CopyOnWriteArrayList<>();
+      useDiscoveryStrategy();
+    }
+
     this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
     this.localInetAddress = localInetAddress;
     this.group = group;
@@ -187,6 +202,40 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
               }
             })
         .subscribe();
+  }
+
+  private void useDiscoveryStrategy() {
+    Mono<List<InetSocketAddress>> discoveryNodes =
+        discoveryStrategy
+            .discoverNodes()
+            .flatMapIterable(Function.identity())
+            .map(hostAndPort -> new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()))
+            .collectList()
+            .doOnNext(seedAddresses::addAll)
+            .doOnNext(
+                i -> {
+                  synchronized (this) {
+                    missed++;
+                  }
+                })
+            .doOnError(
+                throwable ->
+                    logger.error(
+                        "error getting seed nodes using discovery strategy "
+                            + discoveryStrategy.getClass(),
+                        throwable));
+
+    Disposable subscribe =
+        discoveryNodes
+            .retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(1), Duration.ofSeconds(30))
+            .thenMany(
+                Flux.interval(Duration.ofSeconds(10))
+                    .onBackpressureDrop()
+                    .concatMap(i -> discoveryNodes))
+            .retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(1), Duration.ofSeconds(30))
+            .subscribe();
+
+    onClose.doFinally(s -> subscribe.dispose()).subscribe();
   }
 
   private Payload getSetupPayload() {
