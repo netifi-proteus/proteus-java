@@ -18,6 +18,7 @@ package io.netifi.proteus;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.common.tags.Tag;
 import io.netifi.proteus.common.tags.Tags;
+import io.netifi.proteus.discovery.DiscoveryStrategy;
 import io.netifi.proteus.rsocket.NamedRSocketClientWrapper;
 import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
@@ -82,7 +83,8 @@ public class Proteus implements Closeable {
       Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
-      Supplier<Tracer> tracerSupplier) {
+      Supplier<Tracer> tracerSupplier,
+      DiscoveryStrategy discoveryStrategy) {
     this.accesskey = accessKey;
     this.group = group;
     this.tags = tags;
@@ -105,7 +107,8 @@ public class Proteus implements Closeable {
             accessKey,
             accessToken,
             tags,
-            tracerSupplier.get());
+            tracerSupplier.get(),
+            discoveryStrategy);
   }
 
   public static Builder builder() {
@@ -236,6 +239,7 @@ public class Proteus implements Closeable {
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
+    private DiscoveryStrategy discoveryStrategy = null;
     private Function<Broker, InetSocketAddress> addressSelector =
         BrokerAddressSelectors.BIND_ADDRESS; // Default
 
@@ -291,6 +295,11 @@ public class Proteus implements Closeable {
 
     public Builder tracerSupplier(Supplier<Tracer> tracerSupplier) {
       this.tracerSupplier = tracerSupplier;
+      return this;
+    }
+
+    public Builder discoveryStrategy(DiscoveryStrategy discoveryStrategy) {
+      this.discoveryStrategy = discoveryStrategy;
       return this;
     }
 
@@ -484,7 +493,8 @@ public class Proteus implements Closeable {
                     addressSelector,
                     clientTransportFactory,
                     poolSize,
-                    tracerSupplier);
+                    tracerSupplier,
+                    discoveryStrategy);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             return proteus;

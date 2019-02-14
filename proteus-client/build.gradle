@@ -9,6 +9,7 @@ dependencies {
     compile project (':proteus-auth')
     compile project (':proteus-common')
     compile project (':proteus-frames')
+    compile project (':proteus-discovery')
     
     compile 'org.slf4j:slf4j-api'
     compile 'com.google.protobuf:protobuf-java'
