@@ -66,6 +66,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int DEFAULT_INACTIVITY_FACTOR = 500;
   private static final int EFFORT = 5;
+  private static final short DEFAULT_ADDITIONAL_FLAGS = (short) 0;
+
   private final Quantile lowerQuantile = new FrugalQuantile(DEFAULT_LOWER_QUANTILE);
   private final Quantile higherQuantile = new FrugalQuantile(DEFAULT_HIGHER_QUANTILE);
   private final List<SocketAddress> seedAddresses;
@@ -80,6 +82,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int missedAcks;
   private final long accessKey;
   private final ByteBuf accessToken;
+  private final short additionalSetupFlags;
   private final Tags tags;
   private final ByteBuf setupMetadata;
 
@@ -125,6 +128,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         missedAcks,
         accessKey,
         accessToken,
+        DEFAULT_ADDITIONAL_FLAGS,
         tags,
         tracer,
         discoveryStrategy);
@@ -144,6 +148,44 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       int missedAcks,
       long accessKey,
       ByteBuf accessToken,
+      Tags tags,
+      Tracer tracer,
+      DiscoveryStrategy discoveryStrategy) {
+    this(
+        seedAddresses,
+        requestHandlingRSocket,
+        localInetAddress,
+        group,
+        addressSelector,
+        clientTransportFactory,
+        poolSize,
+        keepalive,
+        tickPeriodSeconds,
+        ackTimeoutSeconds,
+        missedAcks,
+        accessKey,
+        accessToken,
+        DEFAULT_ADDITIONAL_FLAGS,
+        tags,
+        tracer,
+        discoveryStrategy);
+  }
+
+  public DefaultProteusBrokerService(
+      List<SocketAddress> seedAddresses,
+      RequestHandlingRSocket requestHandlingRSocket,
+      InetAddress localInetAddress,
+      String group,
+      Function<Broker, InetSocketAddress> addressSelector,
+      Function<SocketAddress, ClientTransport> clientTransportFactory,
+      int poolSize,
+      boolean keepalive,
+      long tickPeriodSeconds,
+      long ackTimeoutSeconds,
+      int missedAcks,
+      long accessKey,
+      ByteBuf accessToken,
+      short additionalSetupFlags,
       Tags tags,
       Tracer tracer,
       DiscoveryStrategy discoveryStrategy) {
@@ -182,10 +224,17 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.missedAcks = missedAcks;
     this.accessKey = accessKey;
     this.accessToken = accessToken;
+    this.additionalSetupFlags = additionalSetupFlags;
     this.tags = tags;
     this.setupMetadata =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, localInetAddress, group, accessKey, accessToken, tags);
+            ByteBufAllocator.DEFAULT,
+            localInetAddress,
+            group,
+            accessKey,
+            accessToken,
+            additionalSetupFlags,
+            tags);
     this.onClose = MonoProcessor.create();
 
     if (discoveryStrategy != null) {
