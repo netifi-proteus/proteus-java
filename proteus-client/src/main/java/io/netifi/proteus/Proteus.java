@@ -58,6 +58,7 @@ import reactor.netty.tcp.TcpClient;
 public class Proteus implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(Proteus.class);
   private static final ConcurrentHashMap<String, Proteus> PROTEUS = new ConcurrentHashMap<>();
+  private static final String DEFAULT_DESTINATION = defaultDestination();
 
   static {
     // Set the Java DNS cache to 60 seconds
@@ -238,6 +239,10 @@ public class Proteus implements Closeable {
     return tags;
   }
 
+  private static String defaultDestination() {
+    return UUID.randomUUID().toString();
+  }
+
   public abstract static class CommonBuilder<SELF extends CommonBuilder<SELF>> {
     Long accessKey = DefaultBuilderConfig.getAccessKey();
     String group = DefaultBuilderConfig.getGroup();
@@ -408,10 +413,10 @@ public class Proteus implements Closeable {
       Objects.requireNonNull(accessKey, "account key is required");
       Objects.requireNonNull(accessToken, "account token is required");
       Objects.requireNonNull(group, "group is required");
-
-      if (destination != null) {
-        tags = tags.and("destination", destination);
+      if (destination == null) {
+        destination = DEFAULT_DESTINATION;
       }
+      tags = tags.and("destination", destination);
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
@@ -848,10 +853,10 @@ public class Proteus implements Closeable {
       Objects.requireNonNull(accessKey, "account key is required");
       Objects.requireNonNull(accessToken, "account token is required");
       Objects.requireNonNull(group, "group is required");
-
-      if (destination != null) {
-        tags = tags.and("destination", destination);
+      if (destination == null) {
+        destination = DEFAULT_DESTINATION;
       }
+      tags = tags.and("destination", destination);
 
       if (clientTransportFactory == null) {
         logger.info("Client transport factory not provided; using TCP transport.");
