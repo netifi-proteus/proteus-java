@@ -2,7 +2,7 @@ description = 'Netifi Proteus Discovery Library For AWS'
 
 dependencyManagement {
     imports {
-        mavenBom 'software.amazon.awssdk:bom:2.3.6'
+        mavenBom 'software.amazon.awssdk:bom:2.4.13'
     }
 }
 
