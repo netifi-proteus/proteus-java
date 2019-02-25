@@ -15,7 +15,6 @@ plugins {
     id 'com.google.osdetector' version '1.4.0'
     id "com.github.hierynomus.license" version '0.15.0'
     id 'com.github.sherter.google-java-format' version '0.8' apply false
-    id 'com.github.johnrengelman.shadow' version '4.0.2' apply false
     id 'me.champeau.gradle.jmh' version '0.4.7' apply false
     id 'io.morethan.jmhreport' version '0.6.2.1' apply false
     id 'io.spring.dependency-management' version '1.0.6.RELEASE' apply false

@@ -1,5 +1,4 @@
 apply plugin: 'com.google.protobuf'
-apply plugin: 'com.github.johnrengelman.shadow'
 
 description = 'Netifi Proteus Client'
 
@@ -28,11 +27,6 @@ dependencies {
     testCompile 'org.apache.logging.log4j:log4j-api'
     testCompile 'org.apache.logging.log4j:log4j-core'
     testCompile 'org.apache.logging.log4j:log4j-slf4j-impl'
-}
-
-shadowJar {
-    mergeServiceFiles()
-    classifier = ''
 }
 
 protobuf {
@@ -72,7 +66,3 @@ idea {
         generatedSourceDirs += file('src/generated/main/proteus')
     }
 }
-
-
-build.finalizedBy(shadowJar)
-
