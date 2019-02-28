@@ -485,7 +485,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   @Override
   public void dispose() {
-    for(ByteBuf metadata : setupMetadata){
+    for (ByteBuf metadata : setupMetadata) {
       ReferenceCountUtil.safeRelease(metadata);
     }
     onClose.onComplete();
