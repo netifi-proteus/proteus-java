@@ -33,25 +33,27 @@ public class UnwrappingRSocket extends AbstractUnwrappingRSocket {
     try {
       ByteBuf data = payload.sliceData();
       ByteBuf metadata = payload.sliceMetadata();
-      ByteBuf unwrappedMetadata;
       FrameType frameType = FrameHeaderFlyweight.frameType(metadata);
-      switch (frameType) {
-        case GROUP:
-          unwrappedMetadata = GroupFlyweight.metadata(metadata);
-          break;
-        case BROADCAST:
-          unwrappedMetadata = BroadcastFlyweight.metadata(metadata);
-          break;
-        case SHARD:
-          unwrappedMetadata = ShardFlyweight.metadata(metadata);
-          break;
-        default:
-          throw new IllegalStateException("unknown frame type " + frameType);
-      }
-
+      ByteBuf unwrappedMetadata = unwrapMetadata(frameType, metadata);
       return ByteBufPayload.create(data.retain(), unwrappedMetadata.retain());
     } finally {
       payload.release();
+    }
+  }
+
+  private ByteBuf unwrapMetadata(FrameType frameType, ByteBuf metadata) {
+    switch (frameType) {
+      case AUTHORIZATION_WRAPPER:
+        ByteBuf innerFrame = AuthorizationWrapperFlyweight.innerFrame(metadata);
+        return unwrapMetadata(FrameHeaderFlyweight.frameType(innerFrame), innerFrame);
+      case GROUP:
+        return GroupFlyweight.metadata(metadata);
+      case BROADCAST:
+        return BroadcastFlyweight.metadata(metadata);
+      case SHARD:
+        return ShardFlyweight.metadata(metadata);
+      default:
+        throw new IllegalStateException("unknown frame type " + frameType);
     }
   }
 }

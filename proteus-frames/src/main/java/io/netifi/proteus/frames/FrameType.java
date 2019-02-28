@@ -22,7 +22,8 @@ public enum FrameType {
   DESTINATION_SETUP(0x02),
   GROUP(0x03),
   BROADCAST(0x04),
-  SHARD(0x05);
+  SHARD(0x05),
+  AUTHORIZATION_WRAPPER(0x06);
 
   private static FrameType[] typesById;
 
