@@ -24,6 +24,7 @@ import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
@@ -42,6 +43,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,6 +78,7 @@ public class Proteus implements Closeable {
   private Proteus(
       long accessKey,
       ByteBuf accessToken,
+      ByteBuf connectionId,
       InetAddress inetAddress,
       String group,
       Tags tags,
@@ -109,6 +113,7 @@ public class Proteus implements Closeable {
             missedAcks,
             accessKey,
             accessToken,
+            connectionId,
             tags,
             tracerSupplier.get(),
             discoveryStrategy);
@@ -250,6 +255,8 @@ public class Proteus implements Closeable {
     Tags tags = DefaultBuilderConfig.getTags();
     String accessToken = DefaultBuilderConfig.getAccessToken();
     byte[] accessTokenBytes = new byte[20];
+    String connectionIdSeedString = DefaultBuilderConfig.getConnectionId();
+    byte[] connectionIdBytes = new byte[16];
     int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     Supplier<Tracer> tracerSupplier = () -> null;
     boolean keepalive = DefaultBuilderConfig.getKeepAlive();
@@ -286,6 +293,11 @@ public class Proteus implements Closeable {
 
     public SELF accessToken(String accessToken) {
       this.accessToken = accessToken;
+      return (SELF) this;
+    }
+
+    public SELF connectionId(String connectionId) {
+      this.connectionIdSeedString = connectionId;
       return (SELF) this;
     }
 
@@ -420,6 +432,18 @@ public class Proteus implements Closeable {
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
+      try {
+        String seedString =
+            this.connectionIdSeedString == null
+                ? UUID.randomUUID().toString()
+                : this.connectionIdSeedString;
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(seedString.getBytes());
+        this.connectionIdBytes = md.digest();
+      } catch (NoSuchAlgorithmException ex) {
+        throw new RuntimeException("Failed to build connection id", ex);
+      }
+
       if (inetAddress == null) {
         try {
           inetAddress = InetAddress.getLocalHost();
@@ -511,6 +535,7 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    Unpooled.wrappedBuffer(connectionIdBytes),
                     inetAddress,
                     group,
                     tags,
@@ -597,6 +622,7 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    Unpooled.wrappedBuffer(connectionIdBytes),
                     inetAddress,
                     group,
                     tags,
@@ -643,6 +669,7 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    Unpooled.wrappedBuffer(connectionIdBytes),
                     inetAddress,
                     group,
                     tags,
@@ -675,6 +702,7 @@ public class Proteus implements Closeable {
     private Tags tags = DefaultBuilderConfig.getTags();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
+    private ByteBuf connectionId = initialConnectionId();
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
@@ -763,6 +791,14 @@ public class Proteus implements Closeable {
       }
 
       return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
+    }
+
+    private static ByteBuf initialConnectionId() {
+      UUID id = UUID.randomUUID();
+      return ByteBufAllocator.DEFAULT
+          .buffer()
+          .writeLong(id.getMostSignificantBits())
+          .writeLong(id.getLeastSignificantBits());
     }
 
     /**
@@ -927,6 +963,7 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionId,
                     inetAddress,
                     group,
                     tags,

@@ -36,9 +36,16 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       byte[] accessToken,
+      byte[] connectionId,
       Tags tags) {
     return encode(
-        allocator, inetAddress, group, accessKey, Unpooled.wrappedBuffer(accessToken), tags);
+        allocator,
+        inetAddress,
+        group,
+        accessKey,
+        Unpooled.wrappedBuffer(accessToken),
+        Unpooled.wrappedBuffer(connectionId),
+        tags);
   }
 
   public static ByteBuf encode(
@@ -47,6 +54,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
+      ByteBuf connectionId,
       Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
@@ -70,6 +78,11 @@ public class DestinationSetupFlyweight {
         .writeLong(accessKey)
         .writeInt(accessTokenLength)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
+
+    int connectionIdLength = connectionId.readableBytes();
+    byteBuf
+        .writeInt(connectionIdLength)
+        .writeBytes(connectionId, connectionId.readerIndex(), connectionIdLength);
 
     for (Tag tag : tags) {
       String key = tag.getKey();
@@ -146,6 +159,24 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, accessTokenLength);
   }
 
+  public static ByteBuf connectionId(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
+
+    int inetAddressLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + inetAddressLength;
+
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength + Long.BYTES;
+
+    int accessTokenLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + accessTokenLength;
+
+    int connectionIdLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES;
+
+    return byteBuf.slice(offset, connectionIdLength);
+  }
+
   public static Tags tags(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
@@ -157,6 +188,9 @@ public class DestinationSetupFlyweight {
 
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
+
+    int connectionIdLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + connectionIdLength;
 
     List<Tag> tags = new ArrayList<>();
     while (offset < byteBuf.readableBytes()) {

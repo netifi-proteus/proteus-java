@@ -193,6 +193,18 @@ final class DefaultBuilderConfig {
     return accessToken;
   }
 
+  static String getConnectionId() {
+    String connectionId = null;
+
+    try {
+      connectionId = conf.getString("proteus.client.connectionId");
+    } catch (ConfigException.Missing m) {
+
+    }
+
+    return connectionId;
+  }
+
   static int getPoolSize() {
     int poolSize = Math.min(4, Runtime.getRuntime().availableProcessors());
     try {

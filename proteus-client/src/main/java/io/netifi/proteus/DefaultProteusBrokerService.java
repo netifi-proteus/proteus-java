@@ -80,6 +80,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int missedAcks;
   private final long accessKey;
   private final ByteBuf accessToken;
+  private final ByteBuf connectionId;
   private final Tags tags;
   private final ByteBuf setupMetadata;
 
@@ -108,6 +109,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       int missedAcks,
       long accessKey,
       ByteBuf accessToken,
+      ByteBuf connectionId,
       Tags tags,
       Tracer tracer,
       DiscoveryStrategy discoveryStrategy) {
@@ -125,6 +127,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         missedAcks,
         accessKey,
         accessToken,
+        connectionId,
         tags,
         tracer,
         discoveryStrategy);
@@ -144,6 +147,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       int missedAcks,
       long accessKey,
       ByteBuf accessToken,
+      ByteBuf connectionId,
       Tags tags,
       Tracer tracer,
       DiscoveryStrategy discoveryStrategy) {
@@ -182,10 +186,17 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.missedAcks = missedAcks;
     this.accessKey = accessKey;
     this.accessToken = accessToken;
+    this.connectionId = connectionId;
     this.tags = tags;
     this.setupMetadata =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, localInetAddress, group, accessKey, accessToken, tags);
+            ByteBufAllocator.DEFAULT,
+            localInetAddress,
+            group,
+            accessKey,
+            accessToken,
+            connectionId,
+            tags);
     this.onClose = MonoProcessor.create();
 
     if (discoveryStrategy != null) {
