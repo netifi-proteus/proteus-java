@@ -30,7 +30,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class DestinationSetupFlyweight {
-  private static int CONNECTION_ID_LENGTH = 16;
+  private static final int CONNECTION_ID_LENGTH = 16;
+  private static final int ADDITIONAL_FLAGS_SIZE = Short.BYTES;
 
   public static ByteBuf encode(
       ByteBufAllocator allocator,
@@ -47,6 +48,7 @@ public class DestinationSetupFlyweight {
         accessKey,
         Unpooled.wrappedBuffer(accessToken),
         Unpooled.wrappedBuffer(connectionId),
+        (short) 0,
         tags);
   }
 
@@ -57,6 +59,39 @@ public class DestinationSetupFlyweight {
       long accessKey,
       ByteBuf accessToken,
       ByteBuf connectionId,
+      Tags tags) {
+    return encode(
+        allocator, inetAddress, group, accessKey, accessToken, connectionId, (short) 0, tags);
+  }
+
+  public static ByteBuf encode(
+      ByteBufAllocator allocator,
+      InetAddress inetAddress,
+      CharSequence group,
+      long accessKey,
+      byte[] accessToken,
+      byte[] connectionId,
+      short additionalFlags,
+      Tags tags) {
+    return encode(
+        allocator,
+        inetAddress,
+        group,
+        accessKey,
+        Unpooled.wrappedBuffer(accessToken),
+        Unpooled.wrappedBuffer(connectionId),
+        additionalFlags,
+        tags);
+  }
+
+  public static ByteBuf encode(
+      ByteBufAllocator allocator,
+      InetAddress inetAddress,
+      CharSequence group,
+      long accessKey,
+      ByteBuf accessToken,
+      ByteBuf connectionId,
+      short additionalFlags,
       Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
@@ -85,6 +120,10 @@ public class DestinationSetupFlyweight {
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
 
     byteBuf.writeBytes(connectionId, connectionId.readerIndex(), CONNECTION_ID_LENGTH);
+
+    // Additional flags, currently just 00000000_00000000 or 00000000_00000001 for private/public
+    // services
+    byteBuf.writeShort(additionalFlags);
 
     for (Tag tag : tags) {
       String key = tag.getKey();
@@ -176,6 +215,23 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, CONNECTION_ID_LENGTH);
   }
 
+  public static short additionalFlags(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
+
+    int inetAddressLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + inetAddressLength;
+
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength + Long.BYTES;
+
+    int accessTokenLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + accessTokenLength;
+
+    offset += CONNECTION_ID_LENGTH;
+
+    return byteBuf.getShort(offset);
+  }
+
   public static Tags tags(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
@@ -189,6 +245,9 @@ public class DestinationSetupFlyweight {
     offset += Integer.BYTES + accessTokenLength;
 
     offset += CONNECTION_ID_LENGTH;
+
+    // Additional flags
+    offset += ADDITIONAL_FLAGS_SIZE;
 
     List<Tag> tags = new ArrayList<>();
     while (offset < byteBuf.readableBytes()) {

@@ -24,7 +24,6 @@ import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
@@ -43,8 +42,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,9 +75,10 @@ public class Proteus implements Closeable {
   private Proteus(
       long accessKey,
       ByteBuf accessToken,
-      ByteBuf connectionId,
+      String connectionIdSeed,
       InetAddress inetAddress,
       String group,
+      short additionalFlags,
       Tags tags,
       boolean keepalive,
       long tickPeriodSeconds,
@@ -113,7 +111,8 @@ public class Proteus implements Closeable {
             missedAcks,
             accessKey,
             accessToken,
-            connectionId,
+            connectionIdSeed,
+            additionalFlags,
             tags,
             tracerSupplier.get(),
             discoveryStrategy);
@@ -252,11 +251,11 @@ public class Proteus implements Closeable {
     Long accessKey = DefaultBuilderConfig.getAccessKey();
     String group = DefaultBuilderConfig.getGroup();
     String destination = DefaultBuilderConfig.getDestination();
+    short additionalFlags = DefaultBuilderConfig.getAdditionalConnectionFlags();
     Tags tags = DefaultBuilderConfig.getTags();
     String accessToken = DefaultBuilderConfig.getAccessToken();
     byte[] accessTokenBytes = new byte[20];
     String connectionIdSeed = DefaultBuilderConfig.getConnectionId();
-    byte[] connectionIdBytes = new byte[16];
     int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     Supplier<Tracer> tracerSupplier = () -> null;
     boolean keepalive = DefaultBuilderConfig.getKeepAlive();
@@ -298,6 +297,11 @@ public class Proteus implements Closeable {
 
     public SELF connectionId(String connectionId) {
       this.connectionIdSeed = connectionId;
+      return (SELF) this;
+    }
+
+    public SELF additionalConnectionFlags(short flags) {
+      this.additionalFlags = flags;
       return (SELF) this;
     }
 
@@ -431,16 +435,8 @@ public class Proteus implements Closeable {
       tags = tags.and("destination", destination);
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
-
-      try {
-        String seedString =
-            this.connectionIdSeed == null ? UUID.randomUUID().toString() : this.connectionIdSeed;
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        md.update(seedString.getBytes());
-        System.arraycopy(md.digest(), 0, this.connectionIdBytes, 0, 16);
-      } catch (NoSuchAlgorithmException ex) {
-        throw new RuntimeException("Failed to build connection id", ex);
-      }
+      this.connectionIdSeed =
+          this.connectionIdSeed == null ? UUID.randomUUID().toString() : this.connectionIdSeed;
 
       if (inetAddress == null) {
         try {
@@ -533,9 +529,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
-                    Unpooled.wrappedBuffer(connectionIdBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -620,9 +617,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
-                    Unpooled.wrappedBuffer(connectionIdBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -667,9 +665,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
-                    Unpooled.wrappedBuffer(connectionIdBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -700,7 +699,7 @@ public class Proteus implements Closeable {
     private Tags tags = DefaultBuilderConfig.getTags();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
-    private ByteBuf connectionId = initialConnectionId();
+    private String connectionIdSeed = initialConnectionId();
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
@@ -791,12 +790,8 @@ public class Proteus implements Closeable {
       return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
     }
 
-    private static ByteBuf initialConnectionId() {
-      UUID id = UUID.randomUUID();
-      return ByteBufAllocator.DEFAULT
-          .buffer()
-          .writeLong(id.getMostSignificantBits())
-          .writeLong(id.getLeastSignificantBits());
+    private static String initialConnectionId() {
+      return UUID.randomUUID().toString();
     }
 
     /**
@@ -961,9 +956,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
-                    connectionId,
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    (short) 0,
                     tags,
                     keepalive,
                     tickPeriodSeconds,

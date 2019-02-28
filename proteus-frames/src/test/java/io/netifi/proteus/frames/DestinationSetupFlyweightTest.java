@@ -42,6 +42,7 @@ public class DestinationSetupFlyweightTest {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
     ByteBuf connectionId = Unpooled.wrappedBuffer("unique 16 bytes!".getBytes());
+    short additionalFlags = 0b00000000_00000001;
     Tags tags = Tags.of("destination", "destination");
 
     ByteBuf byteBuf =
@@ -52,6 +53,7 @@ public class DestinationSetupFlyweightTest {
             Long.MAX_VALUE,
             accessToken,
             connectionId,
+            additionalFlags,
             tags);
 
     Assert.assertArrayEquals(
@@ -62,6 +64,7 @@ public class DestinationSetupFlyweightTest {
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
     Assert.assertTrue(
         ByteBufUtil.equals(connectionId, DestinationSetupFlyweight.connectionId(byteBuf)));
+    Assert.assertTrue(additionalFlags == DestinationSetupFlyweight.additionalFlags(byteBuf));
     Assert.assertEquals(tags, DestinationSetupFlyweight.tags(byteBuf));
   }
 }

@@ -45,11 +45,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -66,6 +69,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int DEFAULT_INACTIVITY_FACTOR = 500;
   private static final int EFFORT = 5;
+
   private final Quantile lowerQuantile = new FrugalQuantile(DEFAULT_LOWER_QUANTILE);
   private final Quantile higherQuantile = new FrugalQuantile(DEFAULT_HIGHER_QUANTILE);
   private final List<SocketAddress> seedAddresses;
@@ -80,9 +84,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int missedAcks;
   private final long accessKey;
   private final ByteBuf accessToken;
-  private final ByteBuf connectionId;
+  private final String connectionIdSeed;
+  private final short additionalSetupFlags;
   private final Tags tags;
-  private final ByteBuf setupMetadata;
+  private final List<ByteBuf> setupMetadata;
 
   private final Function<Broker, InetSocketAddress> addressSelector;
   private final Function<SocketAddress, ClientTransport> clientTransportFactory;
@@ -94,44 +99,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private final int selectRefresh;
   private final DiscoveryStrategy discoveryStrategy;
   private int missed = 0;
+  private volatile int poolCount = 0;
   private volatile Disposable disposable;
-
-  public DefaultProteusBrokerService(
-      List<SocketAddress> seedAddresses,
-      RequestHandlingRSocket requestHandlingRSocket,
-      InetAddress localInetAddress,
-      String group,
-      Function<SocketAddress, ClientTransport> clientTransportFactory,
-      int poolSize,
-      boolean keepalive,
-      long tickPeriodSeconds,
-      long ackTimeoutSeconds,
-      int missedAcks,
-      long accessKey,
-      ByteBuf accessToken,
-      ByteBuf connectionId,
-      Tags tags,
-      Tracer tracer,
-      DiscoveryStrategy discoveryStrategy) {
-    this(
-        seedAddresses,
-        requestHandlingRSocket,
-        localInetAddress,
-        group,
-        BrokerAddressSelectors.BIND_ADDRESS,
-        clientTransportFactory,
-        poolSize,
-        keepalive,
-        tickPeriodSeconds,
-        ackTimeoutSeconds,
-        missedAcks,
-        accessKey,
-        accessToken,
-        connectionId,
-        tags,
-        tracer,
-        discoveryStrategy);
-  }
 
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
@@ -147,7 +116,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       int missedAcks,
       long accessKey,
       ByteBuf accessToken,
-      ByteBuf connectionId,
+      String connectionIdSeed,
+      short additionalSetupFlags,
       Tags tags,
       Tracer tracer,
       DiscoveryStrategy discoveryStrategy) {
@@ -186,17 +156,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.missedAcks = missedAcks;
     this.accessKey = accessKey;
     this.accessToken = accessToken;
-    this.connectionId = connectionId;
+    this.connectionIdSeed = connectionIdSeed;
+    this.additionalSetupFlags = additionalSetupFlags;
     this.tags = tags;
-    this.setupMetadata =
-        DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT,
-            localInetAddress,
-            group,
-            accessKey,
-            accessToken,
-            connectionId,
-            tags);
+    this.setupMetadata = new ArrayList<>();
     this.onClose = MonoProcessor.create();
 
     if (discoveryStrategy != null) {
@@ -253,8 +216,28 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     onClose.doFinally(s -> subscribe.dispose()).subscribe();
   }
 
-  private Payload getSetupPayload() {
-    return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(setupMetadata));
+  private Supplier<Payload> createSetupPayloadSupplier(String connectionIdSuffix) {
+    try {
+      MessageDigest md = MessageDigest.getInstance("MD5");
+      md.update(connectionIdSeed.getBytes());
+      md.update(connectionIdSuffix.getBytes());
+      ByteBuf connectionId = Unpooled.copiedBuffer(md.digest());
+      final ByteBuf metadata =
+          DestinationSetupFlyweight.encode(
+              ByteBufAllocator.DEFAULT,
+              localInetAddress,
+              group,
+              accessKey,
+              accessToken,
+              connectionId,
+              additionalSetupFlags,
+              tags);
+      // To release later
+      this.setupMetadata.add(metadata);
+      return () -> ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(metadata));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new RuntimeException("Failed to build connection id", ex);
+    }
   }
 
   private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {
@@ -440,7 +423,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
     return WeightedReconnectingRSocket.newInstance(
         requestHandlingRSocket,
-        this::getSetupPayload,
+        createSetupPayloadSupplier(String.valueOf(poolCount++)),
         this::isDisposed,
         this::selectClientTransportSupplier,
         keepalive,
@@ -502,7 +485,9 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
   @Override
   public void dispose() {
-    ReferenceCountUtil.safeRelease(setupMetadata);
+    for(ByteBuf metadata : setupMetadata){
+      ReferenceCountUtil.safeRelease(metadata);
+    }
     onClose.onComplete();
   }
 
