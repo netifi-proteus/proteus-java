@@ -255,7 +255,7 @@ public class Proteus implements Closeable {
     Tags tags = DefaultBuilderConfig.getTags();
     String accessToken = DefaultBuilderConfig.getAccessToken();
     byte[] accessTokenBytes = new byte[20];
-    String connectionIdSeedString = DefaultBuilderConfig.getConnectionId();
+    String connectionIdSeed = DefaultBuilderConfig.getConnectionId();
     byte[] connectionIdBytes = new byte[16];
     int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     Supplier<Tracer> tracerSupplier = () -> null;
@@ -297,7 +297,7 @@ public class Proteus implements Closeable {
     }
 
     public SELF connectionId(String connectionId) {
-      this.connectionIdSeedString = connectionId;
+      this.connectionIdSeed = connectionId;
       return (SELF) this;
     }
 
@@ -434,12 +434,10 @@ public class Proteus implements Closeable {
 
       try {
         String seedString =
-            this.connectionIdSeedString == null
-                ? UUID.randomUUID().toString()
-                : this.connectionIdSeedString;
+            this.connectionIdSeed == null ? UUID.randomUUID().toString() : this.connectionIdSeed;
         MessageDigest md = MessageDigest.getInstance("MD5");
         md.update(seedString.getBytes());
-        this.connectionIdBytes = md.digest();
+        System.arraycopy(md.digest(), 0, this.connectionIdBytes, 0, 16);
       } catch (NoSuchAlgorithmException ex) {
         throw new RuntimeException("Failed to build connection id", ex);
       }

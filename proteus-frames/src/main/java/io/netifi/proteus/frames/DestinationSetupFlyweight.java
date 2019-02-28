@@ -30,6 +30,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class DestinationSetupFlyweight {
+  private static int CONNECTION_ID_LENGTH = 16;
+
   public static ByteBuf encode(
       ByteBufAllocator allocator,
       InetAddress inetAddress,
@@ -58,6 +60,9 @@ public class DestinationSetupFlyweight {
       Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
+    if (connectionId.readableBytes() != CONNECTION_ID_LENGTH) {
+      throw new IllegalArgumentException("Connection ID must be 16 bytes");
+    }
 
     ByteBuf byteBuf =
         FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP);
@@ -79,10 +84,7 @@ public class DestinationSetupFlyweight {
         .writeInt(accessTokenLength)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
 
-    int connectionIdLength = connectionId.readableBytes();
-    byteBuf
-        .writeInt(connectionIdLength)
-        .writeBytes(connectionId, connectionId.readerIndex(), connectionIdLength);
+    byteBuf.writeBytes(connectionId, connectionId.readerIndex(), CONNECTION_ID_LENGTH);
 
     for (Tag tag : tags) {
       String key = tag.getKey();
@@ -171,10 +173,7 @@ public class DestinationSetupFlyweight {
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
 
-    int connectionIdLength = byteBuf.getInt(offset);
-    offset += Integer.BYTES;
-
-    return byteBuf.slice(offset, connectionIdLength);
+    return byteBuf.slice(offset, CONNECTION_ID_LENGTH);
   }
 
   public static Tags tags(ByteBuf byteBuf) {
@@ -189,8 +188,7 @@ public class DestinationSetupFlyweight {
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
 
-    int connectionIdLength = byteBuf.getInt(offset);
-    offset += Integer.BYTES + connectionIdLength;
+    offset += CONNECTION_ID_LENGTH;
 
     List<Tag> tags = new ArrayList<>();
     while (offset < byteBuf.readableBytes()) {

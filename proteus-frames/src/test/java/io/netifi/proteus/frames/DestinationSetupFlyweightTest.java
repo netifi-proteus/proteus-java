@@ -41,7 +41,7 @@ public class DestinationSetupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
-    ByteBuf connectionId = Unpooled.wrappedBuffer("unique id".getBytes());
+    ByteBuf connectionId = Unpooled.wrappedBuffer("unique 16 bytes!".getBytes());
     Tags tags = Tags.of("destination", "destination");
 
     ByteBuf byteBuf =
