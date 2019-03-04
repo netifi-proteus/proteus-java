@@ -18,6 +18,7 @@ package io.netifi.proteus.rsocket;
 import io.netty.buffer.ByteBuf;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import io.rsocket.ResponderRSocket;
 import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.frames.Metadata;
 import io.rsocket.util.ByteBufPayload;
@@ -65,7 +66,12 @@ public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
 
   @Override
   public final Flux<Payload> requestChannel(Payload payload, Publisher<Payload> publisher) {
-    return reactor.core.publisher.Flux.error(
-        new UnsupportedOperationException("Request-Channel not implemented."));
+    if (source instanceof ResponderRSocket) {
+      ResponderRSocket responderRSocket = (ResponderRSocket) source;
+
+      return responderRSocket.requestChannel(unwrap(payload), Flux.from(publisher).map(this::unwrap));
+    }
+
+    return super.requestChannel(publisher);
   }
 }
