@@ -41,11 +41,20 @@ public class DestinationSetupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
+    ConnectionId connectionId = ConnectionId.randomConnectionId();
+    short additionalFlags = 0b00000000_00000001;
     Tags tags = Tags.of("destination", "destination");
 
     ByteBuf byteBuf =
         DestinationSetupFlyweight.encode(
-            ByteBufAllocator.DEFAULT, address, "group", Long.MAX_VALUE, accessToken, tags);
+            ByteBufAllocator.DEFAULT,
+            address,
+            "group",
+            Long.MAX_VALUE,
+            accessToken,
+            connectionId,
+            additionalFlags,
+            tags);
 
     Assert.assertArrayEquals(
         address.getAddress(), DestinationSetupFlyweight.inetAddress(byteBuf).get().getAddress());
@@ -53,6 +62,9 @@ public class DestinationSetupFlyweightTest {
     Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
+    Assert.assertTrue(
+        ConnectionId.equal(connectionId, DestinationSetupFlyweight.connectionId(byteBuf)));
+    Assert.assertTrue(additionalFlags == DestinationSetupFlyweight.additionalFlags(byteBuf));
     Assert.assertEquals(tags, DestinationSetupFlyweight.tags(byteBuf));
   }
 }

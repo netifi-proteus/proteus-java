@@ -30,15 +30,26 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class DestinationSetupFlyweight {
+  private static final int CONNECTION_ID_LENGTH = 16;
+  private static final int ADDITIONAL_FLAGS_SIZE = Short.BYTES;
+
   public static ByteBuf encode(
       ByteBufAllocator allocator,
       InetAddress inetAddress,
       CharSequence group,
       long accessKey,
       byte[] accessToken,
+      ConnectionId connectionId,
       Tags tags) {
     return encode(
-        allocator, inetAddress, group, accessKey, Unpooled.wrappedBuffer(accessToken), tags);
+        allocator,
+        inetAddress,
+        group,
+        accessKey,
+        Unpooled.wrappedBuffer(accessToken),
+        connectionId,
+        (short) 0,
+        tags);
   }
 
   public static ByteBuf encode(
@@ -47,6 +58,40 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
+      ConnectionId connectionId,
+      Tags tags) {
+    return encode(
+        allocator, inetAddress, group, accessKey, accessToken, connectionId, (short) 0, tags);
+  }
+
+  public static ByteBuf encode(
+      ByteBufAllocator allocator,
+      InetAddress inetAddress,
+      CharSequence group,
+      long accessKey,
+      byte[] accessToken,
+      ConnectionId connectionId,
+      short additionalFlags,
+      Tags tags) {
+    return encode(
+        allocator,
+        inetAddress,
+        group,
+        accessKey,
+        Unpooled.wrappedBuffer(accessToken),
+        connectionId,
+        additionalFlags,
+        tags);
+  }
+
+  public static ByteBuf encode(
+      ByteBufAllocator allocator,
+      InetAddress inetAddress,
+      CharSequence group,
+      long accessKey,
+      ByteBuf accessToken,
+      ConnectionId connectionId,
+      short additionalFlags,
       Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
@@ -70,6 +115,14 @@ public class DestinationSetupFlyweight {
         .writeLong(accessKey)
         .writeInt(accessTokenLength)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
+
+    ByteBuf wrappedConnectionId = Unpooled.wrappedBuffer(connectionId.bytes());
+    byteBuf.writeBytes(
+        wrappedConnectionId, wrappedConnectionId.readerIndex(), CONNECTION_ID_LENGTH);
+
+    // Additional flags, currently just 00000000_00000000 or 00000000_00000001 for private/public
+    // services
+    byteBuf.writeShort(additionalFlags);
 
     for (Tag tag : tags) {
       String key = tag.getKey();
@@ -146,6 +199,38 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, accessTokenLength);
   }
 
+  public static ConnectionId connectionId(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
+
+    int inetAddressLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + inetAddressLength;
+
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength + Long.BYTES;
+
+    int accessTokenLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + accessTokenLength;
+
+    return ConnectionId.from(byteBuf.slice(offset, CONNECTION_ID_LENGTH));
+  }
+
+  public static short additionalFlags(ByteBuf byteBuf) {
+    int offset = FrameHeaderFlyweight.BYTES;
+
+    int inetAddressLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + inetAddressLength;
+
+    int groupLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + groupLength + Long.BYTES;
+
+    int accessTokenLength = byteBuf.getInt(offset);
+    offset += Integer.BYTES + accessTokenLength;
+
+    offset += CONNECTION_ID_LENGTH;
+
+    return byteBuf.getShort(offset);
+  }
+
   public static Tags tags(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
@@ -157,6 +242,11 @@ public class DestinationSetupFlyweight {
 
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
+
+    offset += CONNECTION_ID_LENGTH;
+
+    // Additional flags
+    offset += ADDITIONAL_FLAGS_SIZE;
 
     List<Tag> tags = new ArrayList<>();
     while (offset < byteBuf.readableBytes()) {

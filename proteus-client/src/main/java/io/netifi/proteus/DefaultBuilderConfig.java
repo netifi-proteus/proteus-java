@@ -140,6 +140,11 @@ final class DefaultBuilderConfig {
     return destination;
   }
 
+  static short getAdditionalConnectionFlags() {
+    // Maybe configure this some day but for now that default is 0.
+    return 0;
+  }
+
   static Tags getTags() {
     Tags tags = Tags.empty();
     try {
@@ -191,6 +196,18 @@ final class DefaultBuilderConfig {
     }
 
     return accessToken;
+  }
+
+  static String getConnectionId() {
+    String connectionId = null;
+
+    try {
+      connectionId = conf.getString("proteus.client.connectionId");
+    } catch (ConfigException.Missing m) {
+
+    }
+
+    return connectionId;
   }
 
   static int getPoolSize() {

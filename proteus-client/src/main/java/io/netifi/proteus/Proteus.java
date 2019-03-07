@@ -75,8 +75,10 @@ public class Proteus implements Closeable {
   private Proteus(
       long accessKey,
       ByteBuf accessToken,
+      String connectionIdSeed,
       InetAddress inetAddress,
       String group,
+      short additionalFlags,
       Tags tags,
       boolean keepalive,
       long tickPeriodSeconds,
@@ -109,6 +111,8 @@ public class Proteus implements Closeable {
             missedAcks,
             accessKey,
             accessToken,
+            connectionIdSeed,
+            additionalFlags,
             tags,
             tracerSupplier.get(),
             discoveryStrategy);
@@ -247,9 +251,11 @@ public class Proteus implements Closeable {
     Long accessKey = DefaultBuilderConfig.getAccessKey();
     String group = DefaultBuilderConfig.getGroup();
     String destination = DefaultBuilderConfig.getDestination();
+    short additionalFlags = DefaultBuilderConfig.getAdditionalConnectionFlags();
     Tags tags = DefaultBuilderConfig.getTags();
     String accessToken = DefaultBuilderConfig.getAccessToken();
     byte[] accessTokenBytes = new byte[20];
+    String connectionIdSeed = DefaultBuilderConfig.getConnectionId();
     int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     Supplier<Tracer> tracerSupplier = () -> null;
     boolean keepalive = DefaultBuilderConfig.getKeepAlive();
@@ -286,6 +292,16 @@ public class Proteus implements Closeable {
 
     public SELF accessToken(String accessToken) {
       this.accessToken = accessToken;
+      return (SELF) this;
+    }
+
+    public SELF connectionId(String connectionId) {
+      this.connectionIdSeed = connectionId;
+      return (SELF) this;
+    }
+
+    public SELF additionalConnectionFlags(short flags) {
+      this.additionalFlags = flags;
       return (SELF) this;
     }
 
@@ -419,6 +435,8 @@ public class Proteus implements Closeable {
       tags = tags.and("destination", destination);
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
+      this.connectionIdSeed =
+          this.connectionIdSeed == null ? UUID.randomUUID().toString() : this.connectionIdSeed;
 
       if (inetAddress == null) {
         try {
@@ -511,8 +529,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -597,8 +617,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -643,8 +665,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    additionalFlags,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
@@ -675,6 +699,7 @@ public class Proteus implements Closeable {
     private Tags tags = DefaultBuilderConfig.getTags();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
+    private String connectionIdSeed = initialConnectionId();
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
@@ -763,6 +788,10 @@ public class Proteus implements Closeable {
       }
 
       return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
+    }
+
+    private static String initialConnectionId() {
+      return UUID.randomUUID().toString();
     }
 
     /**
@@ -927,8 +956,10 @@ public class Proteus implements Closeable {
                 new Proteus(
                     accessKey,
                     Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
+                    (short) 0,
                     tags,
                     keepalive,
                     tickPeriodSeconds,
