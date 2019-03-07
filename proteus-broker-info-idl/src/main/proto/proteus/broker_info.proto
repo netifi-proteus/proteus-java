@@ -36,7 +36,7 @@ message Group {
 
 message Destination {
     string group       = 1;
-    int32 destination  = 2;
+    bytes destination  = 2;
     Broker broker      = 3;
     bytes ipAddress    = 4;
     repeated Tag tags  = 5;
