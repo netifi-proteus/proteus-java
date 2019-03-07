@@ -19,15 +19,13 @@ import com.google.protobuf.Empty;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
+import io.netifi.proteus.broker.info.Id;
 import io.netifi.proteus.common.net.HostAndPort;
 import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
 import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.discovery.DiscoveryStrategy;
-import io.netifi.proteus.frames.BroadcastFlyweight;
-import io.netifi.proteus.frames.DestinationSetupFlyweight;
-import io.netifi.proteus.frames.GroupFlyweight;
-import io.netifi.proteus.frames.ShardFlyweight;
+import io.netifi.proteus.frames.*;
 import io.netifi.proteus.rsocket.*;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
@@ -219,9 +217,11 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private Supplier<Payload> createSetupPayloadSupplier(String connectionIdSuffix) {
     try {
       MessageDigest md = MessageDigest.getInstance("MD5");
-      md.update(connectionIdSeed.getBytes());
+      if (connectionIdSeed != null) {
+        md.update(connectionIdSeed.getBytes());
+      }
       md.update(connectionIdSuffix.getBytes());
-      ByteBuf connectionId = Unpooled.copiedBuffer(md.digest());
+
       final ByteBuf metadata =
           DestinationSetupFlyweight.encode(
               ByteBufAllocator.DEFAULT,
@@ -229,7 +229,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
               group,
               accessKey,
               accessToken,
-              connectionId,
+              ConnectionId.wrap(md.digest()),
               additionalSetupFlags,
               tags);
       // To release later
@@ -377,7 +377,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private void handleJoinEvent(Broker broker) {
-    String incomingBrokerId = broker.getBrokerId();
+    Id incomingBrokerId = broker.getBrokerId();
     Optional<WeightedClientTransportSupplier> first =
         suppliers
             .stream()

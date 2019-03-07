@@ -39,7 +39,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       byte[] accessToken,
-      byte[] connectionId,
+      ConnectionId connectionId,
       Tags tags) {
     return encode(
         allocator,
@@ -47,7 +47,7 @@ public class DestinationSetupFlyweight {
         group,
         accessKey,
         Unpooled.wrappedBuffer(accessToken),
-        Unpooled.wrappedBuffer(connectionId),
+        connectionId,
         (short) 0,
         tags);
   }
@@ -58,7 +58,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
-      ByteBuf connectionId,
+      ConnectionId connectionId,
       Tags tags) {
     return encode(
         allocator, inetAddress, group, accessKey, accessToken, connectionId, (short) 0, tags);
@@ -70,7 +70,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       byte[] accessToken,
-      byte[] connectionId,
+      ConnectionId connectionId,
       short additionalFlags,
       Tags tags) {
     return encode(
@@ -79,7 +79,7 @@ public class DestinationSetupFlyweight {
         group,
         accessKey,
         Unpooled.wrappedBuffer(accessToken),
-        Unpooled.wrappedBuffer(connectionId),
+        connectionId,
         additionalFlags,
         tags);
   }
@@ -90,14 +90,11 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
-      ByteBuf connectionId,
+      ConnectionId connectionId,
       short additionalFlags,
       Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
-    if (connectionId.readableBytes() != CONNECTION_ID_LENGTH) {
-      throw new IllegalArgumentException("Connection ID must be 16 bytes");
-    }
 
     ByteBuf byteBuf =
         FrameHeaderFlyweight.encodeFrameHeader(allocator, FrameType.DESTINATION_SETUP);
@@ -119,7 +116,9 @@ public class DestinationSetupFlyweight {
         .writeInt(accessTokenLength)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
 
-    byteBuf.writeBytes(connectionId, connectionId.readerIndex(), CONNECTION_ID_LENGTH);
+    ByteBuf wrappedConnectionId = Unpooled.wrappedBuffer(connectionId.bytes());
+    byteBuf.writeBytes(
+        wrappedConnectionId, wrappedConnectionId.readerIndex(), CONNECTION_ID_LENGTH);
 
     // Additional flags, currently just 00000000_00000000 or 00000000_00000001 for private/public
     // services
@@ -200,7 +199,7 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, accessTokenLength);
   }
 
-  public static ByteBuf connectionId(ByteBuf byteBuf) {
+  public static ConnectionId connectionId(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
     int inetAddressLength = byteBuf.getInt(offset);
@@ -212,7 +211,7 @@ public class DestinationSetupFlyweight {
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
 
-    return byteBuf.slice(offset, CONNECTION_ID_LENGTH);
+    return ConnectionId.from(byteBuf.slice(offset, CONNECTION_ID_LENGTH));
   }
 
   public static short additionalFlags(ByteBuf byteBuf) {
