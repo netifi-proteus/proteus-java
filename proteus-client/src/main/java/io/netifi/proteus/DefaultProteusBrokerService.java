@@ -43,8 +43,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -215,29 +213,25 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private Supplier<Payload> createSetupPayloadSupplier(String connectionIdSuffix) {
-    try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      if (connectionIdSeed != null) {
-        md.update(connectionIdSeed.getBytes());
-      }
-      md.update(connectionIdSuffix.getBytes());
-
-      final ByteBuf metadata =
-          DestinationSetupFlyweight.encode(
-              ByteBufAllocator.DEFAULT,
-              localInetAddress,
-              group,
-              accessKey,
-              accessToken,
-              ConnectionId.wrap(md.digest()),
-              additionalSetupFlags,
-              tags);
-      // To release later
-      this.setupMetadata.add(metadata);
-      return () -> ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(metadata));
-    } catch (NoSuchAlgorithmException ex) {
-      throw new RuntimeException("Failed to build connection id", ex);
+    final StringJoiner connectionId = new StringJoiner("-");
+    if (connectionIdSeed != null) {
+      connectionId.add(connectionIdSeed);
     }
+    connectionId.add(connectionIdSuffix);
+
+    final ByteBuf metadata =
+        DestinationSetupFlyweight.encode(
+            ByteBufAllocator.DEFAULT,
+            localInetAddress,
+            group,
+            accessKey,
+            accessToken,
+            UUID.nameUUIDFromBytes(connectionId.toString().getBytes()),
+            additionalSetupFlags,
+            tags);
+    // To release later
+    this.setupMetadata.add(metadata);
+    return () -> ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(metadata));
   }
 
   private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {

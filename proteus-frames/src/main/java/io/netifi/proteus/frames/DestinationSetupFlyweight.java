@@ -24,13 +24,10 @@ import io.netty.buffer.Unpooled;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public class DestinationSetupFlyweight {
-  private static final int CONNECTION_ID_LENGTH = 16;
+  private static final int CONNECTION_ID_LENGTH = Long.BYTES + Long.BYTES;
   private static final int ADDITIONAL_FLAGS_SIZE = Short.BYTES;
 
   public static ByteBuf encode(
@@ -39,7 +36,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       byte[] accessToken,
-      ConnectionId connectionId,
+      UUID connectionId,
       Tags tags) {
     return encode(
         allocator,
@@ -58,7 +55,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
-      ConnectionId connectionId,
+      UUID connectionId,
       Tags tags) {
     return encode(
         allocator, inetAddress, group, accessKey, accessToken, connectionId, (short) 0, tags);
@@ -70,7 +67,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       byte[] accessToken,
-      ConnectionId connectionId,
+      UUID connectionId,
       short additionalFlags,
       Tags tags) {
     return encode(
@@ -90,7 +87,7 @@ public class DestinationSetupFlyweight {
       CharSequence group,
       long accessKey,
       ByteBuf accessToken,
-      ConnectionId connectionId,
+      UUID connectionId,
       short additionalFlags,
       Tags tags) {
     Objects.requireNonNull(group);
@@ -116,9 +113,9 @@ public class DestinationSetupFlyweight {
         .writeInt(accessTokenLength)
         .writeBytes(accessToken, accessToken.readerIndex(), accessTokenLength);
 
-    ByteBuf wrappedConnectionId = Unpooled.wrappedBuffer(connectionId.bytes());
-    byteBuf.writeBytes(
-        wrappedConnectionId, wrappedConnectionId.readerIndex(), CONNECTION_ID_LENGTH);
+    byteBuf
+        .writeLong(connectionId.getMostSignificantBits())
+        .writeLong(connectionId.getLeastSignificantBits());
 
     // Additional flags, currently just 00000000_00000000 or 00000000_00000001 for private/public
     // services
@@ -199,7 +196,7 @@ public class DestinationSetupFlyweight {
     return byteBuf.slice(offset, accessTokenLength);
   }
 
-  public static ConnectionId connectionId(ByteBuf byteBuf) {
+  public static UUID connectionId(ByteBuf byteBuf) {
     int offset = FrameHeaderFlyweight.BYTES;
 
     int inetAddressLength = byteBuf.getInt(offset);
@@ -211,7 +208,10 @@ public class DestinationSetupFlyweight {
     int accessTokenLength = byteBuf.getInt(offset);
     offset += Integer.BYTES + accessTokenLength;
 
-    return ConnectionId.from(byteBuf.slice(offset, CONNECTION_ID_LENGTH));
+    long mostSigBits = byteBuf.getLong(offset);
+    long leastSigBits = byteBuf.getLong(offset + Long.BYTES);
+
+    return new UUID(mostSigBits, leastSigBits);
   }
 
   public static short additionalFlags(ByteBuf byteBuf) {

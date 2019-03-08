@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.UUID;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ public class DestinationSetupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
-    ConnectionId connectionId = ConnectionId.randomConnectionId();
+    UUID connectionId = UUID.randomUUID();
     short additionalFlags = 0b00000000_00000001;
     Tags tags = Tags.of("destination", "destination");
 
@@ -62,8 +63,7 @@ public class DestinationSetupFlyweightTest {
     Assert.assertEquals(Long.MAX_VALUE, DestinationSetupFlyweight.accessKey(byteBuf));
     Assert.assertTrue(
         ByteBufUtil.equals(accessToken, DestinationSetupFlyweight.accessToken(byteBuf)));
-    Assert.assertTrue(
-        ConnectionId.equal(connectionId, DestinationSetupFlyweight.connectionId(byteBuf)));
+    Assert.assertEquals(connectionId, DestinationSetupFlyweight.connectionId(byteBuf));
     Assert.assertTrue(additionalFlags == DestinationSetupFlyweight.additionalFlags(byteBuf));
     Assert.assertEquals(tags, DestinationSetupFlyweight.tags(byteBuf));
   }
