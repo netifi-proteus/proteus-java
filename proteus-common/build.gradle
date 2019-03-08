@@ -6,6 +6,9 @@ plugins {
 description = 'Netifi Proteus Common'
 
 dependencies {
+    jmh 'io.netty:netty-common:4.1.33.Final'
+    jmh 'org.agrona:agrona:0.9.33'
+
     testCompile 'junit:junit'
 }
 
