@@ -3,4 +3,18 @@ description = 'Netifi Proteus Authentication Utilities'
 dependencies {
     compile project (':proteus-common')
     compile 'io.netty:netty-buffer'
+
+    compileOnly 'javax.inject:javax.inject'
+
+    testCompile 'junit:junit'
+    testCompile 'javax.inject:javax.inject'
+    testCompile 'io.projectreactor:reactor-test'
+    testCompile "com.google.protobuf:protobuf-java"
+    testCompile 'org.hdrhistogram:HdrHistogram'
+    testCompile 'org.apache.logging.log4j:log4j-api'
+    testCompile 'org.apache.logging.log4j:log4j-core'
+    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl'
+    testCompile 'io.rsocket:rsocket-transport-netty'
+    testCompile 'io.rsocket:rsocket-transport-local'
+    testCompile 'org.mockito:mockito-core'
 }

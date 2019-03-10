@@ -7,6 +7,19 @@ dependencies {
     compile 'io.rsocket.rpc:rsocket-rpc-protobuf'
     protobuf "io.rsocket.rpc:rsocket-rpc-metrics-idl"
     compile 'io.micrometer:micrometer-registry-prometheus'
+    compileOnly 'javax.inject:javax.inject'
+
+    testCompile 'junit:junit'
+    testCompile 'javax.inject:javax.inject'
+    testCompile 'io.projectreactor:reactor-test'
+    testCompile "com.google.protobuf:protobuf-java"
+    testCompile 'org.hdrhistogram:HdrHistogram'
+    testCompile 'org.apache.logging.log4j:log4j-api'
+    testCompile 'org.apache.logging.log4j:log4j-core'
+    testCompile 'org.apache.logging.log4j:log4j-slf4j-impl'
+    testCompile 'io.rsocket:rsocket-transport-netty'
+    testCompile 'io.rsocket:rsocket-transport-local'
+    testCompile 'org.mockito:mockito-core'
 
     testCompile 'org.apache.logging.log4j:log4j-api'
     testCompile 'org.apache.logging.log4j:log4j-core'
