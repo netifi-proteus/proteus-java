@@ -41,7 +41,7 @@ message Group {
 
 message Destination {
     string group       = 1;
-    Id destination  = 2;
+    Id destination     = 2;
     Broker broker      = 3;
     bytes ipAddress    = 4;
     repeated Tag tags  = 5;
@@ -49,7 +49,7 @@ message Destination {
 }
 
 message Broker {
-   Id brokerId          = 1;
+   Id brokerId              = 1;
    string ipAddress         = 2;
    int32 port               = 3;
    string clusterAddress    = 6;
@@ -63,6 +63,7 @@ message Broker {
    string webConsoleAddress = 12;
    int32 webConsolePort     = 13;
    Cluster cluster          = 14;
+   repeated Tag tags        = 15;
 }
 
 message Cluster {
