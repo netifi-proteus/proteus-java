@@ -23,7 +23,6 @@ import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.frames.Metadata;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.RSocketProxy;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 
 public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
