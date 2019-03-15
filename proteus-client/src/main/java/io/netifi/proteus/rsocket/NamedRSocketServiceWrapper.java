@@ -23,7 +23,6 @@ import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.frames.Metadata;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.RSocketProxy;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 
 public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
@@ -65,14 +64,13 @@ public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
   }
 
   @Override
-  public final Flux<Payload> requestChannel(Payload payload, Publisher<Payload> publisher) {
+  public final Flux<Payload> requestChannel(Payload payload, Flux<Payload> payloads) {
     if (source instanceof ResponderRSocket) {
       ResponderRSocket responderRSocket = (ResponderRSocket) source;
 
-      return responderRSocket.requestChannel(
-          unwrap(payload), Flux.from(publisher).map(this::unwrap));
+      return responderRSocket.requestChannel(unwrap(payload), payloads.map(this::unwrap));
     }
 
-    return super.requestChannel(publisher);
+    return super.requestChannel(payloads);
   }
 }
