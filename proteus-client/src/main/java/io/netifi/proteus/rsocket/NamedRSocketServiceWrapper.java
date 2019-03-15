@@ -66,13 +66,17 @@ public class NamedRSocketServiceWrapper extends AbstractUnwrappingRSocket
 
   @Override
   public final Flux<Payload> requestChannel(Payload payload, Publisher<Payload> publisher) {
+    return requestChannel(payload, Flux.from(publisher));
+  }
+
+  @Override
+  public final Flux<Payload> requestChannel(Payload payload, Flux<Payload> payloads) {
     if (source instanceof ResponderRSocket) {
       ResponderRSocket responderRSocket = (ResponderRSocket) source;
 
-      return responderRSocket.requestChannel(
-          unwrap(payload), Flux.from(publisher).map(this::unwrap));
+      return responderRSocket.requestChannel(unwrap(payload), payloads.map(this::unwrap));
     }
 
-    return super.requestChannel(publisher);
+    return super.requestChannel(payloads);
   }
 }
