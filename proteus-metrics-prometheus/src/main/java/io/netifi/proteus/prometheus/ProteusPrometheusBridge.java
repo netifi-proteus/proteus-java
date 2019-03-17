@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleConsumer;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Named;
 import org.reactivestreams.Publisher;
@@ -238,9 +237,15 @@ public class ProteusPrometheusBridge implements MetricsSnapshotHandler {
   }
 
   Tags mapTags(List<MeterTag> tags) {
-    Stream<Tag> stream =
-        tags.stream().map(meterTag -> Tag.of(meterTag.getKey(), meterTag.getValue()));
-    return Tags.of(stream::iterator);
+    int size = tags.size();
+    final Tag[] mappedTags = new Tag[size];
+
+    for (int i = 0; i < size; i++) {
+      final MeterTag meterTag = tags.get(i);
+      mappedTags[i] = Tag.of(meterTag.getKey(), meterTag.getValue());
+    }
+
+    return Tags.of(mappedTags);
   }
 
   String generatePrometheusFriendlyName(Meter.Id id) {
