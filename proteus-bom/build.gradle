@@ -131,3 +131,5 @@ publishing {
 }
 
 publish.dependsOn("build")
+publishMavenJavaPublicationToMavenLocal.dependsOn("build")
+publishToMavenLocal.dependsOn("build")
