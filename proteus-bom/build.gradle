@@ -65,6 +65,7 @@ dependencies {
 	compile project(':proteus-discovery-aws')
 	compile project(':proteus-discovery-consul')
 	compile project(':proteus-discovery-kubernetes')
+	compile project(':proteus-metrics-influx')
 	compile project(':proteus-metrics-micrometer')
 	compile project(':proteus-metrics-prometheus')
 	compile project(':proteus-tracing-openzipkin')
