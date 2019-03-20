@@ -35,9 +35,8 @@ import javax.inject.Named;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.Disposable;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Named("ProteusInfluxBridge")
 public class ProteusInfluxBridge implements MetricsSnapshotHandler {
@@ -138,27 +137,20 @@ public class ProteusInfluxBridge implements MetricsSnapshotHandler {
 
   @Override
   public Flux<Skew> streamMetrics(Publisher<MetricsSnapshot> messages, ByteBuf metadata) {
-    DirectProcessor<Skew> processor = DirectProcessor.create();
+      Mono<Void> mainFlow =
+          Flux.from(messages)
+              .limitRate(256, 32)
+              .flatMapIterable(MetricsSnapshot::getMetersList)
+              .flatMap(
+                  meter ->
+                      Flux.fromIterable(meter.getMeasureList())
+                          .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
+              .then();
 
-    Disposable subscribe =
-        Flux.from(messages)
-            .limitRate(256, 32)
-            .flatMapIterable(MetricsSnapshot::getMetersList)
-            .flatMap(
-                meter ->
-                    Flux.fromIterable(meter.getMeasureList())
-                        .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
-            .doOnComplete(processor::onComplete)
-            .doOnError(processor::onError)
-            .subscribe();
-
-    Flux.interval(Duration.ofSeconds(metricsSkewInterval))
-        .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
-        .onBackpressureDrop()
-        .doFinally(s -> subscribe.dispose())
-        .subscribe(processor);
-
-    return processor;
+      return Flux.interval(Duration.ofSeconds(metricsSkewInterval))
+                 .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
+                 .onBackpressureDrop()
+                 .takeUntilOther(mainFlow);
   }
 
   private void record(io.rsocket.rpc.metrics.om.Meter meter, MeterMeasurement meterMeasurement) {
