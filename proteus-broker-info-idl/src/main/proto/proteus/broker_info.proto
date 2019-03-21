@@ -29,8 +29,8 @@ message Tag {
 }
 
 message Id {
-    fixed64 first = 1;
-    fixed64 second = 2;
+    fixed64 first = 1 [jstype = JS_STRING];
+    fixed64 second = 2 [jstype = JS_STRING];
 }
 
 message Group {
