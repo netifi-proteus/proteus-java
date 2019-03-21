@@ -137,20 +137,20 @@ public class ProteusInfluxBridge implements MetricsSnapshotHandler {
 
   @Override
   public Flux<Skew> streamMetrics(Publisher<MetricsSnapshot> messages, ByteBuf metadata) {
-      Mono<Void> mainFlow =
-          Flux.from(messages)
-              .limitRate(256, 32)
-              .flatMapIterable(MetricsSnapshot::getMetersList)
-              .flatMap(
-                  meter ->
-                      Flux.fromIterable(meter.getMeasureList())
-                          .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
-              .then();
+    Mono<Void> mainFlow =
+        Flux.from(messages)
+            .limitRate(256, 32)
+            .flatMapIterable(MetricsSnapshot::getMetersList)
+            .flatMap(
+                meter ->
+                    Flux.fromIterable(meter.getMeasureList())
+                        .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
+            .then();
 
-      return Flux.interval(Duration.ofSeconds(metricsSkewInterval))
-                 .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
-                 .onBackpressureDrop()
-                 .takeUntilOther(mainFlow);
+    return Flux.interval(Duration.ofSeconds(metricsSkewInterval))
+        .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
+        .onBackpressureDrop()
+        .takeUntilOther(mainFlow);
   }
 
   private void record(io.rsocket.rpc.metrics.om.Meter meter, MeterMeasurement meterMeasurement) {
