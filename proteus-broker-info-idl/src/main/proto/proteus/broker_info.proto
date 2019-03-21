@@ -92,5 +92,6 @@ service BrokerInfoService {
     rpc BrokerWithDestination (Destination) returns (Broker) {}
     rpc streamGroupEvents (Group) returns (stream Event) {}
     rpc streamDestinationEvents (Destination) returns (stream Event) {}
+    rpc streamAllDestinationEvents (google.protobuf.Empty) returns (stream Event) {}
     rpc streamBrokerEvents (google.protobuf.Empty) returns (stream Event) {}
 }
