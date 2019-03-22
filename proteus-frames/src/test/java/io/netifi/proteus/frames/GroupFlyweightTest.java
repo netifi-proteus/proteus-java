@@ -28,7 +28,7 @@ public class GroupFlyweightTest {
   public void testEncoding() {
 
     ByteBuf metadata = Unpooled.wrappedBuffer("metadata".getBytes());
-    Tags tags = Tags.of("destination", "toDestination");
+    Tags tags = Tags.of("com.netifi.destination", "toDestination");
     ByteBuf byteBuf = GroupFlyweight.encode(ByteBufAllocator.DEFAULT, "group", metadata, tags);
 
     System.out.println(ByteBufUtil.prettyHexDump(GroupFlyweight.metadata(byteBuf)));

@@ -180,7 +180,7 @@ public class Proteus implements Closeable {
 
   @Deprecated
   public ProteusSocket destination(String destination, String group) {
-    return groupServiceSocket(group, Tags.of("destination", destination));
+    return groupServiceSocket(group, Tags.of("com.netifi.destination", destination));
   }
 
   @Deprecated
@@ -432,7 +432,7 @@ public class Proteus implements Closeable {
       if (destination == null) {
         destination = DEFAULT_DESTINATION;
       }
-      tags = tags.and("destination", destination);
+      tags = tags.and("com.netifi.destination", destination);
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
       this.connectionIdSeed =
@@ -885,7 +885,7 @@ public class Proteus implements Closeable {
       if (destination == null) {
         destination = DEFAULT_DESTINATION;
       }
-      tags = tags.and("destination", destination);
+      tags = tags.and("com.netifi.destination", destination);
 
       if (clientTransportFactory == null) {
         logger.info("Client transport factory not provided; using TCP transport.");

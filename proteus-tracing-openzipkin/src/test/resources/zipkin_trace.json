@@ -21,7 +21,7 @@
       }
     ],
     "tags": {
-      "destination": "helloservice-f0ada6e3-60fa-42b0-b6fd-e5e065bed989",
+      "com.netifi.destination": "helloservice-f0ada6e3-60fa-42b0-b6fd-e5e065bed989",
       "group": "quickstart.services.helloservices",
       "rsocket.rpc.role": "server",
       "rsocket.rpc.version": "",
@@ -49,7 +49,7 @@
       }
     ],
     "tags": {
-      "destination": "client1",
+      "com.netifi.destination": "client1",
       "group": "quickstart.clients",
       "rsocket.rpc.role": "client",
       "rsocket.rpc.version": "",
