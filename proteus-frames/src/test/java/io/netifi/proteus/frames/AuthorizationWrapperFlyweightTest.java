@@ -52,7 +52,7 @@ public class AuthorizationWrapperFlyweightTest {
   public void testEncodingGroup() {
 
     ByteBuf metadata = Unpooled.wrappedBuffer("metadata".getBytes());
-    Tags tags = Tags.of("destination", "toDestination");
+    Tags tags = Tags.of("com.netifi.destination", "toDestination");
     ByteBuf frame = GroupFlyweight.encode(ByteBufAllocator.DEFAULT, "group", metadata, tags);
 
     ByteBuf wrappedByteBuf =

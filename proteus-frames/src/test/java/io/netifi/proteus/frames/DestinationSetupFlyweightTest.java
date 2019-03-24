@@ -44,7 +44,7 @@ public class DestinationSetupFlyweightTest {
     ByteBuf accessToken = Unpooled.wrappedBuffer("access token".getBytes());
     UUID connectionId = UUID.randomUUID();
     short additionalFlags = 0b00000000_00000001;
-    Tags tags = Tags.of("destination", "destination");
+    Tags tags = Tags.of("com.netifi.destination", "com.netifi.destination");
 
     ByteBuf byteBuf =
         DestinationSetupFlyweight.encode(
