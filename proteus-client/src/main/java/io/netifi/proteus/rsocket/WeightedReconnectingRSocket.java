@@ -210,10 +210,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
           .keepAliveMissedAcks(missedAcks);
     }
 
-    return connect
-        .setupPayload(setupPayloadSupplier.get())
-        .keepAliveAckTimeout(Duration.ofSeconds(0))
-        .keepAliveTickPeriod(Duration.ofSeconds(0));
+    return connect.setupPayload(setupPayloadSupplier.get());
   }
 
   void connect() {
