@@ -7,6 +7,16 @@
 1. Run the following Gradle command to build the project:
 
         $ ./gradlew clean build
+        
+## Updating Dependencies
+The proteus-java build uses [Dependencies Lock strategy](https://docs.gradle.org/current/userguide/dependency_locking.html)
+Which keeps all dependencies versions snapshot in one file. Such a strategy allows avoiding caveats with libs versions and prevent accidental introduction of new dependencies in the project.
+
+In order to update the dependencies versions, it is required to run the project build with 
+additional command as in the following sample
+
+    $ ./gradlew clean build --write-locks
+            
 
 ## Documentation
 

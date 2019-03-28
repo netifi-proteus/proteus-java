@@ -1,0 +1,136 @@
+/*
+ * Copyright 2015-2019 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+buildscript {
+  repositories {
+	maven { url "https://repo.spring.io/plugins-release" }
+  }
+  dependencies {
+	  classpath 'io.spring.gradle:propdeps-plugin:0.0.9.RELEASE'
+	  classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.9.3'
+  }
+}
+
+description = 'Bill of materials to make sure a consistent set of versions is used for Proteus-Java.'
+
+apply plugin: 'propdeps'
+apply plugin: 'propdeps-maven'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
+
+repositories {
+	mavenCentral()
+	jcenter()
+	maven { url 'http://repo.spring.io/release' }
+	maven { url 'http://repo.spring.io/milestone' }
+	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+
+	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
+		mavenLocal()
+		maven { url 'http://repo.spring.io/libs-snapshot' }
+	}
+}
+
+configurations.archives.artifacts.clear()
+
+
+build.doLast {
+	pom {
+		customizePom(it, project)
+	}
+}
+
+dependencies {
+	compile project(':proteus-auth')
+	compile project(':proteus-broker-info-idl')
+	compile project(':proteus-broker-mgmt-idl')
+	compile project(':proteus-frames')
+	compile project(':proteus-client')
+	compile project(':proteus-common')
+	compile project(':proteus-discovery')
+	compile project(':proteus-discovery-aws')
+	compile project(':proteus-discovery-consul')
+	compile project(':proteus-discovery-kubernetes')
+	compile project(':proteus-metrics-influx')
+	compile project(':proteus-metrics-micrometer')
+	compile project(':proteus-metrics-prometheus')
+	compile project(':proteus-tracing-openzipkin')
+	compile project(':proteus-tracing-idl')
+	compile project(':proteus-vizceral-idl')
+}
+
+def customizePom(generatedPom, gradleProject) {
+	//make sure that dependencies are under <dependencyManagement>
+	generatedPom.withXml {
+	  if (generatedPom.generatedDependencies.size > 0) {
+		asNode().appendNode('dependencyManagement', asNode().dependencies)
+		asNode().dependencies.replaceNode {}
+	  }
+	}
+
+	generatedPom.project {
+	  name = 'Proteus-Java Release Train - BOM'
+	  description = gradleProject.description
+	  url = 'https://www.netifi.com'
+	  groupId = group
+
+	  packaging = "pom"
+
+	  organization {
+		name = 'Netifi, Inc.'
+		url = 'https://www.netifi.com'
+	  }
+
+	  licenses {
+		license {
+		  name 'The Apache Software License, Version 2.0'
+		  url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+		  distribution 'repo'
+		}
+	  }
+
+	  scm {
+		url = 'https://github.com/netifi-proteus/proteus-java'
+		connection = 'scm:git:git://github.com/netifi-proteus/proteus-java'
+		developerConnection = 'scm:git:git://github.com/netifi-proteus/proteus-java'
+	  }
+
+	  issueManagement {
+		system = "GitHub Issues"
+		url = "https://github.com/netifi-proteus"
+	  }
+	}
+
+	generatedPom.writeTo("$buildDir/poms/proteus-bom-${version}.xml")
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			pom.withXml {
+				def sb = asString()
+				sb.setLength 0
+				sb.append  file( "$buildDir/poms/proteus-bom-${version}.xml" ).text
+				println( sb.toString() )
+			}
+		}
+	}
+}
+
+publish.dependsOn("build")
+publishMavenJavaPublicationToMavenLocal.dependsOn("build")
+publishToMavenLocal.dependsOn("build")

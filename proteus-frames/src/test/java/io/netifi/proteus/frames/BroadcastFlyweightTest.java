@@ -1,5 +1,21 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus.frames;
 
+import io.netifi.proteus.common.tags.Tags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -12,15 +28,12 @@ public class BroadcastFlyweightTest {
   @Test
   public void testEncoding() {
     ByteBuf metadata = Unpooled.wrappedBuffer("metadata".getBytes());
-    ByteBuf byteBuf =
-        BroadcastFlyweight.encode(
-            ByteBufAllocator.DEFAULT, "fromDestination", "fromGroup", "toGroup", metadata);
+    Tags tags = Tags.of("tag", "tag");
+    ByteBuf byteBuf = BroadcastFlyweight.encode(ByteBufAllocator.DEFAULT, "group", metadata, tags);
 
-    Assert.assertEquals("fromDestination", BroadcastFlyweight.fromDestination(byteBuf));
-    Assert.assertEquals("fromGroup", BroadcastFlyweight.fromGroup(byteBuf));
-    Assert.assertEquals("toGroup", BroadcastFlyweight.toGroup(byteBuf));
-    metadata.resetReaderIndex();
+    Assert.assertEquals("group", BroadcastFlyweight.group(byteBuf));
     System.out.println(ByteBufUtil.prettyHexDump(BroadcastFlyweight.metadata(byteBuf)));
     Assert.assertTrue(ByteBufUtil.equals(metadata, BroadcastFlyweight.metadata(byteBuf)));
+    Assert.assertEquals(tags, BroadcastFlyweight.tags(byteBuf));
   }
 }
