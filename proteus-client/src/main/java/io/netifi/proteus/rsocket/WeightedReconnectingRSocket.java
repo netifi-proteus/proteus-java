@@ -1,6 +1,20 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus.rsocket;
 
-import io.netifi.proteus.DestinationNameFactory;
 import io.netifi.proteus.common.stats.Ewma;
 import io.netifi.proteus.common.stats.Median;
 import io.netifi.proteus.common.stats.Quantile;
@@ -8,6 +22,7 @@ import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.rsocket.*;
+import io.rsocket.RSocketFactory.ClientRSocketFactory;
 import io.rsocket.rpc.exception.TimeoutException;
 import io.rsocket.util.Clock;
 import java.nio.channels.ClosedChannelException;
@@ -15,7 +30,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -44,7 +58,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private final long tau;
   private final Ewma errorPercentage;
   private final MonoProcessor<Void> onClose;
-  private final Function<String, Payload> setupPayloadSupplier;
+  private final Supplier<Payload> setupPayloadSupplier;
   private final BooleanSupplier running;
   private final boolean keepalive;
   private final long tickPeriodSeconds;
@@ -54,7 +68,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   private final long accessKey;
   private final ByteBuf accessToken;
   private final Supplier<WeightedClientTransportSupplier> transportSupplier;
-  private final DestinationNameFactory destinationNameFactory;
   boolean connecting = false;
   private volatile int pending; // instantaneous rate
   private long errorStamp; // last we got an error
@@ -73,8 +86,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
   WeightedReconnectingRSocket(
       RSocket requestHandlingRSocket,
-      DestinationNameFactory destinationNameFactory,
-      Function<String, Payload> setupPayloadSupplier,
+      Supplier<Payload> setupPayloadSupplier,
       BooleanSupplier running,
       Supplier<WeightedClientTransportSupplier> transportSupplier,
       boolean keepalive,
@@ -111,13 +123,11 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
     this.missedAcks = missedAcks;
-    this.destinationNameFactory = destinationNameFactory;
   }
 
   public static WeightedReconnectingRSocket newInstance(
       RSocket requestHandlingRSocket,
-      DestinationNameFactory destinationNameFactory,
-      Function<String, Payload> setupPayloadSupplier,
+      Supplier<Payload> setupPayloadSupplier,
       BooleanSupplier running,
       Supplier<WeightedClientTransportSupplier> transportSupplier,
       boolean keepalive,
@@ -132,7 +142,6 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     WeightedReconnectingRSocket rSocket =
         new WeightedReconnectingRSocket(
             requestHandlingRSocket,
-            destinationNameFactory,
             setupPayloadSupplier,
             running,
             transportSupplier,
@@ -183,24 +192,25 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
     errorPercentage.reset(1.0);
   }
 
-  private RSocketFactory.ClientRSocketFactory getClientFactory(Payload setupPayload) {
-    RSocketFactory.ClientRSocketFactory connect =
-        RSocketFactory.connect().frameDecoder(Frame::retain);
+  private ClientRSocketFactory getClientFactory() {
+    ClientRSocketFactory connect = RSocketFactory.connect().frameDecoder(Frame::retain);
 
     if (keepalive) {
       connect =
           connect
+              .keepAlive()
               .keepAliveTickPeriod(Duration.ofSeconds(tickPeriodSeconds))
               .keepAliveAckTimeout(Duration.ofSeconds(ackTimeoutSeconds))
               .keepAliveMissedAcks(missedAcks);
     } else {
       connect
+          .keepAlive()
           .keepAliveAckTimeout(Duration.ofSeconds(0))
           .keepAliveAckTimeout(Duration.ofSeconds(0))
           .keepAliveMissedAcks(missedAcks);
     }
 
-    return connect.setupPayload(setupPayload);
+    return connect.setupPayload(setupPayloadSupplier.get());
   }
 
   void connect() {
@@ -222,11 +232,9 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
                   WeightedClientTransportSupplier weighedClientTransportSupplier =
                       transportSupplier.get();
-                  String destination = destinationNameFactory.get();
-                  Payload setupPayload = setupPayloadSupplier.apply(destination);
 
                   long start = System.nanoTime();
-                  return getClientFactory(setupPayload)
+                  return getClientFactory()
                       .errorConsumer(
                           throwable ->
                               logger.error(
@@ -255,12 +263,10 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
 
                                       if (Duration.ofNanos(stop - start).getSeconds() < 2) {
                                         logger.warn(
-                                            "connection for destination {} closed in less than 2 seconds - make sure access key {} has a valid access token",
-                                            destinationNameFactory.peek(),
+                                            "connection closed in less than 2 seconds - make sure access key {} has a valid access token",
                                             accessKey);
                                       }
 
-                                      destinationNameFactory.release(destination);
                                       availability = 0.0;
                                       synchronized (WeightedReconnectingRSocket.this) {
                                         connecting = false;
@@ -272,8 +278,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
                                     })
                                 .subscribe();
                             setRSocket(rSocket);
-                          })
-                      .doFinally(signalType -> setupPayload.release());
+                          });
                 }))
         .doOnError(t -> logger.error("error trying to broker", t))
         .retry()

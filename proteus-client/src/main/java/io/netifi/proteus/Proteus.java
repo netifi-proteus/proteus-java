@@ -1,6 +1,24 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus;
 
 import io.netifi.proteus.broker.info.Broker;
+import io.netifi.proteus.common.tags.Tag;
+import io.netifi.proteus.common.tags.Tags;
+import io.netifi.proteus.discovery.DiscoveryStrategy;
 import io.netifi.proteus.rsocket.NamedRSocketClientWrapper;
 import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
@@ -19,13 +37,14 @@ import io.rsocket.rpc.RSocketRpcService;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
+import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -39,6 +58,7 @@ import reactor.netty.tcp.TcpClient;
 public class Proteus implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(Proteus.class);
   private static final ConcurrentHashMap<String, Proteus> PROTEUS = new ConcurrentHashMap<>();
+  private static final String DEFAULT_DESTINATION = defaultDestination();
 
   static {
     // Set the Java DNS cache to 60 seconds
@@ -46,39 +66,42 @@ public class Proteus implements Closeable {
   }
 
   private final long accesskey;
-  private final String fromGroup;
-  private final DestinationNameFactory destinationNameFactory;
+  private final String group;
+  private final Tags tags;
   private final ProteusBrokerService brokerService;
   private MonoProcessor<Void> onClose;
   private RequestHandlingRSocket requestHandlingRSocket;
 
   private Proteus(
       long accessKey,
+      ByteBuf accessToken,
+      String connectionIdSeed,
       InetAddress inetAddress,
       String group,
-      ByteBuf accessToken,
+      short additionalFlags,
+      Tags tags,
       boolean keepalive,
       long tickPeriodSeconds,
       long ackTimeoutSeconds,
       int missedAcks,
-      DestinationNameFactory destinationNameFactory,
       List<SocketAddress> seedAddresses,
       Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
-      Supplier<Tracer> tracerSupplier) {
+      Supplier<Tracer> tracerSupplier,
+      DiscoveryStrategy discoveryStrategy) {
     this.accesskey = accessKey;
+    this.group = group;
+    this.tags = tags;
+
     this.onClose = MonoProcessor.create();
-    this.fromGroup = group;
     this.requestHandlingRSocket = new RequestHandlingRSocket();
-    this.destinationNameFactory = destinationNameFactory;
     this.brokerService =
         new DefaultProteusBrokerService(
             seedAddresses,
             requestHandlingRSocket,
             inetAddress,
-            fromGroup,
-            destinationNameFactory,
+            group,
             addressSelector,
             clientTransportFactory,
             poolSize,
@@ -88,11 +111,28 @@ public class Proteus implements Closeable {
             missedAcks,
             accessKey,
             accessToken,
-            tracerSupplier.get());
+            connectionIdSeed,
+            additionalFlags,
+            tags,
+            tracerSupplier.get(),
+            discoveryStrategy);
   }
 
+  @Deprecated
   public static Builder builder() {
     return new Builder();
+  }
+
+  public static WebSocketBuilder ws() {
+    return new WebSocketBuilder();
+  }
+
+  public static TcpBuilder tcp() {
+    return new TcpBuilder();
+  }
+
+  public static CustomizableBuilder customizable() {
+    return new CustomizableBuilder();
   }
 
   @Override
@@ -103,7 +143,7 @@ public class Proteus implements Closeable {
 
   @Override
   public boolean isDisposed() {
-    return onClose.isDisposed();
+    return onClose.isTerminated();
   }
 
   @Override
@@ -140,47 +180,55 @@ public class Proteus implements Closeable {
 
   @Deprecated
   public ProteusSocket destination(String destination, String group) {
-    Objects.requireNonNull(destination);
-    Objects.requireNonNull(group);
-    return brokerService.destination(destination, group);
+    return groupServiceSocket(group, Tags.of("com.netifi.destination", destination));
   }
 
   @Deprecated
   public ProteusSocket group(String group) {
-    Objects.requireNonNull(group);
-    return brokerService.group(group);
+    return groupServiceSocket(group, Tags.empty());
   }
 
   @Deprecated
   public ProteusSocket broadcast(String group) {
+    return broadcastServiceSocket(group, Tags.empty());
+  }
+
+  @Deprecated
+  public ProteusSocket shard(String group, ByteBuf shardKey) {
+    return shardServiceSocket(group, shardKey, Tags.empty());
+  }
+
+  public ProteusSocket groupServiceSocket(String group, Tags tags) {
     Objects.requireNonNull(group);
-    return brokerService.broadcast(group);
+    Objects.requireNonNull(tags);
+    return brokerService.group(group, tags);
   }
 
-  public ProteusSocket destinationServiceSocket(String destination, String group) {
-    return destination(destination, group);
+  public ProteusSocket broadcastServiceSocket(String group, Tags tags) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(tags);
+    return brokerService.broadcast(group, tags);
   }
 
-  public ProteusSocket groupServiceSocket(String group) {
-    return group(group);
+  public ProteusSocket shardServiceSocket(String group, ByteBuf shardKey, Tags tags) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(tags);
+    return brokerService.shard(group, shardKey, tags);
   }
 
-  public ProteusSocket broadcastServiceSocket(String group) {
-    return broadcast(group);
-  }
-
-  public ProteusSocket destinationNamedRSocket(String name, String destination, String group) {
+  public ProteusSocket groupNamedRSocket(String name, String group, Tags tags) {
     return NamedRSocketClientWrapper.wrap(
-        Objects.requireNonNull(name), destinationServiceSocket(destination, group));
+        Objects.requireNonNull(name), groupServiceSocket(group, tags));
   }
 
-  public ProteusSocket groupNamedRSocket(String name, String group) {
-    return NamedRSocketClientWrapper.wrap(Objects.requireNonNull(name), groupServiceSocket(group));
-  }
-
-  public ProteusSocket broadcastNamedRSocket(String name, String group) {
+  public ProteusSocket broadcastNamedRSocket(String name, String group, Tags tags) {
     return NamedRSocketClientWrapper.wrap(
-        Objects.requireNonNull(name), broadcastServiceSocket(group));
+        Objects.requireNonNull(name), broadcastServiceSocket(group, tags));
+  }
+
+  public ProteusSocket shardNamedRSocket(String name, String group, ByteBuf shardKey, Tags tags) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), shardServiceSocket(group, shardKey, tags));
   }
 
   public long getAccesskey() {
@@ -188,13 +236,458 @@ public class Proteus implements Closeable {
   }
 
   public String getGroupName() {
-    return fromGroup;
+    return group;
   }
 
-  public String getDestination() {
-    return destinationNameFactory.rootName();
+  public Tags getTags() {
+    return tags;
   }
 
+  private static String defaultDestination() {
+    return UUID.randomUUID().toString();
+  }
+
+  public abstract static class CommonBuilder<SELF extends CommonBuilder<SELF>> {
+    Long accessKey = DefaultBuilderConfig.getAccessKey();
+    String group = DefaultBuilderConfig.getGroup();
+    String destination = DefaultBuilderConfig.getDestination();
+    short additionalFlags = DefaultBuilderConfig.getAdditionalConnectionFlags();
+    Tags tags = DefaultBuilderConfig.getTags();
+    String accessToken = DefaultBuilderConfig.getAccessToken();
+    byte[] accessTokenBytes = new byte[20];
+    String connectionIdSeed = DefaultBuilderConfig.getConnectionId();
+    int poolSize = Runtime.getRuntime().availableProcessors() * 2;
+    Supplier<Tracer> tracerSupplier = () -> null;
+    boolean keepalive = DefaultBuilderConfig.getKeepAlive();
+    long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
+    long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
+    int missedAcks = DefaultBuilderConfig.getMissedAcks();
+    InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
+    String host = DefaultBuilderConfig.getHost();
+    Integer port = DefaultBuilderConfig.getPort();
+    List<SocketAddress> seedAddresses = DefaultBuilderConfig.getSeedAddress();
+    String proteusKey;
+    List<SocketAddress> socketAddresses;
+    DiscoveryStrategy discoveryStrategy = null;
+
+    public SELF discoveryStrategy(DiscoveryStrategy discoveryStrategy) {
+      this.discoveryStrategy = discoveryStrategy;
+      return (SELF) this;
+    }
+
+    public SELF poolSize(int poolSize) {
+      this.poolSize = poolSize;
+      return (SELF) this;
+    }
+
+    public SELF tracerSupplier(Supplier<Tracer> tracerSupplier) {
+      this.tracerSupplier = tracerSupplier;
+      return (SELF) this;
+    }
+
+    public SELF accessKey(long accessKey) {
+      this.accessKey = accessKey;
+      return (SELF) this;
+    }
+
+    public SELF accessToken(String accessToken) {
+      this.accessToken = accessToken;
+      return (SELF) this;
+    }
+
+    public SELF connectionId(String connectionId) {
+      this.connectionIdSeed = connectionId;
+      return (SELF) this;
+    }
+
+    public SELF additionalConnectionFlags(short flags) {
+      this.additionalFlags = flags;
+      return (SELF) this;
+    }
+
+    public SELF group(String group) {
+      this.group = group;
+      return (SELF) this;
+    }
+
+    public SELF destination(String destination) {
+      this.destination = destination;
+      return (SELF) this;
+    }
+
+    public SELF tag(String key, String value) {
+      this.tags = tags.and(key, value);
+      return (SELF) this;
+    }
+
+    public SELF tags(String... tags) {
+      this.tags = this.tags.and(tags);
+      return (SELF) this;
+    }
+
+    public SELF tags(Iterable<Tag> tags) {
+      this.tags = this.tags.and(tags);
+      return (SELF) this;
+    }
+
+    public SELF keepalive(boolean useKeepAlive) {
+      this.keepalive = useKeepAlive;
+      return (SELF) this;
+    }
+
+    public SELF tickPeriodSeconds(long tickPeriodSeconds) {
+      this.tickPeriodSeconds = tickPeriodSeconds;
+      return (SELF) this;
+    }
+
+    public SELF ackTimeoutSeconds(long ackTimeoutSeconds) {
+      this.ackTimeoutSeconds = ackTimeoutSeconds;
+      return (SELF) this;
+    }
+
+    public SELF missedAcks(int missedAcks) {
+      this.missedAcks = missedAcks;
+      return (SELF) this;
+    }
+
+    public SELF host(String host) {
+      this.host = host;
+      return (SELF) this;
+    }
+
+    public SELF port(int port) {
+      this.port = port;
+      return (SELF) this;
+    }
+
+    public SELF seedAddresses(Collection<SocketAddress> addresses) {
+      if (addresses instanceof List) {
+        this.seedAddresses = (List<SocketAddress>) addresses;
+      } else {
+        this.seedAddresses = new ArrayList<>(addresses);
+      }
+
+      return (SELF) this;
+    }
+
+    /**
+     * Lets you add a strings in the form host:port
+     *
+     * @param address the first address to seed the broker with.
+     * @param addresses additional addresses to seed the broker with.
+     * @return the initial builder.
+     */
+    public SELF seedAddresses(String address, String... addresses) {
+      List<SocketAddress> list = new ArrayList<>();
+      list.add(toInetSocketAddress(address));
+
+      if (addresses != null) {
+        for (String s : addresses) {
+          list.add(toInetSocketAddress(address));
+        }
+      }
+
+      return seedAddresses(list);
+    }
+
+    public SELF seedAddresses(SocketAddress address, SocketAddress... addresses) {
+      List<SocketAddress> list = new ArrayList<>();
+      list.add(address);
+
+      if (addresses != null) {
+        list.addAll(Arrays.asList(addresses));
+      }
+
+      return seedAddresses(list);
+    }
+
+    public SELF localAddress(String address) {
+      try {
+        return localAddress(InetAddress.getByName(address));
+      } catch (UnknownHostException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    public SELF localAddress(InetAddress address) {
+      this.inetAddress = address;
+      return (SELF) this;
+    }
+
+    private InetSocketAddress toInetSocketAddress(String address) {
+      Objects.requireNonNull(address);
+      String[] s = address.split(":");
+
+      if (s.length != 2) {
+        throw new IllegalArgumentException(address + " was a valid host address");
+      }
+
+      return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
+    }
+
+    void prebuild() {
+      Objects.requireNonNull(accessKey, "account key is required");
+      Objects.requireNonNull(accessToken, "account token is required");
+      Objects.requireNonNull(group, "group is required");
+      if (destination == null) {
+        destination = DEFAULT_DESTINATION;
+      }
+      tags = tags.and("com.netifi.destination", destination);
+
+      this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
+      this.connectionIdSeed =
+          this.connectionIdSeed == null ? UUID.randomUUID().toString() : this.connectionIdSeed;
+
+      if (inetAddress == null) {
+        try {
+          inetAddress = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+          inetAddress = InetAddress.getLoopbackAddress();
+        }
+      }
+
+      if (discoveryStrategy == null) {
+        if (seedAddresses == null) {
+          Objects.requireNonNull(host, "host is required");
+          Objects.requireNonNull(port, "port is required");
+          socketAddresses =
+              Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
+        } else {
+          socketAddresses = seedAddresses;
+        }
+      }
+
+      logger.info("registering with netifi with group {}", group);
+
+      proteusKey = accessKey + group;
+    }
+  }
+
+  public static class WebSocketBuilder extends CommonBuilder<WebSocketBuilder> {
+    private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
+    private Callable<SslContext> sslContextSupplier =
+        () -> {
+          final SslProvider sslProvider;
+          if (OpenSsl.isAvailable()) {
+            logger.info("Native SSL provider is available; will use native provider.");
+            sslProvider = SslProvider.OPENSSL_REFCNT;
+          } else {
+            logger.info("Native SSL provider not available; will use JDK SSL provider.");
+            sslProvider = SslProvider.JDK;
+          }
+          return SslContextBuilder.forClient()
+              .trustManager(InsecureTrustManagerFactory.INSTANCE)
+              .sslProvider(sslProvider)
+              .build();
+        };
+
+    public WebSocketBuilder disableSsl() {
+      this.sslDisabled = true;
+      return this;
+    }
+
+    public WebSocketBuilder enableSsl() {
+      this.sslDisabled = false;
+      return this;
+    }
+
+    public WebSocketBuilder enableSsl(Callable<SslContext> sslContextSupplier) {
+      this.sslContextSupplier = sslContextSupplier;
+      return enableSsl();
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      Function<SocketAddress, ClientTransport> clientTransportFactory;
+
+      logger.info("Client transport factory not provided; using WS transport.");
+      if (sslDisabled) {
+        clientTransportFactory =
+            address -> {
+              TcpClient client = TcpClient.create().addressSupplier(() -> address);
+              return WebsocketClientTransport.create(client);
+            };
+      } else {
+        try {
+          final SslContext sslContext = sslContextSupplier.call();
+          clientTransportFactory =
+              address -> {
+                TcpClient client =
+                    TcpClient.create().addressSupplier(() -> address).secure(sslContext);
+                return WebsocketClientTransport.create(client);
+              };
+        } catch (Exception sslException) {
+          throw Exceptions.propagate(sslException);
+        }
+      }
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
+                    inetAddress,
+                    group,
+                    additionalFlags,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    BrokerAddressSelectors.WEBSOCKET_ADDRESS,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier,
+                    discoveryStrategy);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  public static class TcpBuilder extends CommonBuilder<TcpBuilder> {
+    private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
+    private Callable<SslContext> sslContextSupplier =
+        () -> {
+          final SslProvider sslProvider;
+          if (OpenSsl.isAvailable()) {
+            logger.info("Native SSL provider is available; will use native provider.");
+            sslProvider = SslProvider.OPENSSL_REFCNT;
+          } else {
+            logger.info("Native SSL provider not available; will use JDK SSL provider.");
+            sslProvider = SslProvider.JDK;
+          }
+          return SslContextBuilder.forClient()
+              .trustManager(InsecureTrustManagerFactory.INSTANCE)
+              .sslProvider(sslProvider)
+              .build();
+        };
+
+    public TcpBuilder disableSsl() {
+      this.sslDisabled = true;
+      return this;
+    }
+
+    public TcpBuilder enableSsl() {
+      this.sslDisabled = false;
+      return this;
+    }
+
+    public TcpBuilder enableSsl(Callable<SslContext> sslContextSupplier) {
+      this.sslContextSupplier = sslContextSupplier;
+      return enableSsl();
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      Function<SocketAddress, ClientTransport> clientTransportFactory;
+
+      logger.info("Client transport factory not provided; using WS transport.");
+      if (sslDisabled) {
+        clientTransportFactory =
+            address -> {
+              TcpClient client = TcpClient.create().addressSupplier(() -> address);
+              return TcpClientTransport.create(client);
+            };
+      } else {
+        try {
+          final SslContext sslContext = sslContextSupplier.call();
+          clientTransportFactory =
+              address -> {
+                TcpClient client =
+                    TcpClient.create().addressSupplier(() -> address).secure(sslContext);
+                return TcpClientTransport.create(client);
+              };
+        } catch (Exception sslException) {
+          throw Exceptions.propagate(sslException);
+        }
+      }
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
+                    inetAddress,
+                    group,
+                    additionalFlags,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    BrokerAddressSelectors.TCP_ADDRESS,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier,
+                    discoveryStrategy);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  public static class CustomizableBuilder extends CommonBuilder<CustomizableBuilder> {
+    Function<SocketAddress, ClientTransport> clientTransportFactory;
+    Function<Broker, InetSocketAddress> addressSelector;
+
+    public CustomizableBuilder clientTransportFactory(
+        Function<SocketAddress, ClientTransport> clientTransportFactory) {
+      this.clientTransportFactory = clientTransportFactory;
+      return this;
+    }
+
+    public CustomizableBuilder addressSelector(
+        Function<Broker, InetSocketAddress> addressSelector) {
+      this.addressSelector = addressSelector;
+      return this;
+    }
+
+    public Proteus build() {
+      prebuild();
+
+      return PROTEUS.computeIfAbsent(
+          proteusKey,
+          _k -> {
+            Proteus proteus =
+                new Proteus(
+                    accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
+                    inetAddress,
+                    group,
+                    additionalFlags,
+                    tags,
+                    keepalive,
+                    tickPeriodSeconds,
+                    ackTimeoutSeconds,
+                    missedAcks,
+                    socketAddresses,
+                    addressSelector,
+                    clientTransportFactory,
+                    poolSize,
+                    tracerSupplier,
+                    discoveryStrategy);
+            proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
+
+            return proteus;
+          });
+    }
+  }
+
+  @Deprecated
   public static class Builder {
     private InetAddress inetAddress = DefaultBuilderConfig.getLocalAddress();
     private String host = DefaultBuilderConfig.getHost();
@@ -203,16 +696,18 @@ public class Proteus implements Closeable {
     private Long accessKey = DefaultBuilderConfig.getAccessKey();
     private String group = DefaultBuilderConfig.getGroup();
     private String destination = DefaultBuilderConfig.getDestination();
+    private Tags tags = DefaultBuilderConfig.getTags();
     private String accessToken = DefaultBuilderConfig.getAccessToken();
     private byte[] accessTokenBytes = new byte[20];
+    private String connectionIdSeed = initialConnectionId();
     private boolean sslDisabled = DefaultBuilderConfig.isSslDisabled();
     private boolean keepalive = DefaultBuilderConfig.getKeepAlive();
     private long tickPeriodSeconds = DefaultBuilderConfig.getTickPeriodSeconds();
     private long ackTimeoutSeconds = DefaultBuilderConfig.getAckTimeoutSeconds();
     private int missedAcks = DefaultBuilderConfig.getMissedAcks();
-    private DestinationNameFactory destinationNameFactory;
+    private DiscoveryStrategy discoveryStrategy = null;
     private Function<Broker, InetSocketAddress> addressSelector =
-        BrokerAddressSelectors.TCP_ADDRESS; // Default
+        BrokerAddressSelectors.BIND_ADDRESS; // Default
 
     private Function<SocketAddress, ClientTransport> clientTransportFactory = null;
     private int poolSize = Runtime.getRuntime().availableProcessors() * 2;
@@ -269,6 +764,11 @@ public class Proteus implements Closeable {
       return this;
     }
 
+    public Builder discoveryStrategy(DiscoveryStrategy discoveryStrategy) {
+      this.discoveryStrategy = discoveryStrategy;
+      return this;
+    }
+
     public Builder seedAddresses(Collection<SocketAddress> addresses) {
       if (addresses instanceof List) {
         this.seedAddresses = (List<SocketAddress>) addresses;
@@ -290,12 +790,16 @@ public class Proteus implements Closeable {
       return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
     }
 
+    private static String initialConnectionId() {
+      return UUID.randomUUID().toString();
+    }
+
     /**
      * Lets you add a strings in the form host:port
      *
-     * @param address
-     * @param addresses
-     * @return
+     * @param address the first address to seed the broker with.
+     * @param addresses additional addresses to seed the broker with.
+     * @return the initial builder.
      */
     public Builder seedAddresses(String address, String... addresses) {
       List<SocketAddress> list = new ArrayList<>();
@@ -354,8 +858,18 @@ public class Proteus implements Closeable {
       return this;
     }
 
-    public Builder destinationNameFactory(DestinationNameFactory destinationNameFactory) {
-      this.destinationNameFactory = destinationNameFactory;
+    public Builder tag(String key, String value) {
+      this.tags = tags.and(key, value);
+      return this;
+    }
+
+    public Builder tags(String... tags) {
+      this.tags = this.tags.and(tags);
+      return this;
+    }
+
+    public Builder tags(Iterable<Tag> tags) {
+      this.tags = this.tags.and(tags);
       return this;
     }
 
@@ -368,6 +882,10 @@ public class Proteus implements Closeable {
       Objects.requireNonNull(accessKey, "account key is required");
       Objects.requireNonNull(accessToken, "account token is required");
       Objects.requireNonNull(group, "group is required");
+      if (destination == null) {
+        destination = DEFAULT_DESTINATION;
+      }
+      tags = tags.and("com.netifi.destination", destination);
 
       if (clientTransportFactory == null) {
         logger.info("Client transport factory not provided; using TCP transport.");
@@ -406,14 +924,6 @@ public class Proteus implements Closeable {
 
       this.accessTokenBytes = Base64.getDecoder().decode(accessToken);
 
-      if (destinationNameFactory == null) {
-        if (destination == null) {
-          destination = UUID.randomUUID().toString();
-        }
-
-        destinationNameFactory = DestinationNameFactory.from(destination, new AtomicInteger());
-      }
-
       if (inetAddress == null) {
         try {
           inetAddress = InetAddress.getLocalHost();
@@ -422,38 +932,45 @@ public class Proteus implements Closeable {
         }
       }
 
-      List<SocketAddress> socketAddresses;
-      if (seedAddresses == null) {
-        Objects.requireNonNull(host, "host is required");
-        Objects.requireNonNull(port, "port is required");
-        socketAddresses = Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
-      } else {
-        socketAddresses = seedAddresses;
+      List<SocketAddress> socketAddresses = null;
+      if (discoveryStrategy == null) {
+        if (seedAddresses == null) {
+          Objects.requireNonNull(host, "host is required");
+          Objects.requireNonNull(port, "port is required");
+          socketAddresses =
+              Collections.singletonList(InetSocketAddress.createUnresolved(host, port));
+        } else {
+          socketAddresses = seedAddresses;
+        }
       }
 
-      logger.info("registering with netifi with group {}, and destination {}", group, destination);
+      logger.info("registering with netifi with group {}", group);
 
-      String proteusKey = accessKey + group + destination;
+      String proteusKey = accessKey + group;
 
+      List<SocketAddress> _s = socketAddresses;
       return PROTEUS.computeIfAbsent(
           proteusKey,
           _k -> {
             Proteus proteus =
                 new Proteus(
                     accessKey,
+                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    connectionIdSeed,
                     inetAddress,
                     group,
-                    Unpooled.wrappedBuffer(accessTokenBytes),
+                    (short) 0,
+                    tags,
                     keepalive,
                     tickPeriodSeconds,
                     ackTimeoutSeconds,
                     missedAcks,
-                    destinationNameFactory,
-                    socketAddresses,
+                    _s,
                     addressSelector,
                     clientTransportFactory,
                     poolSize,
-                    tracerSupplier);
+                    tracerSupplier,
+                    discoveryStrategy);
             proteus.onClose.doFinally(s -> PROTEUS.remove(proteusKey)).subscribe();
 
             return proteus;

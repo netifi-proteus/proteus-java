@@ -1,8 +1,23 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus.rsocket.transport;
 
+import io.netifi.proteus.broker.info.Broker;
 import io.rsocket.DuplexConnection;
 import io.rsocket.transport.ClientTransport;
-import java.net.InetSocketAddress;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -20,9 +35,10 @@ public class WeightedClientTransportSupplierTest {
     ClientTransport transport = Mockito.mock(ClientTransport.class);
     Mockito.when(transport.connect()).thenReturn(Mono.just(duplexConnection));
 
+    Broker b = Broker.newBuilder().setTcpAddress("localhost").setTcpPort(8001).build();
     WeightedClientTransportSupplier supplier =
         new WeightedClientTransportSupplier(
-            InetSocketAddress.createUnresolved("localhost", 8081), address -> transport);
+            b, BrokerAddressSelectors.BIND_ADDRESS, address -> transport);
 
     supplier.select();
     DuplexConnection block = supplier.get().connect().block();
@@ -37,5 +53,14 @@ public class WeightedClientTransportSupplierTest {
     i = supplier.activeConnections();
 
     Assert.assertEquals(0, i);
+  }
+
+  @Test
+  public void testShouldGetCorrectSocketAddress() {
+    Broker b =
+        Broker.newBuilder().setWebSocketAddress("edge.netifi.com").setWebSocketPort(443).build();
+    WeightedClientTransportSupplier supplier =
+        new WeightedClientTransportSupplier(b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, null);
+    Assert.assertEquals("edge.netifi.com:443", supplier.getSocketAddress().toString());
   }
 }

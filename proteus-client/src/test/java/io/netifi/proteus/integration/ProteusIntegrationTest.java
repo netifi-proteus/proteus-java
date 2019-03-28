@@ -1,3 +1,18 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus.integration;
 
 import com.google.protobuf.Empty;
@@ -11,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,7 +36,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-@Ignore
 public class ProteusIntegrationTest {
 
   private static final long accessKey = 9007199254740991L;
@@ -35,7 +50,7 @@ public class ProteusIntegrationTest {
   @BeforeClass
   public static void setup() {
     server =
-        Proteus.builder()
+        Proteus.tcp()
             .keepalive(false)
             .group("test.server")
             .destination("server")
@@ -46,7 +61,7 @@ public class ProteusIntegrationTest {
             .build();
 
     client =
-        Proteus.builder()
+        Proteus.tcp()
             .keepalive(false)
             .group("test.client")
             .destination("client")
@@ -63,6 +78,16 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  public void shouldReturnCorrectStatusWhenProteusHasBeenDisposed() {
+    server.dispose();
+    client.dispose();
+
+    Assert.assertTrue(server.isDisposed());
+    Assert.assertTrue(client.isDisposed());
+  }
+
+  @Test
+  @Ignore
   public void testUnaryRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse simpleResponse =
@@ -75,6 +100,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testUnaryRpc_100() {
     doTest(100);
     doTest(100);
@@ -87,6 +113,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testUnaryRpc_multiple() {
     doTest(1_000_000);
     doTest(1_000_000);
@@ -117,6 +144,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testServerStreamingRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
@@ -129,6 +157,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testServerStreamingFireHose() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     SimpleResponse response =
@@ -141,6 +170,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testClientStreamingRpc() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
     Flux<SimpleRequest> map =
@@ -153,6 +183,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testBidiRequest() {
     SimpleServiceClient simpleServiceClient = new SimpleServiceClient(proteusSocket);
 
@@ -177,6 +208,7 @@ public class ProteusIntegrationTest {
   }
 
   @Test
+  @Ignore
   public void testFireAndForget() throws Exception {
     int count = 1;
     CountDownLatch latch = new CountDownLatch(count);

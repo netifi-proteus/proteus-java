@@ -1,3 +1,18 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus.influx;
 
 import com.google.common.util.concurrent.AtomicDouble;
@@ -20,9 +35,8 @@ import javax.inject.Named;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.Disposable;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Named("ProteusInfluxBridge")
 public class ProteusInfluxBridge implements MetricsSnapshotHandler {
@@ -123,9 +137,7 @@ public class ProteusInfluxBridge implements MetricsSnapshotHandler {
 
   @Override
   public Flux<Skew> streamMetrics(Publisher<MetricsSnapshot> messages, ByteBuf metadata) {
-    DirectProcessor<Skew> processor = DirectProcessor.create();
-
-    Disposable subscribe =
+    Mono<Void> mainFlow =
         Flux.from(messages)
             .limitRate(256, 32)
             .flatMapIterable(MetricsSnapshot::getMetersList)
@@ -133,17 +145,12 @@ public class ProteusInfluxBridge implements MetricsSnapshotHandler {
                 meter ->
                     Flux.fromIterable(meter.getMeasureList())
                         .doOnNext(meterMeasurement -> record(meter, meterMeasurement)))
-            .doOnComplete(processor::onComplete)
-            .doOnError(processor::onError)
-            .subscribe();
+            .then();
 
-    Flux.interval(Duration.ofSeconds(metricsSkewInterval))
+    return Flux.interval(Duration.ofSeconds(metricsSkewInterval))
         .map(l -> Skew.newBuilder().setTimestamp(System.currentTimeMillis()).build())
         .onBackpressureDrop()
-        .doFinally(s -> subscribe.dispose())
-        .subscribe(processor);
-
-    return processor;
+        .takeUntilOther(mainFlow);
   }
 
   private void record(io.rsocket.rpc.metrics.om.Meter meter, MeterMeasurement meterMeasurement) {
