@@ -4,6 +4,6 @@
 io.netty:netty-buffer:4.1.33.Final
 io.netty:netty-common:4.1.33.Final
 io.projectreactor:reactor-core:3.2.6.RELEASE
-io.rsocket:rsocket-core:0.11.16
+io.rsocket:rsocket-core:0.11.17.2
 javax.inject:javax.inject:1
 org.reactivestreams:reactive-streams:1.0.2
