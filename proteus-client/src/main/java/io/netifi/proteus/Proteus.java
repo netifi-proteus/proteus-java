@@ -904,7 +904,6 @@ public class Proteus implements Closeable {
       return this;
     }
 
-
     public CustomizableBuilder toCustomizableBuilder() {
       CustomizableBuilder builder = new CustomizableBuilder();
 
