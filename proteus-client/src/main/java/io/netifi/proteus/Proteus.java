@@ -713,6 +713,32 @@ public class Proteus implements Closeable {
     private int poolSize = Runtime.getRuntime().availableProcessors() * 2;
     private Supplier<Tracer> tracerSupplier = () -> null;
 
+    public static Builder fromCustomizableBuilder(CustomizableBuilder customizableBuilder) {
+      Builder builder = new Builder();
+
+      builder.clientTransportFactory = customizableBuilder.clientTransportFactory;
+      builder.accessKey = customizableBuilder.accessKey;
+      builder.accessToken = customizableBuilder.accessToken;
+      builder.accessTokenBytes = customizableBuilder.accessTokenBytes;
+      builder.ackTimeoutSeconds = customizableBuilder.ackTimeoutSeconds;
+      builder.addressSelector = customizableBuilder.addressSelector;
+      builder.connectionIdSeed = customizableBuilder.connectionIdSeed;
+      builder.destination = customizableBuilder.destination;
+      builder.discoveryStrategy = customizableBuilder.discoveryStrategy;
+      builder.group = customizableBuilder.group;
+      builder.host = customizableBuilder.host;
+      builder.inetAddress = customizableBuilder.inetAddress;
+      builder.missedAcks = customizableBuilder.missedAcks;
+      builder.poolSize = customizableBuilder.poolSize;
+      builder.port = customizableBuilder.port;
+      builder.seedAddresses = customizableBuilder.seedAddresses;
+      builder.tags = customizableBuilder.tags;
+      builder.tickPeriodSeconds = customizableBuilder.tickPeriodSeconds;
+      builder.tracerSupplier = customizableBuilder.tracerSupplier;
+
+      return builder;
+    }
+
     public Builder clientTransportFactory(
         Function<SocketAddress, ClientTransport> clientTransportFactory) {
       this.clientTransportFactory = clientTransportFactory;
@@ -876,6 +902,32 @@ public class Proteus implements Closeable {
     public Builder addressSelector(Function<Broker, InetSocketAddress> addressSelector) {
       this.addressSelector = addressSelector;
       return this;
+    }
+
+    public CustomizableBuilder toCustomizableBuilder() {
+      CustomizableBuilder builder = new CustomizableBuilder();
+
+      builder.clientTransportFactory = this.clientTransportFactory;
+      builder.accessKey = this.accessKey;
+      builder.accessToken = this.accessToken;
+      builder.accessTokenBytes = this.accessTokenBytes;
+      builder.ackTimeoutSeconds = this.ackTimeoutSeconds;
+      builder.addressSelector = this.addressSelector;
+      builder.connectionIdSeed = this.connectionIdSeed;
+      builder.destination = this.destination;
+      builder.discoveryStrategy = this.discoveryStrategy;
+      builder.group = this.group;
+      builder.host = this.host;
+      builder.inetAddress = this.inetAddress;
+      builder.missedAcks = this.missedAcks;
+      builder.poolSize = this.poolSize;
+      builder.port = this.port;
+      builder.seedAddresses = this.seedAddresses;
+      builder.tags = this.tags;
+      builder.tickPeriodSeconds = this.tickPeriodSeconds;
+      builder.tracerSupplier = this.tracerSupplier;
+
+      return builder;
     }
 
     public Proteus build() {
