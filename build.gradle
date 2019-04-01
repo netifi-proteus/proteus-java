@@ -59,7 +59,7 @@ subprojects {
     repositories {
         jcenter()
         maven {
-            url = 'https://artifactory.netifiinc.com/artifactory/libs-snapshot-local'
+            url = 'https://artifactory.netifiinc.com/artifactory/libs-release-local'
             credentials {
                 username = project.findProperty('netifiArtifactoryUsername') ?: System.getenv('NETIFI_ARTIFACTORY_USERNAME')
                 password = project.findProperty('netifiArtifactoryPassword') ?: System.getenv('NETIFI_ARTIFACTORY_PASSWORD')

@@ -1,7 +1,7 @@
 apply plugin: 'io.spring.dependency-management'
 
 ext['slf4j.version'] = '1.7.25'
-ext['proteus-common-dependencies.version'] = 'Andromeda-BUILD-SNAPSHOT'
+ext['proteus-common-dependencies.version'] = '1.6.0-RELEASE'
 
 dependencyManagement {
   imports {
