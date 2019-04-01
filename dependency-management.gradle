@@ -1,0 +1,14 @@
+apply plugin: 'io.spring.dependency-management'
+
+ext['slf4j.version'] = '1.7.25'
+ext['proteus-common-dependencies.version'] = 'Andromeda-BUILD-SNAPSHOT'
+
+dependencyManagement {
+  imports {
+    mavenBom "io.netifi.proteus:proteus-common-dependencies:${ext['proteus-common-dependencies.version']}"
+  }
+
+  dependencies {
+    dependency "org.slf4j:slf4j-api:${ext['slf4j.version']}"
+  }
+}

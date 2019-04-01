@@ -1,18 +1,33 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus;
 
 import com.google.protobuf.Empty;
 import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.broker.info.BrokerInfoServiceClient;
 import io.netifi.proteus.broker.info.Event;
+import io.netifi.proteus.broker.info.Id;
+import io.netifi.proteus.common.net.HostAndPort;
 import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
-import io.netifi.proteus.frames.BroadcastFlyweight;
-import io.netifi.proteus.frames.DestinationFlyweight;
-import io.netifi.proteus.frames.DestinationSetupFlyweight;
-import io.netifi.proteus.frames.GroupFlyweight;
-import io.netifi.proteus.presence.BrokerInfoPresenceNotifier;
-import io.netifi.proteus.presence.PresenceNotifier;
+import io.netifi.proteus.common.tags.Tags;
+import io.netifi.proteus.discovery.DiscoveryStrategy;
+import io.netifi.proteus.frames.*;
 import io.netifi.proteus.rsocket.*;
+import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -23,12 +38,16 @@ import io.rsocket.RSocket;
 import io.rsocket.rpc.rsocket.RequestHandlingRSocket;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.util.ByteBufPayload;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -45,38 +64,45 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private static final double DEFAULT_HIGHER_QUANTILE = 0.8;
   private static final int DEFAULT_INACTIVITY_FACTOR = 500;
   private static final int EFFORT = 5;
+
   private final Quantile lowerQuantile = new FrugalQuantile(DEFAULT_LOWER_QUANTILE);
   private final Quantile higherQuantile = new FrugalQuantile(DEFAULT_HIGHER_QUANTILE);
   private final List<SocketAddress> seedAddresses;
   private final List<WeightedClientTransportSupplier> suppliers;
   private final List<WeightedReconnectingRSocket> members;
   private final RSocket requestHandlingRSocket;
+  private final InetAddress localInetAddress;
   private final String group;
-  private final DestinationNameFactory destinationNameFactory;
   private final boolean keepalive;
   private final long tickPeriodSeconds;
   private final long ackTimeoutSeconds;
   private final int missedAcks;
   private final long accessKey;
   private final ByteBuf accessToken;
+  private final String connectionIdSeed;
+  private final short additionalSetupFlags;
+  private final Tags tags;
+  private final List<ByteBuf> setupMetadata;
+
+  private final Function<Broker, InetSocketAddress> addressSelector;
   private final Function<SocketAddress, ClientTransport> clientTransportFactory;
   private final int poolSize;
   private final double expFactor = DEFAULT_EXP_FACTOR;
   private final int inactivityFactor = DEFAULT_INACTIVITY_FACTOR;
   private final BrokerInfoServiceClient client;
-  private final PresenceNotifier presenceNotifier;
   private final MonoProcessor<Void> onClose;
-  private int missed = 0;
-
   private final int selectRefresh;
-
+  private final DiscoveryStrategy discoveryStrategy;
+  private int missed = 0;
+  private volatile int poolCount = 0;
   private volatile Disposable disposable;
 
   public DefaultProteusBrokerService(
       List<SocketAddress> seedAddresses,
       RequestHandlingRSocket requestHandlingRSocket,
+      InetAddress localInetAddress,
       String group,
-      DestinationNameFactory destinationNameFactory,
+      Function<Broker, InetSocketAddress> addressSelector,
       Function<SocketAddress, ClientTransport> clientTransportFactory,
       int poolSize,
       boolean keepalive,
@@ -85,10 +111,22 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
       int missedAcks,
       long accessKey,
       ByteBuf accessToken,
-      Tracer tracer) {
-    Objects.requireNonNull(seedAddresses);
-    if (seedAddresses.isEmpty()) {
-      throw new IllegalStateException("seedAddress is empty");
+      String connectionIdSeed,
+      short additionalSetupFlags,
+      Tags tags,
+      Tracer tracer,
+      DiscoveryStrategy discoveryStrategy) {
+
+    this.discoveryStrategy = discoveryStrategy;
+
+    if (discoveryStrategy == null) {
+      if (seedAddresses.isEmpty()) {
+        throw new IllegalStateException("seedAddress is empty");
+      } else {
+        this.seedAddresses = seedAddresses;
+      }
+    } else {
+      this.seedAddresses = new CopyOnWriteArrayList<>();
     }
 
     Objects.requireNonNull(accessToken);
@@ -98,12 +136,12 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
 
     Objects.requireNonNull(clientTransportFactory);
 
-    this.seedAddresses = seedAddresses;
     this.requestHandlingRSocket = new UnwrappingRSocket(requestHandlingRSocket);
+    this.localInetAddress = localInetAddress;
     this.group = group;
-    this.destinationNameFactory = destinationNameFactory;
     this.members = Collections.synchronizedList(new ArrayList<>());
     this.suppliers = Collections.synchronizedList(new ArrayList<>());
+    this.addressSelector = addressSelector;
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
     this.selectRefresh = poolSize / 2;
@@ -113,10 +151,19 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.missedAcks = missedAcks;
     this.accessKey = accessKey;
     this.accessToken = accessToken;
+    this.connectionIdSeed = connectionIdSeed;
+    this.additionalSetupFlags = additionalSetupFlags;
+    this.tags = tags;
+    this.setupMetadata = new ArrayList<>();
     this.onClose = MonoProcessor.create();
 
-    this.client = new BrokerInfoServiceClient(unwrappedGroup("com.netifi.proteus.brokerServices"));
-    this.presenceNotifier = new BrokerInfoPresenceNotifier(client);
+    if (discoveryStrategy != null) {
+      logger.info("discovery strategy found using " + discoveryStrategy.getClass());
+      useDiscoveryStrategy();
+    }
+
+    this.client =
+        new BrokerInfoServiceClient(group("com.netifi.proteus.brokerServices", Tags.empty()));
     this.disposable = listenToBrokerEvents().subscribe();
 
     onClose
@@ -129,16 +176,61 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         .subscribe();
   }
 
-  static Payload getSetupPayload(
-      ByteBufAllocator alloc,
-      String computedFromDestination,
-      String group,
-      long accessKey,
-      ByteBuf accessToken) {
-    ByteBuf metadata =
+  private void useDiscoveryStrategy() {
+    Mono<List<InetSocketAddress>> discoveryNodes =
+        discoveryStrategy
+            .discoverNodes()
+            .flatMapIterable(Function.identity())
+            .map(hostAndPort -> new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()))
+            .collectList()
+            .doOnNext(
+                i -> {
+                  synchronized (this) {
+                    missed++;
+                    seedAddresses.clear();
+                    seedAddresses.addAll(i);
+                  }
+                })
+            .doOnError(
+                throwable ->
+                    logger.error(
+                        "error getting seed nodes using discovery strategy "
+                            + discoveryStrategy.getClass(),
+                        throwable));
+
+    Disposable subscribe =
+        discoveryNodes
+            .retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(1), Duration.ofSeconds(30))
+            .thenMany(
+                Flux.interval(Duration.ofSeconds(10))
+                    .onBackpressureDrop()
+                    .concatMap(i -> discoveryNodes))
+            .retryBackoff(Long.MAX_VALUE, Duration.ofSeconds(1), Duration.ofSeconds(30))
+            .subscribe();
+
+    onClose.doFinally(s -> subscribe.dispose()).subscribe();
+  }
+
+  private Supplier<Payload> createSetupPayloadSupplier(String connectionIdSuffix) {
+    final StringJoiner connectionId = new StringJoiner("-");
+    if (connectionIdSeed != null) {
+      connectionId.add(connectionIdSeed);
+    }
+    connectionId.add(connectionIdSuffix);
+
+    final ByteBuf metadata =
         DestinationSetupFlyweight.encode(
-            alloc, computedFromDestination, group, accessKey, accessToken);
-    return ByteBufPayload.create(Unpooled.EMPTY_BUFFER, metadata);
+            ByteBufAllocator.DEFAULT,
+            localInetAddress,
+            group,
+            accessKey,
+            accessToken,
+            UUID.nameUUIDFromBytes(connectionId.toString().getBytes()),
+            additionalSetupFlags,
+            tags);
+    // To release later
+    this.setupMetadata.add(metadata);
+    return () -> ByteBufPayload.create(Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(metadata));
   }
 
   private synchronized void reconcileSuppliers(Set<Broker> incomingBrokers) {
@@ -205,21 +297,60 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         .retry();
   }
 
-  BrokerInfoServiceClient getBrokerInfoServiceClient() {
-    return client;
-  }
-
-  PresenceNotifier getBrokerInfoPresenceNotifier() {
-    return presenceNotifier;
-  }
-
   private void seedClientTransportSupplier() {
     synchronized (this) {
       missed++;
     }
     seedAddresses
         .stream()
-        .map(address -> new WeightedClientTransportSupplier(address, clientTransportFactory))
+        .map(
+            address -> {
+              try {
+                Broker b;
+                String str = address.toString();
+                URI u = URI.create(str);
+                switch (u.getScheme()) {
+                  case "ws":
+                  case "wss":
+                    b =
+                        Broker.newBuilder()
+                            .setWebSocketAddress(u.getHost())
+                            .setWebSocketPort(u.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.WEBSOCKET_ADDRESS, clientTransportFactory);
+                  case "tcp":
+                    b =
+                        Broker.newBuilder()
+                            .setTcpAddress(u.getHost())
+                            .setTcpPort(u.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+                  default:
+                    // Assume URI is actually a HostAndPort, and TCP is our default
+                    HostAndPort hostAndPort = HostAndPort.fromString(str);
+                    b =
+                        Broker.newBuilder()
+                            .setTcpAddress(hostAndPort.getHost())
+                            .setTcpPort(hostAndPort.getPort())
+                            .build();
+                    return new WeightedClientTransportSupplier(
+                        b, BrokerAddressSelectors.TCP_ADDRESS, clientTransportFactory);
+                }
+              } catch (Throwable t) {
+                InetSocketAddress address1 = (InetSocketAddress) address;
+
+                logger.info("can't parse socket to URI");
+                return new WeightedClientTransportSupplier(
+                    Broker.newBuilder()
+                        .setTcpAddress(address1.getHostName())
+                        .setTcpPort(address1.getPort())
+                        .build(),
+                    BrokerAddressSelectors.TCP_ADDRESS,
+                    clientTransportFactory);
+              }
+            })
         .forEach(suppliers::add);
   }
 
@@ -239,7 +370,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   private void handleJoinEvent(Broker broker) {
-    String incomingBrokerId = broker.getBrokerId();
+    Id incomingBrokerId = broker.getBrokerId();
     Optional<WeightedClientTransportSupplier> first =
         suppliers
             .stream()
@@ -250,10 +381,8 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     if (!first.isPresent()) {
       logger.info("adding transport supplier to broker {}", broker);
 
-      InetSocketAddress address =
-          InetSocketAddress.createUnresolved(broker.getIpAddress(), broker.getPort());
       WeightedClientTransportSupplier s =
-          new WeightedClientTransportSupplier(broker, address, clientTransportFactory);
+          new WeightedClientTransportSupplier(broker, addressSelector, clientTransportFactory);
       suppliers.add(s);
 
       s.onClose()
@@ -287,8 +416,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   private WeightedReconnectingRSocket createWeightedReconnectingRSocket() {
     return WeightedReconnectingRSocket.newInstance(
         requestHandlingRSocket,
-        destinationNameFactory,
-        this::getSetupPayload,
+        createSetupPayloadSupplier(String.valueOf(poolCount++)),
         this::isDisposed,
         this::selectClientTransportSupplier,
         keepalive,
@@ -302,62 +430,14 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         inactivityFactor);
   }
 
-  private Payload getSetupPayload(String computedFromDestination) {
-    return getSetupPayload(
-        ByteBufAllocator.DEFAULT, computedFromDestination, group, accessKey, accessToken);
-  }
-
-  private ProteusSocket unwrappedDestination(String destination, String group) {
+  @Override
+  public ProteusSocket group(CharSequence group, Tags tags) {
     return new DefaultProteusSocket(
         payload -> {
           ByteBuf data = payload.sliceData().retain();
           ByteBuf metadataToWrap = payload.sliceMetadata();
           ByteBuf metadata =
-              DestinationFlyweight.encode(
-                  ByteBufAllocator.DEFAULT,
-                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
-                  DefaultProteusBrokerService.this.group,
-                  destination,
-                  group,
-                  metadataToWrap);
-          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-          payload.release();
-          return wrappedPayload;
-        },
-        this::selectRSocket);
-  }
-
-  private ProteusSocket unwrappedGroup(String group) {
-    return new DefaultProteusSocket(
-        payload -> {
-          ByteBuf data = payload.sliceData().retain();
-          ByteBuf metadataToWrap = payload.sliceMetadata();
-          ByteBuf metadata =
-              GroupFlyweight.encode(
-                  ByteBufAllocator.DEFAULT,
-                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
-                  DefaultProteusBrokerService.this.group,
-                  group,
-                  metadataToWrap);
-          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-          payload.release();
-          return wrappedPayload;
-        },
-        this::selectRSocket);
-  }
-
-  private ProteusSocket unwrappedBroadcast(String group) {
-    return new DefaultProteusSocket(
-        payload -> {
-          ByteBuf data = payload.sliceData().retain();
-          ByteBuf metadataToWrap = payload.sliceMetadata();
-          ByteBuf metadata =
-              BroadcastFlyweight.encode(
-                  ByteBufAllocator.DEFAULT,
-                  DefaultProteusBrokerService.this.destinationNameFactory.peek(),
-                  DefaultProteusBrokerService.this.group,
-                  group,
-                  metadataToWrap);
+              GroupFlyweight.encode(ByteBufAllocator.DEFAULT, group, metadataToWrap, tags);
           Payload wrappedPayload = ByteBufPayload.create(data, metadata);
           payload.release();
           return wrappedPayload;
@@ -366,23 +446,41 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   @Override
-  public ProteusSocket destination(String destination, String group) {
-    return PresenceAwareRSocket.wrap(
-        unwrappedDestination(destination, group), destination, group, presenceNotifier);
+  public ProteusSocket broadcast(CharSequence group, Tags tags) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              BroadcastFlyweight.encode(ByteBufAllocator.DEFAULT, group, metadataToWrap, tags);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
   }
 
   @Override
-  public ProteusSocket group(String group) {
-    return PresenceAwareRSocket.wrap(unwrappedGroup(group), null, group, presenceNotifier);
-  }
-
-  @Override
-  public ProteusSocket broadcast(String group) {
-    return PresenceAwareRSocket.wrap(unwrappedBroadcast(group), null, group, presenceNotifier);
+  public ProteusSocket shard(CharSequence group, ByteBuf shardKey, Tags tags) {
+    return new DefaultProteusSocket(
+        payload -> {
+          ByteBuf data = payload.sliceData().retain();
+          ByteBuf metadataToWrap = payload.sliceMetadata();
+          ByteBuf metadata =
+              ShardFlyweight.encode(
+                  ByteBufAllocator.DEFAULT, group, metadataToWrap, shardKey, tags);
+          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
+          payload.release();
+          return wrappedPayload;
+        },
+        this::selectRSocket);
   }
 
   @Override
   public void dispose() {
+    for (ByteBuf metadata : setupMetadata) {
+      ReferenceCountUtil.safeRelease(metadata);
+    }
     onClose.onComplete();
   }
 

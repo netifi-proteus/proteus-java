@@ -1,12 +1,30 @@
+/*
+ *    Copyright 2019 The Proteus Authors
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package io.netifi.proteus;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
-import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.*;
+import io.netifi.proteus.common.tags.Tag;
+import io.netifi.proteus.common.tags.Tags;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Gets current default configuration for {@link Proteus.Builder}. Can be overriden with System
@@ -66,6 +84,18 @@ final class DefaultBuilderConfig {
     return missedAcks;
   }
 
+  static InetAddress getLocalAddress() {
+    InetAddress localAddress = null;
+
+    try {
+      localAddress = InetAddress.getByName(conf.getString("proteus.client.localAddress"));
+    } catch (ConfigException.Missing | UnknownHostException m) {
+
+    }
+
+    return localAddress;
+  }
+
   static String getHost() {
     String host = null;
     try {
@@ -110,16 +140,38 @@ final class DefaultBuilderConfig {
     return destination;
   }
 
-  static Long getAccountId() {
-    Long accountId = null;
+  static short getAdditionalConnectionFlags() {
+    // Maybe configure this some day but for now that default is 0.
+    return 0;
+  }
 
+  static Tags getTags() {
+    Tags tags = Tags.empty();
     try {
-      accountId = conf.getLong("proteus.client.accountId");
+      Stream<Tag> stream =
+          conf.getObject("proteus.client.tags")
+              .entrySet()
+              .stream()
+              .map(
+                  e -> {
+                    String key = e.getKey();
+                    ConfigValue configValue = e.getValue();
+                    if (configValue.valueType() == ConfigValueType.STRING) {
+                      String value = (String) configValue.unwrapped();
+                      if (value.isEmpty()) {
+                        throw new IllegalArgumentException("Tag mapping " + key + " is empty");
+                      }
+                      return Tag.of(key, value);
+                    }
+                    throw new IllegalArgumentException(
+                        "Tag mapping " + key + " is not a string: " + configValue);
+                  });
+      tags = Tags.of(stream::iterator);
     } catch (ConfigException.Missing m) {
 
     }
 
-    return accountId;
+    return tags;
   }
 
   static Long getAccessKey() {
@@ -144,6 +196,18 @@ final class DefaultBuilderConfig {
     }
 
     return accessToken;
+  }
+
+  static String getConnectionId() {
+    String connectionId = null;
+
+    try {
+      connectionId = conf.getString("proteus.client.connectionId");
+    } catch (ConfigException.Missing m) {
+
+    }
+
+    return connectionId;
   }
 
   static int getPoolSize() {
