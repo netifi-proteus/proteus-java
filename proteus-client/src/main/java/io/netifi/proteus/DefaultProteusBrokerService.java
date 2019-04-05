@@ -182,7 +182,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         discoveryStrategy
             .discoverNodes()
             .flatMapIterable(Function.identity())
-            .map(hostAndPort -> new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()))
+            .map(
+                hostAndPort ->
+                    InetSocketAddress.createUnresolved(
+                        hostAndPort.getHost(), hostAndPort.getPort()))
             .collectList()
             .doOnNext(
                 i -> {

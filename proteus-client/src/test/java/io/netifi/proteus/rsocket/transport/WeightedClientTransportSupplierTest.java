@@ -38,7 +38,7 @@ public class WeightedClientTransportSupplierTest {
     Broker b = Broker.newBuilder().setTcpAddress("localhost").setTcpPort(8001).build();
     WeightedClientTransportSupplier supplier =
         new WeightedClientTransportSupplier(
-            b, BrokerAddressSelectors.BIND_ADDRESS, address -> transport);
+            b, BrokerAddressSelectors.TCP_ADDRESS, address -> transport);
 
     supplier.select();
     DuplexConnection block = supplier.get().connect().block();
