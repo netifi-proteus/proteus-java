@@ -25,18 +25,9 @@ public class BrokerAddressSelectors {
   private static final Logger logger = LoggerFactory.getLogger(BrokerAddressSelectors.class);
 
   public static Function<Broker, InetSocketAddress> TCP_ADDRESS =
-      broker -> {
-        logger.debug(
-            "using tcp info: host={} port={}", broker.getTcpAddress(), broker.getTcpPort());
-        return InetSocketAddress.createUnresolved(broker.getTcpAddress(), broker.getTcpPort());
-      };
+      broker -> InetSocketAddress.createUnresolved(broker.getTcpAddress(), broker.getTcpPort());
   public static Function<Broker, InetSocketAddress> WEBSOCKET_ADDRESS =
-      broker -> {
-        logger.debug(
-            "using websocket info: host={} port={}",
-            broker.getWebSocketAddress(),
-            broker.getWebSocketPort());
-        return InetSocketAddress.createUnresolved(
-            broker.getWebSocketAddress(), broker.getWebSocketPort());
-      };
+      broker ->
+          InetSocketAddress.createUnresolved(
+              broker.getWebSocketAddress(), broker.getWebSocketPort());
 }

@@ -145,7 +145,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.addressSelector = addressSelector;
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
-    this.selectRefresh = poolSize == 1 ? 1 : poolSize/ 2;
+    this.selectRefresh = poolSize == 1 ? 1 : poolSize / 2;
     this.keepalive = keepalive;
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
