@@ -145,7 +145,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     this.addressSelector = addressSelector;
     this.clientTransportFactory = clientTransportFactory;
     this.poolSize = poolSize;
-    this.selectRefresh = poolSize / 2;
+    this.selectRefresh = poolSize == 1 ? 1 : poolSize / 2;
     this.keepalive = keepalive;
     this.tickPeriodSeconds = tickPeriodSeconds;
     this.ackTimeoutSeconds = ackTimeoutSeconds;
@@ -182,7 +182,10 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
         discoveryStrategy
             .discoverNodes()
             .flatMapIterable(Function.identity())
-            .map(hostAndPort -> new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()))
+            .map(
+                hostAndPort ->
+                    InetSocketAddress.createUnresolved(
+                        hostAndPort.getHost(), hostAndPort.getPort()))
             .collectList()
             .doOnNext(
                 i -> {
