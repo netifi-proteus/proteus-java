@@ -18,12 +18,8 @@ package io.netifi.proteus.rsocket.transport;
 import io.netifi.proteus.broker.info.Broker;
 import java.net.InetSocketAddress;
 import java.util.function.Function;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BrokerAddressSelectors {
-  private static final Logger logger = LoggerFactory.getLogger(BrokerAddressSelectors.class);
-
   public static Function<Broker, InetSocketAddress> TCP_ADDRESS =
       broker -> InetSocketAddress.createUnresolved(broker.getTcpAddress(), broker.getTcpPort());
   public static Function<Broker, InetSocketAddress> WEBSOCKET_ADDRESS =
