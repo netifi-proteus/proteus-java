@@ -28,6 +28,6 @@ service ClusterManagementService {
     // Closes connections to a specific set of destinations across broker cluster
     rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (Ack) {}
 
-    // Closes connections to a specific set of groups across broker cluster
+    // Closes all connections to a specific group cluster-wide
     rpc closeGroup (stream io.netifi.proteus.broker.info.Group) returns (Ack) {}
 }
