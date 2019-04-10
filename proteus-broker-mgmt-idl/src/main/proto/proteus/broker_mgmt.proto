@@ -50,7 +50,10 @@ service BrokerManagementService {
     rpc restart (google.protobuf.Empty) returns (Ack) {}
 
     // Broker joins cluster It previously left
-    rpc join (google.protobuf.Empty) returns (Ack) {}
+    rpc rejoin (google.protobuf.Empty) returns (Ack) {}
+
+    // Tells the Broker to join using the provided Brokers
+    rpc join (Brokers) returns (Ack) {}
 
     // Closes connections to a specific set of destinations
     rpc closeDestination (stream io.netifi.proteus.broker.info.Destination) returns (Ack) {}
