@@ -46,7 +46,6 @@ service BrokerManagementService {
     rpc leave (google.protobuf.Empty) returns (Ack) {}
 
     // Broker drains connections and leaves the cluster, then joins cluster again
-    // using seed addresses
     rpc restart (google.protobuf.Empty) returns (Ack) {}
 
     // Broker joins cluster It previously left
