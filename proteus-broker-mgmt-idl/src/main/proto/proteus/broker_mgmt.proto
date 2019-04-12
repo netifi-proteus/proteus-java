@@ -30,14 +30,25 @@ message Brokers {
     repeated io.netifi.proteus.broker.info.Broker brokers = 1;
 }
 
+message Connection {
+  io.netifi.proteus.broker.info.Id id = 1;
+  string group = 2;
+}
+
 service BrokerManagementService {
     // Shutdowns down a broker process
     rpc shutdown (google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
+    // Shutdowns down a broker process after draining connections with timeout
+    rpc shutdownGracefully (google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
     // Broker leaves the cluster, but stays running
     rpc leave (google.protobuf.Empty) returns (Ack) {}
 
-    // Rejoins the cluster it  has seed information for
+    // Broker drains connections and leaves the cluster, then joins cluster again
+    rpc restart (google.protobuf.Empty) returns (Ack) {}
+
+    // Broker joins cluster It previously left
     rpc rejoin (google.protobuf.Empty) returns (Ack) {}
 
     // Tells the Broker to join using the provided Brokers
@@ -60,4 +71,7 @@ service BrokerManagementService {
 
     // Closes all connections on the broker including broker to broker connections
     rpc closeAll (google.protobuf.Empty) returns (Ack) {}
+
+    // Closes connection on the broker by its id. Connection group is optional
+    rpc closeConnection(stream Connection) returns (Ack) {}
 }
