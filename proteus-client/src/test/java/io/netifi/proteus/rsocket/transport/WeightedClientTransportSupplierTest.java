@@ -33,7 +33,7 @@ public class WeightedClientTransportSupplierTest {
     Mockito.when(duplexConnection.onClose()).thenReturn(onClose);
 
     ClientTransport transport = Mockito.mock(ClientTransport.class);
-    Mockito.when(transport.connect()).thenReturn(Mono.just(duplexConnection));
+    Mockito.when(transport.connect(0)).thenReturn(Mono.just(duplexConnection));
 
     Broker b = Broker.newBuilder().setTcpAddress("localhost").setTcpPort(8001).build();
     WeightedClientTransportSupplier supplier =
@@ -41,7 +41,7 @@ public class WeightedClientTransportSupplierTest {
             b, BrokerAddressSelectors.TCP_ADDRESS, address -> transport);
 
     supplier.select();
-    DuplexConnection block = supplier.get().connect().block();
+    DuplexConnection block = supplier.get().connect(0).block();
 
     int i = supplier.activeConnections();
 

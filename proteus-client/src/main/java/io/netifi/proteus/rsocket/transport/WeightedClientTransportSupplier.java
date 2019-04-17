@@ -66,10 +66,10 @@ public class WeightedClientTransportSupplier implements Supplier<ClientTransport
 
     int i = selectCount.get();
 
-    return () ->
+    return (int mtu) ->
         clientTransportFunction
             .apply(socketAddress)
-            .connect()
+            .connect(mtu)
             .doOnNext(
                 duplexConnection -> {
                   logger.debug("opened connection to {} - active connections {}", socketAddress, i);
