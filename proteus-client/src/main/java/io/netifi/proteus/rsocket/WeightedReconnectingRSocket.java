@@ -23,7 +23,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.rsocket.*;
 import io.rsocket.RSocketFactory.ClientRSocketFactory;
-import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.rpc.exception.TimeoutException;
 import io.rsocket.util.Clock;
 import java.nio.channels.ClosedChannelException;
@@ -194,7 +193,7 @@ public class WeightedReconnectingRSocket implements WeightedRSocket {
   }
 
   private ClientRSocketFactory getClientFactory() {
-    ClientRSocketFactory connect = RSocketFactory.connect().frameDecoder(PayloadDecoder.ZERO_COPY);
+    ClientRSocketFactory connect = RSocketFactory.connect().frameDecoder(Frame::retain);
 
     if (keepalive) {
       connect =
