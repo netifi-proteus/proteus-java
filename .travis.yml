@@ -6,6 +6,8 @@ before_cache:
 - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
 notifications:
   email: false
+  slack:
+    secure: Cu+GeTIBNIXH+SCidpbtbU5C82K3Car8V2St47mJvxiI7spWvUm+LXWS1x8L8ylR2zE8lE3NYjSPCDVSOxBh3ixCE804Lasb6eAfQ4dZ0zUMCEZuKa/xfunN10y/ZrgTiclVF7dmfEkll0Jv48bJSSXBk0iArnbKb3HGKudPsTVLeJySNGbZXFx9+fkZRYXieh+V1R9aeKLFtiMzNk7IuLwb64fhAqYtEJXBmax47BZiH98vu8LjWeGvszAuXyzrCzeOOS713nPqoeA2RRa15YhasFZcPHQFduwY+yl8ljCqr3JKx5qjpi8LozWfH4BqDlo7WgaYFATts1d4A1lAnfBYrAbfiIxNyFuAVLzm2MjlqjkowVe7C5BBlfltmJQhD8ZQeKF3OWn/wq/VARGu55MvcjicVixM+vafzah0LJr511gEhvydSZnLnaoJvIP3JK5FASRokMQQ+qA4OS0wCdZxzvEea/KOZ+DnABGhA2BaJSNyetCB9Lbzmb0UeSdz8eKCRmV6JJrqFn/8mgkYDOlDo6CqsUa2iX73sPa0GOBIaNvRjbyaJMvxHdDuO8iM3WOcSB5iu/E+ep6mYqOrLfyrkX2aUlBbgP9Ld8/2Ayf33yW5YBjiPBe6R89DOuqYtImk7Sw6RDazXEicKyghtSufvjw5lG2dh/XG1RbupoE=
 cache:
   directories:
   - "$HOME/.gradle/caches/"
