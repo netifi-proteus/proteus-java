@@ -1,7 +1,7 @@
 apply plugin: 'io.spring.dependency-management'
 
 ext['slf4j.version'] = '1.7.25'
-ext['proteus-common-dependencies.version'] = '1.6.1-263536950097ce227b414bbf0d465bbc9efcac84-SNAPSHOT'
+ext['proteus-common-dependencies.version'] = '1.6.1-95d31f0b9ea97072214606ba82feb2e131417874-SNAPSHOT'
 
 dependencyManagement {
   imports {

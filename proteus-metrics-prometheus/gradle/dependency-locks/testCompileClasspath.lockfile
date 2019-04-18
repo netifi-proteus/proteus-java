@@ -24,11 +24,11 @@ io.projectreactor:reactor-core:3.2.6.RELEASE
 io.projectreactor:reactor-test:3.2.6.RELEASE
 io.prometheus:simpleclient:0.4.0
 io.prometheus:simpleclient_common:0.4.0
-io.rsocket.rpc:rsocket-rpc-core:0.2.17
-io.rsocket.rpc:rsocket-rpc-protobuf:0.2.17
-io.rsocket:rsocket-core:0.12.2-RC1
-io.rsocket:rsocket-transport-local:0.12.2-RC1
-io.rsocket:rsocket-transport-netty:0.12.2-RC1
+io.rsocket.rpc:rsocket-rpc-core:0.2.18
+io.rsocket.rpc:rsocket-rpc-protobuf:0.2.18
+io.rsocket:rsocket-core:0.12.2-RC2
+io.rsocket:rsocket-transport-local:0.12.2-RC2
+io.rsocket:rsocket-transport-netty:0.12.2-RC2
 javax.annotation:javax.annotation-api:1.3.2
 javax.inject:javax.inject:1
 junit:junit:4.12
