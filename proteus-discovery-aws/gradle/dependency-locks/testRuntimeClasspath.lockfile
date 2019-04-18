@@ -1,7 +1,14 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
+com.fasterxml.jackson.core:jackson-annotations:2.9.0
+com.fasterxml.jackson.core:jackson-core:2.9.8
+com.fasterxml.jackson.core:jackson-databind:2.9.8
 com.google.protobuf:protobuf-java:3.6.1
+com.typesafe.netty:netty-reactive-streams-http:2.0.0
+com.typesafe.netty:netty-reactive-streams:2.0.0
+commons-codec:commons-codec:1.10
+commons-logging:commons-logging:1.2
 io.netty:netty-buffer:4.1.31.Final
 io.netty:netty-codec-http2:4.1.31.Final
 io.netty:netty-codec-http:4.1.31.Final
@@ -24,6 +31,8 @@ javax.inject:javax.inject:1
 junit:junit:4.12
 net.bytebuddy:byte-buddy-agent:1.9.7
 net.bytebuddy:byte-buddy:1.9.7
+org.apache.httpcomponents:httpclient:4.5.6
+org.apache.httpcomponents:httpcore:4.4.10
 org.apache.logging.log4j:log4j-api:2.11.2
 org.apache.logging.log4j:log4j-core:2.11.2
 org.apache.logging.log4j:log4j-slf4j-impl:2.11.2
@@ -33,3 +42,17 @@ org.mockito:mockito-core:2.25.0
 org.objenesis:objenesis:2.6
 org.reactivestreams:reactive-streams:1.0.2
 org.slf4j:slf4j-api:1.7.25
+software.amazon.awssdk:annotations:2.4.13
+software.amazon.awssdk:apache-client:2.4.13
+software.amazon.awssdk:auth:2.4.13
+software.amazon.awssdk:aws-core:2.4.13
+software.amazon.awssdk:aws-query-protocol:2.4.13
+software.amazon.awssdk:ec2:2.4.13
+software.amazon.awssdk:http-client-spi:2.4.13
+software.amazon.awssdk:netty-nio-client:2.4.13
+software.amazon.awssdk:profiles:2.4.13
+software.amazon.awssdk:protocol-core:2.4.13
+software.amazon.awssdk:regions:2.4.13
+software.amazon.awssdk:sdk-core:2.4.13
+software.amazon.awssdk:utils:2.4.13
+software.amazon:flow:1.7
