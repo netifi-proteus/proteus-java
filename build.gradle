@@ -66,6 +66,13 @@ subprojects {
             }
         }
         maven {
+            url = 'https://artifactory.netifiinc.com/artifactory/libs-snapshot-local'
+            credentials {
+                username = project.findProperty('netifiArtifactoryUsername') ?: System.getenv('NETIFI_ARTIFACTORY_USERNAME')
+                password = project.findProperty('netifiArtifactoryPassword') ?: System.getenv('NETIFI_ARTIFACTORY_PASSWORD')
+            }
+        }
+        maven {
             url  "https://dl.bintray.com/netifi/netifi-oss"
         }
         maven { url 'http://repo.spring.io/libs-snapshot' }
