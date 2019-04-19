@@ -1,14 +1,81 @@
 apply plugin: 'io.spring.dependency-management'
 
-ext['slf4j.version'] = '1.7.25'
-ext['proteus-common-dependencies.version'] = '1.6.1-9414b43531addba56bf67765d48d6b3682a2c5a5-SNAPSHOT'
-
 dependencyManagement {
-  imports {
-    mavenBom "io.netifi.proteus:proteus-common-dependencies:${ext['proteus-common-dependencies.version']}"
-  }
+    imports {
 
-  dependencies {
-    dependency "org.slf4j:slf4j-api:${ext['slf4j.version']}"
-  }
+        mavenBom "com.fasterxml.jackson:jackson-bom:${jacksonVersion}"
+        mavenBom "io.netifi.proteus:proteus-rsocket-bom:${rsocketBomVersion}"
+        mavenBom "io.netty:netty-bom:${nettyVersion}"
+        mavenBom "io.projectreactor:reactor-bom:${reactorBomVersion}"
+        mavenBom "org.apache.logging.log4j:log4j-bom:${log4j2Version}"
+        mavenBom "org.junit:junit-bom:${junitJupiterVersion}"
+        mavenBom "software.amazon.awssdk:bom:${awssdkVersion}"
+    }
+
+    dependencies {
+        dependency "org.slf4j:slf4j-api:${slf4jVersion}"
+        
+        dependency "com.github.davidmoten:rxjava2-jdbc:${rxjava2JdbcVersion}"
+        dependency "com.google.guava:guava:${guavaVersion}"
+        dependency "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+        dependency "com.google.protobuf:protobuf-java:${protobufVersion}"
+        dependency "com.google.protobuf:protoc:${protobufVersion}"
+        dependency "com.hubspot.jackson:jackson-datatype-protobuf:${jacksonProtobufVersion}"
+        dependency "com.netflix.spectator:spectator-api:${spectatorVersion}"
+        dependency "com.netflix.spectator:spectator-ext-ipc:${spectatorVersion}"
+        dependency "com.netflix.spectator:spectator-reg-atlas:${spectatorVersion}"
+        dependency "com.typesafe:config:${typesafeConfigVersion}"
+        dependency "commons-io:commons-io:${commonsIoVersion}"
+        dependency "commons-validator:commons-validator:${commonsValidatorVersion}"
+        dependency "io.micrometer:micrometer-core:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-jersey2:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-appoptics:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-atlas:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-azure-monitor:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-cloudwatch:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-datadog:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-dynatrace:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-elastic:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-ganglia:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-graphite:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-humio:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-influx:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-jmx:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-kairos:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-new-relic:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-prometheus:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-signalfx:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-statsd:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-registry-wavefront:${micrometerVersion}"
+        dependency "io.micrometer:micrometer-test:${micrometerVersion}"
+        dependency "io.netty:netty-tcnative-boringssl-static:${nettyTcnativeVersion}"
+        dependency "io.netty:netty-tcnative:${nettyTcnativeVersion}"
+        dependency "io.opentracing:opentracing-api:${opentracingVersion}"
+        dependency "io.opentracing.brave:brave-opentracing:${braveOpentracingVersion}"
+        dependency "io.zipkin.reporter2:zipkin-sender-okhttp3:${zipkinSenderVersion}"
+        dependency "javax.annotation:javax.annotation-api:${javaxAnnotationVersion}"
+        dependency "javax.inject:javax.inject:${javaxInjectVersion}"
+        dependency "junit:junit:${junitVersion}"
+        dependency "org.assertj:assertj-core:${assertjVersion}"
+        dependency "org.flywaydb:flyway-core:${flywayVersion}"
+        dependency "org.hamcrest:hamcrest-core:${hamcrestVersion}"
+        dependency "org.hamcrest:hamcrest-library:${hamcrestVersion}"
+        dependency "org.hdrhistogram:HdrHistogram:${hdrhistogramVersion}"
+        dependency "org.jctools:jctools-core:${jctoolsVersion}"
+        dependency "org.mockito:mockito-core:${mockitoVersion}"
+        dependency "org.mockito:mockito-inline:${mockitoVersion}"
+        dependency "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+        dependency "org.postgresql:postgresql:${postgresqlVersion}"
+        dependency "org.roaringbitmap:RoaringBitmap:${roaringbitmapVersion}"
+        dependency "io.rsocket:rsocket-core:${rsocketVersion}"
+        dependency "io.rsocket:rsocket-load-balancer:${rsocketVersion}"
+        dependency "io.rsocket:rsocket-micrometer:${rsocketVersion}"
+        dependency "io.rsocket:rsocket-test:${rsocketVersion}"
+        dependency "io.rsocket:rsocket-transport-netty:${rsocketVersion}"
+        dependency "io.rsocket:rsocket-transport-local:${rsocketVersion}"
+        dependency "io.rsocket.rpc:rsocket-rpc-core:${rsocketRpcVersion}"
+        dependency "io.rsocket.rpc:rsocket-rpc-metrics-idl:${rsocketRpcVersion}"
+        dependency "io.rsocket.rpc:rsocket-rpc-protobuf:${rsocketRpcVersion}"
+        dependency "io.rsocket.rpc:rsocket-rpc-protobuf-idl:${rsocketRpcVersion}"
+    }
 }
