@@ -21,6 +21,10 @@ dependencies {
     testCompile 'org.mockito:mockito-core'
 }
 
+googleJavaFormat {
+    exclude 'src/*'
+}
+
 protobuf {
     generatedFilesBaseDir = "${projectDir}/src/generated"
 
