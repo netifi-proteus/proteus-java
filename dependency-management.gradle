@@ -4,7 +4,6 @@ dependencyManagement {
     imports {
 
         mavenBom "com.fasterxml.jackson:jackson-bom:${jacksonVersion}"
-        mavenBom "io.netifi.proteus:proteus-rsocket-bom:${rsocketBomVersion}"
         mavenBom "io.netty:netty-bom:${nettyVersion}"
         mavenBom "io.projectreactor:reactor-bom:${reactorBomVersion}"
         mavenBom "org.apache.logging.log4j:log4j-bom:${log4j2Version}"
