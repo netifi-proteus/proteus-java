@@ -33,11 +33,9 @@ buildScan {
 
 
 allprojects {
-
     dependencyLocking {
         lockAllConfigurations()
     }
-
 }
 
 subprojects {
