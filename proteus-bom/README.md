@@ -11,7 +11,7 @@ In Maven, you need to import the bom first:
         <dependency>
             <groupId>io.netifi.proteus</groupId>
             <artifactId>proteus-bom</artifactId>
-            <version>1.6.0</version>
+            <version>1.6.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -67,7 +67,7 @@ Then use it to import the BOM:
 ```groovy
 dependencyManagement {
      imports {
-          mavenBom "io.netifi.proteus:proteus-bom:1.6.0"
+          mavenBom "io.netifi.proteus:proteus-bom:1.6.1"
      }
 }
 ```

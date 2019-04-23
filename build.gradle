@@ -33,11 +33,9 @@ buildScan {
 
 
 allprojects {
-
     dependencyLocking {
         lockAllConfigurations()
     }
-
 }
 
 subprojects {
@@ -60,6 +58,13 @@ subprojects {
         jcenter()
         maven {
             url = 'https://artifactory.netifiinc.com/artifactory/libs-release-local'
+            credentials {
+                username = project.findProperty('netifiArtifactoryUsername') ?: System.getenv('NETIFI_ARTIFACTORY_USERNAME')
+                password = project.findProperty('netifiArtifactoryPassword') ?: System.getenv('NETIFI_ARTIFACTORY_PASSWORD')
+            }
+        }
+        maven {
+            url = 'https://artifactory.netifiinc.com/artifactory/libs-snapshot-local'
             credentials {
                 username = project.findProperty('netifiArtifactoryUsername') ?: System.getenv('NETIFI_ARTIFACTORY_USERNAME')
                 password = project.findProperty('netifiArtifactoryPassword') ?: System.getenv('NETIFI_ARTIFACTORY_PASSWORD')
