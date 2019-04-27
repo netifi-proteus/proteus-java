@@ -512,7 +512,7 @@ public class Proteus implements Closeable {
 
       logger.info("registering with netifi with group {}", group);
 
-      proteusKey = accessKey + group;
+      proteusKey = accessKey + group + tags.toString();
     }
   }
 
