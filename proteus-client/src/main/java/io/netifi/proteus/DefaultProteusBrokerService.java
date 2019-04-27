@@ -25,8 +25,10 @@ import io.netifi.proteus.common.stats.FrugalQuantile;
 import io.netifi.proteus.common.stats.Quantile;
 import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.discovery.DiscoveryStrategy;
-import io.netifi.proteus.frames.*;
-import io.netifi.proteus.rsocket.*;
+import io.netifi.proteus.frames.DestinationSetupFlyweight;
+import io.netifi.proteus.rsocket.UnwrappingRSocket;
+import io.netifi.proteus.rsocket.WeightedRSocket;
+import io.netifi.proteus.rsocket.WeightedReconnectingRSocket;
 import io.netifi.proteus.rsocket.transport.BrokerAddressSelectors;
 import io.netifi.proteus.rsocket.transport.WeightedClientTransportSupplier;
 import io.netty.buffer.ByteBuf;
@@ -435,52 +437,6 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
   }
 
   @Override
-  public ProteusSocket group(CharSequence group, Tags tags) {
-    return new DefaultProteusSocket(
-        payload -> {
-          ByteBuf data = payload.sliceData().retain();
-          ByteBuf metadataToWrap = payload.sliceMetadata();
-          ByteBuf metadata =
-              GroupFlyweight.encode(ByteBufAllocator.DEFAULT, group, metadataToWrap, tags);
-          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-          payload.release();
-          return wrappedPayload;
-        },
-        this::selectRSocket);
-  }
-
-  @Override
-  public ProteusSocket broadcast(CharSequence group, Tags tags) {
-    return new DefaultProteusSocket(
-        payload -> {
-          ByteBuf data = payload.sliceData().retain();
-          ByteBuf metadataToWrap = payload.sliceMetadata();
-          ByteBuf metadata =
-              BroadcastFlyweight.encode(ByteBufAllocator.DEFAULT, group, metadataToWrap, tags);
-          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-          payload.release();
-          return wrappedPayload;
-        },
-        this::selectRSocket);
-  }
-
-  @Override
-  public ProteusSocket shard(CharSequence group, ByteBuf shardKey, Tags tags) {
-    return new DefaultProteusSocket(
-        payload -> {
-          ByteBuf data = payload.sliceData().retain();
-          ByteBuf metadataToWrap = payload.sliceMetadata();
-          ByteBuf metadata =
-              ShardFlyweight.encode(
-                  ByteBufAllocator.DEFAULT, group, metadataToWrap, shardKey, tags);
-          Payload wrappedPayload = ByteBufPayload.create(data, metadata);
-          payload.release();
-          return wrappedPayload;
-        },
-        this::selectRSocket);
-  }
-
-  @Override
   public void dispose() {
     for (ByteBuf metadata : setupMetadata) {
       ReferenceCountUtil.safeRelease(metadata);
@@ -501,7 +457,7 @@ public class DefaultProteusBrokerService implements ProteusBrokerService, Dispos
     }
   }
 
-  private RSocket selectRSocket() {
+  public RSocket selectRSocket() {
     RSocket rSocket;
     List<WeightedReconnectingRSocket> _m;
     int r;

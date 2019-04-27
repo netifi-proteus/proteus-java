@@ -19,6 +19,7 @@ import io.netifi.proteus.broker.info.Broker;
 import io.netifi.proteus.common.tags.Tag;
 import io.netifi.proteus.common.tags.Tags;
 import io.netifi.proteus.discovery.DiscoveryStrategy;
+import io.netifi.proteus.frames.DestinationSetupFlyweight;
 import io.netifi.proteus.rsocket.NamedRSocketClientWrapper;
 import io.netifi.proteus.rsocket.NamedRSocketServiceWrapper;
 import io.netifi.proteus.rsocket.ProteusSocket;
@@ -93,7 +94,6 @@ public class Proteus implements Closeable {
     this.accesskey = accessKey;
     this.group = group;
     this.tags = tags;
-
     this.onClose = MonoProcessor.create();
     this.requestHandlingRSocket = new RequestHandlingRSocket();
     this.brokerService =
@@ -133,6 +133,10 @@ public class Proteus implements Closeable {
 
   public static CustomizableBuilder customizable() {
     return new CustomizableBuilder();
+  }
+
+  private static String defaultDestination() {
+    return UUID.randomUUID().toString();
   }
 
   @Override
@@ -204,10 +208,22 @@ public class Proteus implements Closeable {
     return brokerService.group(group, tags);
   }
 
+  public ProteusSocket groupServiceSocket(String group) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(tags);
+    return brokerService.group(group, Tags.empty());
+  }
+
   public ProteusSocket broadcastServiceSocket(String group, Tags tags) {
     Objects.requireNonNull(group);
     Objects.requireNonNull(tags);
     return brokerService.broadcast(group, tags);
+  }
+
+  public ProteusSocket broadcastServiceSocket(String group) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(tags);
+    return brokerService.broadcast(group, Tags.empty());
   }
 
   public ProteusSocket shardServiceSocket(String group, ByteBuf shardKey, Tags tags) {
@@ -216,9 +232,20 @@ public class Proteus implements Closeable {
     return brokerService.shard(group, shardKey, tags);
   }
 
+  public ProteusSocket shardServiceSocket(String group, ByteBuf shardKey) {
+    Objects.requireNonNull(group);
+    Objects.requireNonNull(tags);
+    return brokerService.shard(group, shardKey, Tags.empty());
+  }
+
   public ProteusSocket groupNamedRSocket(String name, String group, Tags tags) {
     return NamedRSocketClientWrapper.wrap(
         Objects.requireNonNull(name), groupServiceSocket(group, tags));
+  }
+
+  public ProteusSocket groupNamedRSocket(String name, String group) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), groupServiceSocket(group, Tags.empty()));
   }
 
   public ProteusSocket broadcastNamedRSocket(String name, String group, Tags tags) {
@@ -226,9 +253,29 @@ public class Proteus implements Closeable {
         Objects.requireNonNull(name), broadcastServiceSocket(group, tags));
   }
 
+  public ProteusSocket broadcastNamedRSocket(String name, String group) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), broadcastServiceSocket(group, Tags.empty()));
+  }
+
   public ProteusSocket shardNamedRSocket(String name, String group, ByteBuf shardKey, Tags tags) {
     return NamedRSocketClientWrapper.wrap(
         Objects.requireNonNull(name), shardServiceSocket(group, shardKey, tags));
+  }
+
+  public ProteusSocket shardNamedRSocket(String name, String group, ByteBuf shardKey) {
+    return NamedRSocketClientWrapper.wrap(
+        Objects.requireNonNull(name), shardServiceSocket(group, shardKey, Tags.empty()));
+  }
+
+  /**
+   * This is an advanced API that lets you select a raw {@link RSocket} to the broker. Do not use
+   * this unless you know what you are doing. It will not provide any routing metadata, or wrapping
+   *
+   * @return a raw RSocket
+   */
+  public RSocket selectRSocket() {
+    return brokerService.selectRSocket();
   }
 
   public long getAccesskey() {
@@ -241,10 +288,6 @@ public class Proteus implements Closeable {
 
   public Tags getTags() {
     return tags;
-  }
-
-  private static String defaultDestination() {
-    return UUID.randomUUID().toString();
   }
 
   public abstract static class CommonBuilder<SELF extends CommonBuilder<SELF>> {
@@ -269,6 +312,16 @@ public class Proteus implements Closeable {
     String proteusKey;
     List<SocketAddress> socketAddresses;
     DiscoveryStrategy discoveryStrategy = null;
+
+    public SELF isPublic(boolean enablePublicAccess) {
+      if (enablePublicAccess) {
+        additionalFlags |= DestinationSetupFlyweight.FLAG_ENABLE_PUBLIC_ACCESS;
+      } else {
+        additionalFlags &= ~DestinationSetupFlyweight.FLAG_ENABLE_PUBLIC_ACCESS;
+      }
+
+      return (SELF) this;
+    }
 
     public SELF discoveryStrategy(DiscoveryStrategy discoveryStrategy) {
       this.discoveryStrategy = discoveryStrategy;
@@ -739,6 +792,10 @@ public class Proteus implements Closeable {
       return builder;
     }
 
+    private static String initialConnectionId() {
+      return UUID.randomUUID().toString();
+    }
+
     public Builder clientTransportFactory(
         Function<SocketAddress, ClientTransport> clientTransportFactory) {
       this.clientTransportFactory = clientTransportFactory;
@@ -814,10 +871,6 @@ public class Proteus implements Closeable {
       }
 
       return InetSocketAddress.createUnresolved(s[0], Integer.parseInt(s[1]));
-    }
-
-    private static String initialConnectionId() {
-      return UUID.randomUUID().toString();
     }
 
     /**
